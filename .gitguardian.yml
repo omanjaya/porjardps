@@ -1,0 +1,8 @@
+version: 2
+
+# These are test/seed credentials — not production secrets.
+# They only exist in local development and E2E test environments.
+paths-ignore:
+  - "porjar-api/scripts/seed.go"
+  - "porjar-web/e2e/**"
+  - "porjar-api/.env.example"
