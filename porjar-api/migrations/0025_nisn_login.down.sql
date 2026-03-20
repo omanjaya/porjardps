@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS idx_users_nisn;
+ALTER TABLE users DROP COLUMN IF EXISTS needs_password_change;
+ALTER TABLE users DROP COLUMN IF EXISTS nomor_pertandingan;
+ALTER TABLE users DROP COLUMN IF EXISTS tingkat;
+ALTER TABLE users DROP COLUMN IF EXISTS nisn;

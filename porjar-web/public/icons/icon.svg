@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#0F172A"/>
+  <rect x="8" y="8" width="496" height="496" rx="88" fill="none" stroke="#3B82F6" stroke-width="4" opacity="0.3"/>
+  <!-- Trophy body -->
+  <path d="M192 160h128v120c0 35.3-28.7 64-64 64s-64-28.7-64-64V160z" fill="#F59E0B"/>
+  <path d="M192 160h128v120c0 35.3-28.7 64-64 64s-64-28.7-64-64V160z" fill="url(#grad)" opacity="0.5"/>
+  <!-- Trophy handles -->
+  <path d="M192 180h-24c-22.1 0-40 17.9-40 40v8c0 22.1 17.9 40 40 40h24" fill="none" stroke="#F59E0B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M320 180h24c22.1 0 40 17.9 40 40v8c0 22.1-17.9 40-40 40h-24" fill="none" stroke="#F59E0B" stroke-width="16" stroke-linecap="round"/>
+  <!-- Trophy base -->
+  <rect x="224" y="340" width="64" height="24" rx="4" fill="#F59E0B"/>
+  <rect x="200" y="360" width="112" height="16" rx="8" fill="#F59E0B"/>
+  <!-- Star -->
+  <path d="M256 200l12 24 26 4-19 18 4 26-23-12-23 12 4-26-19-18 26-4z" fill="#0F172A" opacity="0.6"/>
+  <!-- Text -->
+  <text x="256" y="440" text-anchor="middle" font-family="Arial, sans-serif" font-weight="800" font-size="48" fill="#3B82F6" letter-spacing="4">PORJAR</text>
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+  </defs>
+</svg>

@@ -1,0 +1,125 @@
+groups:
+  - name: porjar_api
+    rules:
+      # ── Availability ────────────────────────────────────────────────────────
+      - alert: APIDown
+        expr: up{job="porjar-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PORJAR API is down"
+          description: >
+            The porjar-api instance has not been successfully scraped for more than
+            1 minute. Target: {{ $labels.instance }}.
+
+      # ── Error rate ──────────────────────────────────────────────────────────
+      - alert: HighErrorRate
+        expr: >
+          (
+            sum(rate(http_requests_total{job="porjar-api", status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="porjar-api"}[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx error rate (> 5%)"
+          description: >
+            More than 5% of requests are returning 5xx responses over the last
+            5 minutes. Current value: {{ $value | humanizePercentage }}.
+
+      # ── Response time ───────────────────────────────────────────────────────
+      - alert: HighResponseTimeP95
+        expr: >
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="porjar-api"}[5m]))
+            by (le)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 response time exceeds 2 s"
+          description: >
+            The 95th-percentile HTTP response time has been above 2 seconds for
+            more than 5 minutes. Current p95: {{ $value | humanizeDuration }}.
+
+      # ── Submission queue ─────────────────────────────────────────────────────
+      - alert: SubmissionQueueBacklog
+        expr: submission_queue_depth{job="porjar-api"} > 1000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Submission queue depth > 1000"
+          description: >
+            The match submission processing queue has more than 1000 unprocessed
+            messages. Current depth: {{ $value }}. Consider scaling submission
+            workers (SUBMISSION_WORKERS env var).
+
+  - name: porjar_database
+    rules:
+      # ── DB connection pool ───────────────────────────────────────────────────
+      - alert: DBConnectionsHigh
+        expr: db_pool_open_connections{job="porjar-api"} > 180
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "DB connection pool usage > 180 (max_connections=250)"
+          description: >
+            The application has {{ $value }} open database connections.
+            PostgreSQL is configured with max_connections=250; at current usage
+            new connections may be refused.
+
+      - alert: DBConnectionsCritical
+        expr: db_pool_open_connections{job="porjar-api"} > 220
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DB connection pool critically high (> 220)"
+          description: >
+            {{ $value }} open database connections detected; pool exhaustion is
+            imminent (max_connections=250).
+
+  - name: porjar_infrastructure
+    rules:
+      # ── Disk space ──────────────────────────────────────────────────────────
+      - alert: LowDiskSpace
+        expr: >
+          (
+            node_filesystem_avail_bytes{job=~"node.*", mountpoint="/", fstype!~"tmpfs|overlay"}
+            /
+            node_filesystem_size_bytes{job=~"node.*", mountpoint="/", fstype!~"tmpfs|overlay"}
+          ) < 0.10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Less than 10% disk space remaining on /"
+          description: >
+            Only {{ $value | humanizePercentage }} of disk space is available
+            on {{ $labels.instance }} mount {{ $labels.mountpoint }}.
+
+      # ── Postgres exporter availability ───────────────────────────────────────
+      - alert: PostgresExporterDown
+        expr: up{job="postgres-exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "postgres-exporter is not reachable"
+          description: "Prometheus cannot scrape the postgres-exporter target."
+
+      # ── Redis exporter availability ──────────────────────────────────────────
+      - alert: RedisExporterDown
+        expr: up{job="redis-exporter"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "redis-exporter is not reachable"
+          description: "Prometheus cannot scrape the redis-exporter target."

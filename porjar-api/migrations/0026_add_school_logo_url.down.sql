@@ -1,0 +1,1 @@
+ALTER TABLE schools DROP COLUMN IF EXISTS logo_url;

@@ -1,0 +1,1 @@
+ALTER TABLE schools ADD COLUMN IF NOT EXISTS coach_phone VARCHAR(20);

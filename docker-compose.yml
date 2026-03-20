@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: porjar-db
+    environment:
+      POSTGRES_USER: porjar
+      POSTGRES_PASSWORD: porjar_dev
+      POSTGRES_DB: porjar
+    ports:
+      - "5499:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U porjar"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - porjar-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: porjar-redis
+    ports:
+      - "6399:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - porjar-net
+
+  api:
+    build:
+      context: ./porjar-api
+      dockerfile: Dockerfile.dev
+    container_name: porjar-api
+    env_file: ./porjar-api/.env.docker
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./porjar-api:/app
+      - go_cache:/root/.cache/go-build
+      - go_mod_cache:/go/pkg/mod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - porjar-net
+
+  web:
+    build:
+      context: ./porjar-web
+      dockerfile: Dockerfile.dev
+    container_name: porjar-web
+    env_file: ./porjar-web/.env.docker
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./porjar-web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - api
+    networks:
+      - porjar-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  go_cache:
+  go_mod_cache:
+
+networks:
+  porjar-net:
+    driver: bridge

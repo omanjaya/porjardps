@@ -1,0 +1,58 @@
+# Environment files
+.env
+.env.local
+.env.docker
+.env.prod
+.env.prod.web
+porjar-api/.env
+porjar-api/.env.docker
+porjar-web/.env.local
+porjar-web/.env.docker
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# API
+porjar-api/tmp/
+porjar-api/storage/uploads/*
+!porjar-api/storage/uploads/.gitkeep
+
+# Web
+porjar-web/.next/
+porjar-web/node_modules/
+porjar-web/out/
+
+# Test artifacts
+porjar-web/test-results/
+porjar-web/playwright-report/
+porjar-web/e2e/.auth/
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+npm-debug.log*
+
+# Misc
+*.tmp
+*.bak
+deploy.zip
+
+# Database backups
+backup_*.sql
+*.dump
