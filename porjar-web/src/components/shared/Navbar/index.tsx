@@ -41,10 +41,12 @@ const MOBILE_LINKS = [
 
 const GAMES = [
   { slug: 'hok' as GameSlug, name: 'HOK', icon: Sword },
-  { slug: 'ml' as GameSlug, name: 'Mobile Legends', icon: GameController },
+  { slug: 'ml-pria' as GameSlug, name: 'ML Pria', icon: GameController },
+  { slug: 'ml-wanita' as GameSlug, name: 'ML Wanita', icon: GameController },
   { slug: 'ff' as GameSlug, name: 'Free Fire', icon: Target },
   { slug: 'pubgm' as GameSlug, name: 'PUBG Mobile', icon: Lightning },
-  { slug: 'efootball' as GameSlug, name: 'eFootball', icon: SoccerBall },
+  { slug: 'efootball-solo' as GameSlug, name: 'eFootball Solo', icon: SoccerBall },
+  { slug: 'efootball-duo' as GameSlug, name: 'eFootball Duo', icon: SoccerBall },
 ]
 
 interface NavbarProps {

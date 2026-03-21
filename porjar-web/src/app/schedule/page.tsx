@@ -145,12 +145,12 @@ export default function SchedulePage() {
 
       {/* Sticky filter section */}
       <div className="sticky top-0 z-20 -mx-4 bg-white/95 px-4 pb-3 pt-2 backdrop-blur-sm sm:-mx-6 sm:px-6 border-b border-stone-100 mb-5 shadow-sm">
-        {/* Game filter */}
-        <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+        {/* Game filter — horizontal scroll on mobile */}
+        <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 mb-2.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <button
             onClick={() => setActiveGame(null)}
             className={cn(
-              'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+              'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
               !activeGame ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
             )}
           >
@@ -163,7 +163,7 @@ export default function SchedulePage() {
                 key={g.slug}
                 onClick={() => setActiveGame(activeGame === g.slug ? null : g.slug)}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+                  'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
                   activeGame === g.slug ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
                 )}
               >
@@ -340,54 +340,54 @@ export default function SchedulePage() {
                         <div className="flex items-stretch">
                           {/* Left: game color stripe + logo */}
                           <div className={cn(
-                            'flex w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-l-xl py-3',
+                            'flex w-10 sm:w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-l-xl py-3',
                             gCfg ? gCfg.bgColor : 'bg-stone-50'
                           )}>
                             {gCfg ? (
-                              <img src={gCfg.logo} alt="" className="h-7 w-7 object-contain" />
+                              <img src={gCfg.logo} alt="" className="h-5 w-5 sm:h-7 sm:w-7 object-contain" />
                             ) : (
-                              <CalendarBlank size={20} className="text-stone-400" />
+                              <CalendarBlank size={18} className="text-stone-400" />
                             )}
                           </div>
 
                           {/* Right: content */}
-                          <div className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3">
+                          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
                             {/* Time block */}
-                            <div className="w-16 shrink-0 text-center">
+                            <div className="w-12 sm:w-16 shrink-0 text-center">
                               <p className={cn(
-                                'text-sm font-bold tabular-nums',
+                                'text-xs sm:text-sm font-bold tabular-nums',
                                 isLive ? 'text-porjar-red' : 'text-stone-900'
                               )}>
                                 {time}
                               </p>
                               {endTime && (
-                                <p className="text-[10px] text-stone-400 tabular-nums mt-0.5">{endTime}</p>
+                                <p className="text-[10px] text-stone-400 tabular-nums mt-0.5 hidden sm:block">{endTime}</p>
                               )}
                             </div>
 
                             {/* Vertical divider */}
-                            <div className={cn('h-10 w-px shrink-0', isLive ? 'bg-porjar-red/30' : 'bg-stone-100')} />
+                            <div className={cn('h-8 w-px shrink-0', isLive ? 'bg-porjar-red/30' : 'bg-stone-100')} />
 
                             {/* Info */}
                             <div className="min-w-0 flex-1">
                               {hasTeams ? (
                                 /* Show team matchup */
                                 <>
-                                  <div className="flex items-center gap-2">
-                                    <span className="truncate text-sm font-semibold text-stone-900">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900">
                                       {s.team_a?.name ?? 'TBD'}
                                     </span>
-                                    <ArrowsLeftRight size={12} className="shrink-0 text-stone-400" weight="bold" />
-                                    <span className="truncate text-sm font-semibold text-stone-900">
+                                    <ArrowsLeftRight size={10} className="shrink-0 text-stone-400" weight="bold" />
+                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900">
                                       {s.team_b?.name ?? 'TBD'}
                                     </span>
                                   </div>
-                                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-400">
+                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400">
                                     <span className="truncate">{s.title}</span>
                                     {s.venue && (
                                       <>
-                                        <span className="text-stone-200">·</span>
-                                        <span className="shrink-0">{s.venue}</span>
+                                        <span className="hidden sm:inline text-stone-200">·</span>
+                                        <span className="hidden sm:inline shrink-0">{s.venue}</span>
                                       </>
                                     )}
                                   </div>
@@ -395,10 +395,10 @@ export default function SchedulePage() {
                               ) : (
                                 /* No teams yet — show title + venue */
                                 <>
-                                  <p className="text-sm font-semibold text-stone-900 truncate">{s.title}</p>
-                                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-400">
-                                    {s.venue && <span className="truncate">{s.venue}</span>}
-                                    {s.venue && s.tournament && <span className="text-stone-200">·</span>}
+                                  <p className="text-xs sm:text-sm font-semibold text-stone-900 truncate">{s.title}</p>
+                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400">
+                                    {s.venue && <span className="hidden sm:inline truncate">{s.venue}</span>}
+                                    {s.venue && s.tournament && <span className="hidden sm:inline text-stone-200">·</span>}
                                     {s.tournament && <span className="truncate">{s.tournament.name}</span>}
                                   </div>
                                 </>
@@ -408,20 +408,20 @@ export default function SchedulePage() {
                             {/* Status badge */}
                             <div className="shrink-0">
                               {isLive ? (
-                                <span className="flex items-center gap-1 rounded-full bg-porjar-red px-2.5 py-1 text-[10px] font-bold text-white">
+                                <span className="flex items-center gap-1 rounded-full bg-porjar-red px-2 py-1 text-[10px] font-bold text-white">
                                   <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
                                   LIVE
                                 </span>
                               ) : isDone ? (
-                                <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold text-stone-400">
+                                <span className="hidden sm:inline rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold text-stone-400">
                                   Selesai
                                 </span>
                               ) : isPostponed ? (
-                                <span className="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-[10px] font-semibold text-amber-600">
-                                  {s.status === 'cancelled' ? 'Dibatalkan' : 'Ditunda'}
+                                <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-semibold text-amber-600">
+                                  {s.status === 'cancelled' ? 'Batal' : 'Tunda'}
                                 </span>
                               ) : (
-                                <Clock size={14} className="text-stone-300 group-hover:text-stone-400 transition-colors" />
+                                <Clock size={13} className="text-stone-300 group-hover:text-stone-400 transition-colors" />
                               )}
                             </div>
                           </div>
