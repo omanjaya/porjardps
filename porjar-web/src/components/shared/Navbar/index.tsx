@@ -2,15 +2,13 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { List as ListIcon, SignIn, UserPlus, Sword, GameController, Target, Lightning, SoccerBall, CalendarBlank, Users, Scales, Broadcast, House, Buildings } from '@phosphor-icons/react'
-import { Button } from '@/components/ui/button'
+import { List as ListIcon, Sword, GameController, Target, Lightning, SoccerBall, CalendarBlank, Users, Scales, Broadcast, House, Buildings } from '@phosphor-icons/react'
 import {
   Sheet,
   SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetClose,
 } from '@/components/ui/sheet'
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -123,88 +121,79 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
             <ListIcon size={24} />
             <span className="sr-only">Menu</span>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72 bg-white border-stone-200 p-0">
-            <SheetHeader className="border-b border-stone-200 p-4">
-              <SheetTitle className="flex items-center gap-1.5 text-stone-900">
-                <Image src="/images/logo/kota-denpasar.webp" alt="Kota Denpasar" width={28} height={28} className="h-7 w-7 object-contain" />
-                <Image src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" width={28} height={28} className="h-7 w-7 object-contain" />
-                <span className="ml-1 text-sm font-bold text-porjar-red">PORJAR</span>
-                <span className="text-[10px] font-medium text-stone-500 tracking-wider">ESPORT</span>
-              </SheetTitle>
+          <SheetContent side="right" className="flex flex-col w-72 bg-white border-stone-200 p-0 h-full">
+            {/* Header: logo + auth */}
+            <SheetHeader className="shrink-0 border-b border-stone-200 px-4 py-3">
+              <div className="flex items-center justify-between gap-2">
+                <SheetTitle className="flex items-center gap-1.5">
+                  <Image src="/images/logo/kota-denpasar.webp" alt="Kota Denpasar" width={26} height={26} className="h-6.5 w-6.5 object-contain" />
+                  <Image src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" width={26} height={26} className="h-6.5 w-6.5 object-contain" />
+                  <span className="ml-1 text-sm font-bold text-porjar-red">PORJAR</span>
+                </SheetTitle>
+
+                {/* Auth — always visible at top */}
+                {isAuthenticated ? (
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); router.push('/dashboard') }}
+                    className="flex items-center gap-1.5 rounded-lg bg-porjar-red px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 transition-all"
+                  >
+                    Dashboard
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => { setMobileMenuOpen(false); router.push('/login') }}
+                      className="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-600 hover:bg-stone-50 transition-colors"
+                    >
+                      Masuk
+                    </button>
+                    <button
+                      onClick={() => { setMobileMenuOpen(false); router.push('/register') }}
+                      className="rounded-lg bg-porjar-red px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 transition-all"
+                    >
+                      Daftar
+                    </button>
+                  </div>
+                )}
+              </div>
             </SheetHeader>
 
-            {/* Game links */}
-            <nav className="flex flex-col gap-1 p-4">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-stone-400">Cabang Lomba</p>
-              {gameListItems.map((game) => (
-                  <button
-                    key={game.slug}
-                    onClick={() => { setMobileMenuOpen(false); router.push(`/games/${game.slug}`) }}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-500 hover:bg-stone-50 hover:text-stone-800 transition-colors text-left"
-                  >
-                    <game.IconComp size={20} />
-                    {game.name}
-                  </button>
-              ))}
-            </nav>
+            {/* Scrollable nav content */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Game links — 2-column grid */}
+              <div className="p-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Cabang Lomba</p>
+                <div className="grid grid-cols-2 gap-1">
+                  {gameListItems.map((game) => (
+                    <button
+                      key={game.slug}
+                      onClick={() => { setMobileMenuOpen(false); router.push(`/games/${game.slug}`) }}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors text-left"
+                    >
+                      <game.IconComp size={16} className="shrink-0 text-stone-400" />
+                      <span className="truncate">{game.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            {/* Page links */}
-            <nav className="flex flex-col gap-1 border-t border-stone-200 p-4">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-stone-400">Halaman</p>
-              {MOBILE_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-500 hover:bg-stone-50 hover:text-stone-800 transition-colors"
-                >
-                  <link.icon size={20} />
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-
-            {/* Auth buttons */}
-            <div className="mt-auto border-t border-stone-200 p-4 flex flex-col gap-2">
-              {isAuthenticated ? (
-                <SheetClose
-                  render={
-                    <Button
-                      className="w-full justify-start gap-2 bg-porjar-red text-white hover:brightness-110"
-                      onClick={() => router.push('/dashboard')}
-                    />
-                  }
-                >
-                  <UserPlus size={18} />
-                  Dashboard
-                </SheetClose>
-              ) : (
-                <>
-                  <SheetClose
-                    render={
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start gap-2 text-stone-500 hover:text-porjar-red hover:bg-porjar-red/5"
-                        onClick={() => router.push('/login')}
-                      />
-                    }
-                  >
-                    <SignIn size={18} />
-                    Masuk
-                  </SheetClose>
-                  <SheetClose
-                    render={
-                      <Button
-                        className="w-full justify-start gap-2 bg-porjar-red text-white hover:brightness-110"
-                        onClick={() => router.push('/register')}
-                      />
-                    }
-                  >
-                    <UserPlus size={18} />
-                    Daftar
-                  </SheetClose>
-                </>
-              )}
+              {/* Page links */}
+              <div className="border-t border-stone-100 p-4">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-stone-400">Halaman</p>
+                <nav className="flex flex-col gap-0.5">
+                  {MOBILE_LINKS.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors"
+                    >
+                      <link.icon size={18} className="shrink-0 text-stone-400" />
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
