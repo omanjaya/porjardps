@@ -89,7 +89,7 @@ export default function GameDetailPage() {
   const slug = game.slug
   const config = GAME_CONFIG[slug]
   const gameLogo = config?.logo ?? `/images/games/${slug}-logo.webp`
-  const gameBg = `/images/games/${slug}-bg.webp`
+  const gameBg = config?.bgImage ?? `/images/games/${slug}-bg.webp`
 
   const totalTeams = tournaments.reduce((sum, t) => sum + (t.team_count ?? 0), 0)
   const totalMatches = tournaments.length

@@ -29,9 +29,13 @@ import type { Icon } from '@phosphor-icons/react'
 const gameIcons: Record<GameSlug, Icon> = {
   hok: Sword,
   ml: GameController,
+  'ml-pria': GameController,
+  'ml-wanita': GameController,
   ff: Target,
   pubgm: Lightning,
   efootball: SoccerBall,
+  'efootball-solo': SoccerBall,
+  'efootball-duo': SoccerBall,
 }
 
 const roleBadge: Record<string, { label: string; color: string }> = {

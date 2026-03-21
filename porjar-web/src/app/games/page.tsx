@@ -77,7 +77,7 @@ export default function GamesPage() {
                 <div className="relative h-36 overflow-hidden">
                   <div
                     className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                    style={{ backgroundImage: `url(/images/games/${game.slug}-bg.webp)` }}
+                    style={{ backgroundImage: `url(${config?.bgImage ?? `/images/games/${game.slug}-bg.webp`})` }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent" />
 

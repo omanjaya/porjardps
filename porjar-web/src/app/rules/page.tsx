@@ -76,10 +76,14 @@ const GAME_TABS: { slug: GameSlug; label: string }[] = [
 
 const GAME_DATES: Record<GameSlug, string> = {
   ml: '29 Maret 2026',
+  'ml-pria': '29 Maret 2026',
+  'ml-wanita': '29 Maret 2026',
   hok: '29 Maret 2026',
   ff: '29-30 Maret 2026',
   pubgm: '30-31 Maret 2026',
   efootball: '29-31 Maret 2026',
+  'efootball-solo': '29-31 Maret 2026',
+  'efootball-duo': '29-31 Maret 2026',
 }
 
 /* ------------------------------------------------------------------ */

@@ -33,7 +33,7 @@ export type TournamentFormat =
 export type TournamentStage = 'qualifier' | 'group_stage' | 'playoff' | 'main' | 'grand_final'
 export type TournamentStatus = 'upcoming' | 'registration' | 'ongoing' | 'completed' | 'cancelled'
 
-export type GameSlug = 'hok' | 'ml' | 'ff' | 'pubgm' | 'efootball'
+export type GameSlug = 'hok' | 'ml' | 'ml-pria' | 'ml-wanita' | 'ff' | 'pubgm' | 'efootball' | 'efootball-solo' | 'efootball-duo'
 
 // === Battle Royale ===
 export interface BRLobby {

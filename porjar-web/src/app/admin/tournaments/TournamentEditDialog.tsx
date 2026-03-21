@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
 import { Input } from '@/components/ui/input'
@@ -22,19 +22,24 @@ export function TournamentEditDialog({
   onSaved,
 }: TournamentEditDialogProps) {
   const [editName, setEditName] = useState('')
+  const [editFormat, setEditFormat] = useState('single_elimination')
   const [editBestOf, setEditBestOf] = useState('3')
   const [editMaxTeams, setEditMaxTeams] = useState('')
   const [editStatus, setEditStatus] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Sync form when tournament changes
-  function handleOpenChange(val: boolean) {
-    if (val && tournament) {
+  useEffect(() => {
+    if (open && tournament) {
       setEditName(tournament.name)
+      setEditFormat(tournament.format)
       setEditBestOf(String(tournament.best_of))
       setEditMaxTeams(tournament.max_teams ? String(tournament.max_teams) : '')
       setEditStatus(tournament.status)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, tournament])
+
+  function handleOpenChange(val: boolean) {
     onOpenChange(val)
   }
 
@@ -44,6 +49,7 @@ export function TournamentEditDialog({
     try {
       await api.put(`/admin/tournaments/${tournament.id}`, {
         name: editName.trim(),
+        format: editFormat,
         best_of: parseInt(editBestOf),
         max_teams: editMaxTeams ? parseInt(editMaxTeams) : null,
         status: editStatus,
@@ -71,6 +77,28 @@ export function TournamentEditDialog({
                 onChange={(e) => setEditName(e.target.value)}
                 className="bg-white border-stone-300 focus:border-porjar-red"
               />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700">Format</label>
+              <div className="flex flex-wrap gap-1.5">
+                {([
+                  { value: 'single_elimination', label: 'Single Elim' },
+                  { value: 'double_elimination', label: 'Double Elim' },
+                  { value: 'battle_royale_points', label: 'Battle Royale' },
+                ] as { value: string; label: string }[]).map(f => (
+                  <button
+                    key={f.value}
+                    onClick={() => setEditFormat(f.value)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      editFormat === f.value
+                        ? 'border-porjar-red bg-porjar-red text-white'
+                        : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-stone-700">Status</label>

@@ -20,9 +20,13 @@ function getGameAccent(slug?: GameSlug | null): { border: string; bg: string; do
   const map: Record<GameSlug, { border: string; bg: string; dot: string }> = {
     hok: { border: 'border-amber-300', bg: 'bg-amber-50', dot: 'bg-amber-400' },
     ml: { border: 'border-blue-300', bg: 'bg-blue-50', dot: 'bg-blue-400' },
+    'ml-pria': { border: 'border-blue-300', bg: 'bg-blue-50', dot: 'bg-blue-400' },
+    'ml-wanita': { border: 'border-pink-300', bg: 'bg-pink-50', dot: 'bg-pink-400' },
     ff: { border: 'border-orange-300', bg: 'bg-orange-50', dot: 'bg-orange-400' },
     pubgm: { border: 'border-yellow-300', bg: 'bg-yellow-50', dot: 'bg-yellow-400' },
     efootball: { border: 'border-green-300', bg: 'bg-green-50', dot: 'bg-green-400' },
+    'efootball-solo': { border: 'border-green-300', bg: 'bg-green-50', dot: 'bg-green-400' },
+    'efootball-duo': { border: 'border-emerald-300', bg: 'bg-emerald-50', dot: 'bg-emerald-400' },
   }
   return map[slug] ?? { border: 'border-stone-200', bg: 'bg-stone-50', dot: 'bg-stone-400' }
 }

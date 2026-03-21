@@ -15,13 +15,13 @@ import type { Game, GameSlug } from '@/types'
 
 // ─── Game categories per tingkat ───
 const GAME_CATEGORIES = [
-  { label: 'ML Pria', slug: 'ml', format: 'single_elimination', bo: 3 },
-  { label: 'ML Wanita', slug: 'ml', format: 'single_elimination', bo: 3 },
+  { label: 'ML Pria', slug: 'ml-pria', format: 'single_elimination', bo: 3 },
+  { label: 'ML Wanita', slug: 'ml-wanita', format: 'single_elimination', bo: 3 },
   { label: 'HOK', slug: 'hok', format: 'single_elimination', bo: 3 },
   { label: 'Free Fire', slug: 'ff', format: 'battle_royale_points', bo: 1 },
   { label: 'PUBG Mobile', slug: 'pubgm', format: 'battle_royale_points', bo: 1 },
-  { label: 'eFootball Solo', slug: 'efootball', format: 'single_elimination', bo: 1 },
-  { label: 'eFootball Duo', slug: 'efootball', format: 'single_elimination', bo: 1 },
+  { label: 'eFootball Solo', slug: 'efootball-solo', format: 'single_elimination', bo: 1 },
+  { label: 'eFootball Duo', slug: 'efootball-duo', format: 'single_elimination', bo: 1 },
 ]
 
 const TINGKAT_OPTIONS = [
@@ -277,6 +277,29 @@ export function TournamentWizardDialog({
                     onChange={(e) => setWizName(e.target.value)}
                     className="bg-white border-stone-300 focus:border-porjar-red"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Format Bracket</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { value: 'single_elimination', label: 'Single Elimination' },
+                      { value: 'double_elimination', label: 'Double Elimination' },
+                      { value: 'battle_royale_points', label: 'Battle Royale' },
+                    ].map(f => (
+                      <button
+                        key={f.value}
+                        onClick={() => setWizFormat(f.value)}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          wizFormat === f.value
+                            ? 'border-porjar-red bg-porjar-red text-white'
+                            : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
