@@ -177,7 +177,7 @@ export default function SubmitResultPage() {
             </div>
           )}
 
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <h2 className="mb-3 flex items-center gap-2 text-base font-bold uppercase tracking-wide text-porjar-text">
               <Trophy size={18} weight="fill" className="text-porjar-red" />
               Pertandingan Aktif
@@ -286,9 +286,9 @@ export default function SubmitResultPage() {
             Kembali ke daftar pertandingan
           </button>
 
-          <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-6 shadow-sm">
             {/* Match info header */}
-            <div className="mb-6 rounded-lg bg-porjar-bg p-4">
+            <div className="mb-4 sm:mb-6 rounded-lg bg-porjar-bg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <GameController size={18} weight="duotone" className="text-porjar-red" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-porjar-muted">

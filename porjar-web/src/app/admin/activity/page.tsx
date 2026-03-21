@@ -196,7 +196,7 @@ export default function AdminActivityPage() {
       />
 
       {/* Filters */}
-      <div className="mb-6 flex flex-wrap items-end gap-3">
+      <div className="mb-4 sm:mb-6 flex flex-wrap items-end gap-3">
         {/* Date range */}
         <div>
           <label className="mb-1 block text-xs font-medium text-stone-500">Dari</label>
@@ -269,7 +269,7 @@ export default function AdminActivityPage() {
           {/* Timeline */}
           <div className="relative space-y-1">
             {/* Vertical line */}
-            <div className="absolute left-[23px] top-4 bottom-4 w-px bg-stone-200" />
+            <div className="absolute left-5 top-4 bottom-4 w-px bg-stone-200" />
 
             {data.items.map((log) => {
               const actionColor = getActionColor(log.action)

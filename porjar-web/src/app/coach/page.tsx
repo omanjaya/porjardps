@@ -81,7 +81,7 @@ interface StatCardProps {
 
 function StatCard({ label, value, icon: IconComp, loading, color = 'text-porjar-red' }: StatCardProps) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm">
       <div className="flex items-center gap-4">
         <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-porjar-red/10">
           <IconComp size={32} weight="duotone" className={color} />
@@ -133,7 +133,7 @@ export default function CoachDashboardPage() {
   return (
     <CoachLayout>
       {/* School header */}
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-4 sm:mb-6 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-porjar-red/10">
           <GraduationCap size={28} weight="duotone" className="text-porjar-red" />
         </div>
@@ -146,7 +146,7 @@ export default function CoachDashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Total Tim"
           value={data?.stats.total_teams ?? 0}
@@ -240,7 +240,7 @@ export default function CoachDashboardPage() {
       {/* Bottom Grid */}
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Hasil Terbaru */}
-        <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-base font-bold uppercase tracking-wide text-porjar-text">
               <Trophy size={16} weight="duotone" className="text-porjar-red" />
@@ -300,7 +300,7 @@ export default function CoachDashboardPage() {
         </div>
 
         {/* Jadwal Mendatang */}
-        <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5 shadow-sm">
           <h3 className="mb-3 flex items-center gap-2 text-base font-bold uppercase tracking-wide text-porjar-text">
             <CalendarBlank size={16} weight="duotone" className="text-porjar-red" />
             Jadwal Mendatang

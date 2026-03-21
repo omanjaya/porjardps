@@ -142,11 +142,11 @@ export default function AdminSettingsPage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Event Info */}
-          <section className="rounded-xl border border-porjar-border bg-white p-6">
+          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
             <h2 className="mb-4 text-base font-semibold text-porjar-text">Informasi Event</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-porjar-muted">Nama Event</label>
                 <Input name="event_name" value={form.event_name} onChange={handleChange} placeholder="PORJAR Denpasar Esport 2026" />
@@ -175,9 +175,9 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* Organizer & Contact */}
-          <section className="rounded-xl border border-porjar-border bg-white p-6">
+          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
             <h2 className="mb-4 text-base font-semibold text-porjar-text">Penyelenggara & Kontak</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-porjar-muted">Penyelenggara</label>
                 <Input name="organizer" value={form.organizer} onChange={handleChange} placeholder="ESI Kota Denpasar" />
@@ -198,9 +198,9 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* Branding */}
-          <section className="rounded-xl border border-porjar-border bg-white p-6">
+          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
             <h2 className="mb-4 text-base font-semibold text-porjar-text">Logo & Banner</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-porjar-muted">Logo URL</label>
                 <Input name="event_logo_url" value={form.event_logo_url} onChange={handleChange} placeholder="https://..." />
@@ -219,7 +219,7 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* Announcement */}
-          <section className="rounded-xl border border-porjar-border bg-white p-6">
+          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
             <h2 className="mb-4 text-base font-semibold text-porjar-text">Pengumuman</h2>
             <div className="space-y-4">
               <div>
@@ -236,7 +236,7 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* Feature Toggles */}
-          <section className="rounded-xl border border-porjar-border bg-white p-6">
+          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
             <h2 className="mb-4 text-base font-semibold text-porjar-text">Fitur</h2>
             <div className="space-y-4">
               <ToggleRow

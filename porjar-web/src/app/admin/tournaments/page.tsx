@@ -104,13 +104,13 @@ export default function AdminTournamentsPage() {
       />
 
       {/* Filters */}
-      <div className="mb-6 space-y-3">
+      <div className="mb-4 sm:mb-6 space-y-3">
         {/* Tingkat filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Tingkat</span>
+        <div className="flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Tingkat</span>
           <button
             onClick={() => setFilterTingkat(null)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
               !filterTingkat ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
             }`}
           >
@@ -120,7 +120,7 @@ export default function AdminTournamentsPage() {
             <button
               key={t.value}
               onClick={() => setFilterTingkat(filterTingkat === t.value ? null : t.value)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filterTingkat === t.value ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               }`}
             >
@@ -130,11 +130,11 @@ export default function AdminTournamentsPage() {
         </div>
 
         {/* Game filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Game</span>
+        <div className="flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Game</span>
           <button
             onClick={() => setFilterGame(null)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
               !filterGame ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
             }`}
           >
@@ -144,7 +144,7 @@ export default function AdminTournamentsPage() {
             <button
               key={g.slug}
               onClick={() => setFilterGame(filterGame === g.slug ? null : g.slug)}
-              className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`shrink-0 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filterGame === g.slug ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               }`}
             >
@@ -157,11 +157,11 @@ export default function AdminTournamentsPage() {
         </div>
 
         {/* Status filter */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Status</span>
+        <div className="flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-stone-400 w-16">Status</span>
           <button
             onClick={() => setFilterStatus(null)}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
               !filterStatus ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
             }`}
           >
@@ -177,7 +177,7 @@ export default function AdminTournamentsPage() {
             <button
               key={s.value}
               onClick={() => setFilterStatus(filterStatus === s.value ? null : s.value)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 filterStatus === s.value ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               }`}
             >
@@ -226,7 +226,7 @@ export default function AdminTournamentsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {(t.format !== 'battle_royale_points') ? (
                       <Link href={`/admin/tournaments/${t.id}/bracket`}>
                         <Button variant="outline" size="sm" className="border-stone-300 text-stone-600">

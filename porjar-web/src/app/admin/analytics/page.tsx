@@ -60,7 +60,7 @@ function generateSparkline(length: number, base: number): number[] {
 
 function ChartSkeleton({ className = 'h-80' }: { className?: string }) {
   return (
-    <div className={`rounded-xl border border-stone-200 bg-white shadow-sm p-5 ${className}`}>
+    <div className={`rounded-xl border border-stone-200 bg-white shadow-sm p-4 sm:p-5 ${className}`}>
       <Skeleton className="mb-4 h-4 w-40 bg-stone-200" />
       <Skeleton className="h-full w-full rounded-lg bg-stone-100" />
     </div>
@@ -136,7 +136,7 @@ export default function AdminAnalyticsPage() {
       />
 
       {/* Stats Summary Row */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:grid-cols-4">
         {loading ? (
           <>
             <StatSkeleton />

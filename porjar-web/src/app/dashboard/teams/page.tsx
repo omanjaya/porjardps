@@ -71,9 +71,9 @@ export default function MyTeamsPage() {
             <Link
               key={team.id}
               href={`/dashboard/teams/${team.id}`}
-              className="block rounded-xl border border-stone-200 bg-white p-4 shadow-sm transition-colors hover:bg-stone-50"
+              className="block rounded-xl border border-stone-200 bg-white p-3 sm:p-4 shadow-sm transition-colors hover:bg-stone-50"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 {/* Logo */}
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-100">
                   {team.logo_url ? (

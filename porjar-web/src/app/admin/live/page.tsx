@@ -297,7 +297,7 @@ export default function AdminLivePage() {
 
       {/* Score input sheet */}
       <Sheet open={!!selectedMatch} onOpenChange={(open) => !open && setSelectedMatch(null)}>
-        <SheetContent className="bg-white border-stone-200 overflow-y-auto" side="right">
+        <SheetContent className="bg-white border-stone-200 overflow-y-auto max-h-[90vh]" side="right">
           <SheetHeader>
             <SheetTitle className="text-stone-900">
               {selectedMatch?.team_a?.name ?? 'TBD'} vs {selectedMatch?.team_b?.name ?? 'TBD'}

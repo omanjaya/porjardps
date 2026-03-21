@@ -196,7 +196,7 @@ export default function AdminWebhooksPage() {
             <TableHeader>
               <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">URL</TableHead>
+                <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">URL</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Events</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Terakhir Trigger</TableHead>
@@ -208,7 +208,7 @@ export default function AdminWebhooksPage() {
               {webhooks.map((wh) => (
                 <TableRow key={wh.id} className="border-stone-100 hover:bg-red-50/50">
                   <TableCell className="font-medium text-stone-900">{wh.name}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-stone-500">
+                  <TableCell className="hidden sm:table-cell max-w-[200px] truncate text-sm text-stone-500">
                     {wh.url}
                   </TableCell>
                   <TableCell>
