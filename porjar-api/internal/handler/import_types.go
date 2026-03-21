@@ -7,13 +7,13 @@ import (
 
 // nomorPertandinganToSlug maps CSV nomor_pertandingan values to game slugs.
 var nomorPertandinganToSlug = map[string]string{
-	"ml pria":         "ml",
-	"ml wanita":       "ml",
+	"ml pria":         "ml-pria",
+	"ml wanita":       "ml-wanita",
 	"hok":             "hok",
 	"free fire":       "ff",
 	"pubg mobile":     "pubgm",
-	"efootball solo":  "efootball",
-	"efootball duo":   "efootball",
+	"efootball solo":  "efootball-solo",
+	"efootball duo":   "efootball-duo",
 }
 
 // nomorPertandinganDisplay maps lowercase key back to a display label for credentials export.
