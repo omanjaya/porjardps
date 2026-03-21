@@ -364,7 +364,7 @@ export default function AdminUsersPage() {
               <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Email</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Telepon</TableHead>
+                <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Telepon</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Role</TableHead>
                 <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
               </TableRow>
@@ -389,7 +389,7 @@ export default function AdminUsersPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-stone-500">{user.email}</TableCell>
-                  <TableCell className="text-sm text-stone-500">
+                  <TableCell className="hidden sm:table-cell text-sm text-stone-500">
                     {user.phone ?? '-'}
                   </TableCell>
                   <TableCell>

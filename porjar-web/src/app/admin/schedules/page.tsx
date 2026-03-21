@@ -503,9 +503,9 @@ export default function AdminSchedulesPage() {
               <TableHeader>
                 <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Judul</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Game</TableHead>
+                  <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Game</TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Waktu</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Venue</TableHead>
+                  <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Venue</TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
                   <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
@@ -525,7 +525,7 @@ export default function AdminSchedulesPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {gameConfig ? (
                           <div className="flex items-center gap-1.5">
                             <img src={gameConfig.logo} alt="" className="h-5 w-5 object-contain" />
@@ -544,7 +544,7 @@ export default function AdminSchedulesPage() {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-stone-500">
+                      <TableCell className="hidden sm:table-cell text-sm text-stone-500">
                         {schedule.venue ?? '-'}
                       </TableCell>
                       <TableCell>

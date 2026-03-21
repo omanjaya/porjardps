@@ -415,8 +415,8 @@ export default function AdminTeamsPage() {
                   </TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Nama Tim</TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Game</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Sekolah</TableHead>
-                  <TableHead className="text-center text-stone-600 uppercase text-xs tracking-wider">Anggota</TableHead>
+                  <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Sekolah</TableHead>
+                  <TableHead className="hidden sm:table-cell text-center text-stone-600 uppercase text-xs tracking-wider">Anggota</TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Status</TableHead>
                   <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
@@ -439,8 +439,8 @@ export default function AdminTeamsPage() {
                       <span className="font-medium text-stone-900">{team.name}</span>
                     </TableCell>
                     <TableCell className="text-stone-500 text-sm">{team.game.name}</TableCell>
-                    <TableCell className="text-stone-500 text-sm">{team.school?.name ?? '-'}</TableCell>
-                    <TableCell className="text-center text-stone-500 tabular-nums">{team.member_count}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-stone-500 text-sm">{team.school?.name ?? '-'}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-center text-stone-500 tabular-nums">{team.member_count}</TableCell>
                     <TableCell><StatusBadge status={team.status} /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

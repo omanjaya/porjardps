@@ -271,8 +271,8 @@ export default function AdminSchoolsPage() {
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Nama Sekolah</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Jenjang</TableHead>
                 <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Tim</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Alamat</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Kota</TableHead>
+                <TableHead className="hidden md:table-cell text-stone-600 uppercase text-xs tracking-wider">Alamat</TableHead>
+                <TableHead className="hidden md:table-cell text-stone-600 uppercase text-xs tracking-wider">Kota</TableHead>
                 <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -325,10 +325,10 @@ export default function AdminSchoolsPage() {
                           {schoolTeams.length}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm text-stone-500">
+                      <TableCell className="hidden md:table-cell text-sm text-stone-500">
                         {school.address ?? '-'}
                       </TableCell>
-                      <TableCell className="text-sm text-stone-500">{school.city}</TableCell>
+                      <TableCell className="hidden md:table-cell text-sm text-stone-500">{school.city}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button

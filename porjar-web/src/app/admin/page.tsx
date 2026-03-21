@@ -91,15 +91,15 @@ export default function AdminDashboardPage() {
   return (
     <AdminLayout>
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
-          <h1 className="text-xl font-bold text-stone-900">Dashboard</h1>
-          <p className="text-sm text-stone-500">Halo, {user?.full_name ?? 'Admin'} — {today}</p>
+          <h1 className="text-lg sm:text-xl font-bold text-stone-900">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-stone-500">Halo, {user?.full_name ?? 'Admin'} — {today}</p>
         </div>
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
         <StatCard label="Turnamen" value={stats.tournaments} icon={Trophy} href="/admin/tournaments" color="text-porjar-red" bg="bg-red-50" loading={loading} />
         <StatCard label="Tim" value={stats.teams} icon={Users} href="/admin/teams" color="text-blue-600" bg="bg-blue-50" loading={loading} />
         <StatCard label="Hari Ini" value={stats.today} icon={CalendarBlank} color="text-amber-600" bg="bg-amber-50" loading={loading} />
