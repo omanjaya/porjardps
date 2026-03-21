@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   async headers() {
     return [{
       source: '/(.*)',
@@ -32,6 +33,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "http",
         hostname: "127.0.0.1",
+      },
+      {
+        protocol: "https",
+        hostname: "porjardenpasar.nouma.id",
       },
     ],
   },

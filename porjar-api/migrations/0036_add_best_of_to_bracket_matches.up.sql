@@ -1,0 +1,1 @@
+ALTER TABLE bracket_matches ADD COLUMN IF NOT EXISTS best_of INT DEFAULT 1;

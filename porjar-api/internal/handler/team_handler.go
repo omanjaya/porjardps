@@ -37,6 +37,8 @@ type TeamServiceInterface interface {
 	GetByIDEnriched(ctx context.Context, id uuid.UUID) (*service.EnrichedTeam, error)
 	GetInviteInfo(ctx context.Context, code string) (map[string]interface{}, error)
 	Delete(ctx context.Context, teamID, captainUserID uuid.UUID) error
+	AdminUpdate(ctx context.Context, id uuid.UUID, name string) (*model.Team, error)
+	AdminDelete(ctx context.Context, teamID uuid.UUID) error
 }
 
 type TeamHandler struct {
@@ -76,6 +78,8 @@ func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadm
 	// Admin routes
 	app.Put("/admin/teams/:id/approve", authMw, adminMw, h.Approve)
 	app.Put("/admin/teams/:id/reject", authMw, adminMw, h.Reject)
+	app.Put("/admin/teams/:id", authMw, adminMw, h.AdminUpdate)
+	app.Delete("/admin/teams/:id", authMw, adminMw, h.AdminDelete)
 }
 
 type createTeamRequest struct {
@@ -470,6 +474,44 @@ func (h *TeamHandler) GetInviteInfo(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, invite)
+}
+
+func (h *TeamHandler) AdminUpdate(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "ID tidak valid")
+	}
+
+	var req updateTeamRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Format request tidak valid")
+	}
+
+	if req.Name != "" && !validator.ValidateStringLength(req.Name, 3, 50) {
+		return response.Err(c, apperror.ValidationError(map[string]string{
+			"name": "Nama tim harus 3-50 karakter",
+		}))
+	}
+
+	team, svcErr := h.teamService.AdminUpdate(c.Context(), id, validator.TrimString(req.Name))
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.OK(c, team)
+}
+
+func (h *TeamHandler) AdminDelete(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "ID tidak valid")
+	}
+
+	if svcErr := h.teamService.AdminDelete(c.Context(), id); svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.NoContent(c)
 }
 
 func (h *TeamHandler) Delete(c *fiber.Ctx) error {

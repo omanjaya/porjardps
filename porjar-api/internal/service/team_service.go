@@ -570,3 +570,32 @@ func (s *TeamService) Delete(ctx context.Context, teamID, captainUserID uuid.UUI
 	}
 	return nil
 }
+
+func (s *TeamService) AdminUpdate(ctx context.Context, id uuid.UUID, name string) (*model.Team, error) {
+	team, err := s.teamRepo.FindByID(ctx, id)
+	if err != nil || team == nil {
+		return nil, apperror.NotFound("TEAM")
+	}
+
+	if name != "" {
+		team.Name = name
+	}
+	team.UpdatedAt = time.Now()
+
+	if err := s.teamRepo.Update(ctx, team); err != nil {
+		return nil, apperror.Wrap(err, "admin update team")
+	}
+	return team, nil
+}
+
+func (s *TeamService) AdminDelete(ctx context.Context, teamID uuid.UUID) error {
+	team, err := s.teamRepo.FindByID(ctx, teamID)
+	if err != nil || team == nil {
+		return apperror.NotFound("TEAM")
+	}
+
+	if err := s.teamRepo.Delete(ctx, teamID); err != nil {
+		return apperror.Wrap(err, "admin delete team")
+	}
+	return nil
+}

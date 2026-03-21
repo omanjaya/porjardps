@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -73,8 +73,12 @@ export function TournamentWizardDialog({
     setCreatedTournament(null)
   }
 
+  useEffect(() => {
+    if (open) reset()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   function handleOpenChange(val: boolean) {
-    if (val) reset()
     onOpenChange(val)
   }
 
