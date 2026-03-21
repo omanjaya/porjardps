@@ -26,6 +26,8 @@ export interface School {
   level: SchoolLevel
   address: string | null
   city: string
+  logo_url: string | null
+  coach_phone: string | null
 }
 
 // === Summaries (for nested references) ===
