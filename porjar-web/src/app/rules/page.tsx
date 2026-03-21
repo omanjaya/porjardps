@@ -156,8 +156,8 @@ export default function RulesPage() {
         </div>
       </section>
 
-      {/* Game Tabs */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      {/* Game Tabs — horizontal scroll on mobile */}
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto scrollbar-hide pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         {GAME_TABS.map((game) => {
           const gc = GAME_CONFIG[game.slug]
           const isActive = activeGame === game.slug
@@ -166,7 +166,7 @@ export default function RulesPage() {
               key={game.slug}
               onClick={() => setActiveGame(game.slug)}
               className={cn(
-                'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors',
+                'shrink-0 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors',
                 isActive
                   ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
                   : 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50'

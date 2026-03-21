@@ -238,7 +238,7 @@ export default function TournamentDetailPage() {
             </div>
 
             {/* CTA buttons */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {brMode ? (
                 <Link href={`/tournaments/${tournament.id}/standings`}>
                   <Button className="gap-1.5 bg-porjar-red hover:bg-porjar-red-dark text-white">

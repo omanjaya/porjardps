@@ -181,12 +181,12 @@ export default function TeamsDirectoryPage() {
       <div className="mb-5 space-y-3">
         {/* Row 1: Game pills + search + view toggle */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Game pills */}
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* Game pills — horizontal scroll on mobile */}
+          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <button
               onClick={() => setActiveGame(null)}
               className={cn(
-                'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+                'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
                 !activeGame
                   ? 'border-porjar-red bg-porjar-red text-white'
                   : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
@@ -202,7 +202,7 @@ export default function TeamsDirectoryPage() {
                   key={g.slug}
                   onClick={() => setActiveGame(active ? null : g.slug)}
                   className={cn(
-                    'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
+                    'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
                     active
                       ? 'border-porjar-red bg-porjar-red text-white'
                       : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
@@ -217,14 +217,14 @@ export default function TeamsDirectoryPage() {
 
           {/* Search + view toggle */}
           <div className="flex items-center gap-2">
-            <div className="relative">
+            <div className="relative flex-1 sm:flex-none">
               <MagnifyingGlass size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
               <input
                 type="text"
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Cari tim..."
-                className="w-48 rounded-lg border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-porjar-red/40 focus:ring-1 focus:ring-porjar-red/10"
+                className="w-full sm:w-48 rounded-lg border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-porjar-red/40 focus:ring-1 focus:ring-porjar-red/10"
               />
             </div>
             <div className="flex rounded-lg border border-stone-200 bg-white p-0.5">

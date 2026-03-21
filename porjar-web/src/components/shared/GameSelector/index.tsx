@@ -17,7 +17,7 @@ interface GameSelectorProps {
 
 export function GameSelector({ games, activeSlug, onSelect }: GameSelectorProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       {games.map((game) => {
         const config = GAME_CONFIG[game.slug]
         const isActive = activeSlug === game.slug
@@ -27,7 +27,7 @@ export function GameSelector({ games, activeSlug, onSelect }: GameSelectorProps)
             key={game.slug}
             onClick={() => onSelect(game.slug)}
             className={cn(
-              'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors',
+              'shrink-0 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors',
               isActive
                 ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
                 : 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -40,6 +40,6 @@ export function GameSelector({ games, activeSlug, onSelect }: GameSelectorProps)
           </button>
         )
       })}
-    </div>
+    </>
   )
 }

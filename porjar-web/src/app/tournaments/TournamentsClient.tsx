@@ -66,12 +66,12 @@ export function TournamentsClient({ initialTournaments, initialGames }: Tourname
           />
         </div>
 
-        {/* Game tabs */}
+        {/* Game tabs — horizontal scroll on mobile */}
         {initialGames.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <button
               onClick={() => setActiveGame(null)}
-              className={`rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors ${
+              className={`shrink-0 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors ${
                 activeGame === null
                   ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
                   : 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
@@ -83,11 +83,11 @@ export function TournamentsClient({ initialTournaments, initialGames }: Tourname
           </div>
         )}
 
-        {/* Status filter */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Status filter — horizontal scroll on mobile */}
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-0.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <button
             onClick={() => setActiveStatus(null)}
-            className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
+            className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
               activeStatus === null
                 ? 'border-stone-700 bg-stone-900 text-white shadow-sm'
                 : 'border-stone-200 text-stone-500 hover:bg-stone-50'
@@ -99,7 +99,7 @@ export function TournamentsClient({ initialTournaments, initialGames }: Tourname
             <button
               key={s.value}
               onClick={() => setActiveStatus(activeStatus === s.value ? null : s.value)}
-              className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`shrink-0 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
                 activeStatus === s.value
                   ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
                   : 'border-stone-200 text-stone-500 hover:bg-stone-50'
