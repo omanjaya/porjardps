@@ -37,6 +37,7 @@ export interface TeamSummary {
   seed?: number | null
   logo_url?: string | null
   school_logo_url?: string | null
+  school_name?: string | null
 }
 
 export interface GameSummary {

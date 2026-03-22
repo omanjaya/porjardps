@@ -29,6 +29,8 @@ interface BracketViewProps {
   highlightTeamId?: string
   bestOf?: number
   isAdmin?: boolean
+  tournamentName?: string
+  gameLogoUrl?: string | null
 }
 
 export function BracketView({
@@ -38,6 +40,8 @@ export function BracketView({
   onMatchClick,
   liveMatchIds = [],
   highlightTeamId,
+  tournamentName,
+  gameLogoUrl,
 }: BracketViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -64,11 +68,22 @@ export function BracketView({
     [matches, rounds]
   )
 
+  // Grand final winner (for winner card)
+  const grandFinalWinner = useMemo(() => {
+    const gf = matches.find((m) => m.bracket_position === 'grand_final' && m.winner)
+    return gf?.winner ?? null
+  }, [matches])
+
+  // Winner card width: extra column after GF
+  const WINNER_CARD_GAP = ROUND_GAP
+  const WINNER_CARD_WIDTH = 200
+
   // Content bounds
   const contentWidth = useMemo(() => {
     if (positions.length === 0) return 0
-    return Math.max(...positions.map((p) => p.x)) + MATCH_WIDTH + PADDING_X * 2
-  }, [positions])
+    const base = Math.max(...positions.map((p) => p.x)) + MATCH_WIDTH + PADDING_X * 2
+    return grandFinalWinner ? base + WINNER_CARD_GAP + WINNER_CARD_WIDTH + PADDING_X : base
+  }, [positions, grandFinalWinner, WINNER_CARD_GAP, WINNER_CARD_WIDTH])
 
   const contentHeight = useMemo(() => {
     if (positions.length === 0) return 0
@@ -316,6 +331,9 @@ export function BracketView({
         highlightTeamId={highlightTeamId}
         roundLabels={roundLabels}
         onMatchClick={onMatchClick}
+        grandFinalWinner={grandFinalWinner}
+        tournamentName={tournamentName}
+        gameLogoUrl={gameLogoUrl}
       />
 
       {/* Mobile landscape hint — shown briefly at top-center, below round header */}

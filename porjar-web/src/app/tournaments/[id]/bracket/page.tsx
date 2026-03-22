@@ -293,6 +293,8 @@ export default function BracketPage() {
           rounds={maxRound}
           liveMatchIds={liveMatchIds}
           onMatchClick={handleMatchClick}
+          tournamentName={tournament?.name}
+          format={tournament?.format as 'single_elimination' | 'double_elimination' | 'round_robin' | undefined}
         />
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 bg-white py-20 shadow-sm">

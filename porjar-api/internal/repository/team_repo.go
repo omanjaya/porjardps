@@ -41,7 +41,7 @@ func (r *teamRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.Tea
 	}
 	rows, err := r.db.Query(ctx,
 		`SELECT t.id, t.name, t.school_id, t.game_id, t.captain_user_id, t.logo_url, t.status, t.seed, t.created_at, t.updated_at,
-		        s.logo_url AS school_logo_url
+		        s.logo_url AS school_logo_url, s.name AS school_name
 		 FROM teams t
 		 LEFT JOIN schools s ON s.id = t.school_id
 		 WHERE t.id = ANY($1)`, ids)
@@ -53,7 +53,7 @@ func (r *teamRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.Tea
 	var teams []*model.Team
 	for rows.Next() {
 		t := &model.Team{}
-		if err := rows.Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt, &t.SchoolLogoURL); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt, &t.SchoolLogoURL, &t.SchoolName); err != nil {
 			return nil, fmt.Errorf("FindByIDs scan: %w", err)
 		}
 		teams = append(teams, t)

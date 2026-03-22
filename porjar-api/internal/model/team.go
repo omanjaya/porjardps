@@ -21,6 +21,7 @@ type Team struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 	// Populated by JOIN queries (not a DB column on teams)
 	SchoolLogoURL *string `json:"school_logo_url,omitempty"`
+	SchoolName    *string `json:"school_name,omitempty"`
 }
 
 type TeamSummary struct {
@@ -29,6 +30,7 @@ type TeamSummary struct {
 	Seed          *int      `json:"seed,omitempty"`
 	LogoURL       *string   `json:"logo_url,omitempty"`
 	SchoolLogoURL *string   `json:"school_logo_url,omitempty"`
+	SchoolName    *string   `json:"school_name,omitempty"`
 }
 
 type TeamMember struct {

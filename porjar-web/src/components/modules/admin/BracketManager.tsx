@@ -17,9 +17,10 @@ interface BracketManagerProps {
   tournamentId: string
   format: string
   bestOf: number
+  tournamentName?: string
 }
 
-export function BracketManager({ tournamentId, format, bestOf }: BracketManagerProps) {
+export function BracketManager({ tournamentId, format, bestOf, tournamentName }: BracketManagerProps) {
   const [_matches, _setMatches] = useState<BracketMatch[] | null>(null)
   const [_teams, _setTeams] = useState<Team[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -296,6 +297,8 @@ export function BracketManager({ tournamentId, format, bestOf }: BracketManagerP
           rounds={maxRound}
           liveMatchIds={liveMatchIds}
           onMatchClick={handleMatchClick}
+          format={format as 'single_elimination' | 'double_elimination' | 'round_robin'}
+          tournamentName={tournamentName}
         />
       ) : (
         <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 bg-white py-20">

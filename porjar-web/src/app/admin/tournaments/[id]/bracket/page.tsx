@@ -74,6 +74,7 @@ export default function AdminBracketPage() {
           tournamentId={params.id}
           format={tournament.format}
           bestOf={tournament.best_of}
+          tournamentName={tournament.name}
         />
       )}
     </AdminLayout>

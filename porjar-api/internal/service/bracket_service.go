@@ -91,6 +91,7 @@ func (s *BracketService) GetBracket(ctx context.Context, tournamentID uuid.UUID)
 					Seed:          team.Seed,
 					LogoURL:       team.LogoURL,
 					SchoolLogoURL: team.SchoolLogoURL,
+					SchoolName:    team.SchoolName,
 				}
 			}
 		}
