@@ -96,7 +96,7 @@ export default function AdminTournamentsPage() {
         title="Kelola Turnamen"
         description="Buat dan kelola semua turnamen PORJAR Esport"
         actions={
-          <Button onClick={() => setCreateOpen(true)} className="bg-porjar-red hover:bg-porjar-red-dark text-white">
+          <Button onClick={() => setCreateOpen(true)} disabled={loading} className="bg-porjar-red hover:bg-porjar-red-dark text-white">
             <Plus size={16} className="mr-1.5" />
             Buat Turnamen
           </Button>

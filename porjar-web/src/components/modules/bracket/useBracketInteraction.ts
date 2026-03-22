@@ -250,11 +250,24 @@ export function useBracketInteraction({ contentWidth, contentHeight }: UseBracke
   }, [])
 
   // Touch: pinch zoom & single-finger pan
+  // Attached via useEffect with { passive: false } so e.preventDefault() works
+  // (React synthetic touch events are passive by default in React 19, so
+  //  calling preventDefault() on them is silently ignored by the browser)
   const touchRef = useRef<{ dist: number; zoom: number; panX: number; panY: number; cx: number; cy: number } | null>(null)
+  const isPanningRef = useRef(false)
+  const panStartRef = useRef({ x: 0, y: 0 })
 
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
+  // Keep refs in sync with state so the native handlers can read latest values
+  useEffect(() => { isPanningRef.current = isPanning }, [isPanning])
+  useEffect(() => { panStartRef.current = panStart }, [panStart])
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
+        e.preventDefault()
         const dx = e.touches[0].clientX - e.touches[1].clientX
         const dy = e.touches[0].clientY - e.touches[1].clientY
         const dist = Math.sqrt(dx * dx + dy * dy)
@@ -264,14 +277,14 @@ export function useBracketInteraction({ contentWidth, contentHeight }: UseBracke
         touchRef.current = { dist, zoom: t.zoom, panX: t.panX, panY: t.panY, cx, cy }
       } else if (e.touches.length === 1) {
         setIsPanning(true)
-        setPanStart({ x: e.touches[0].clientX - target.current.panX, y: e.touches[0].clientY - target.current.panY })
+        const ps = { x: e.touches[0].clientX - target.current.panX, y: e.touches[0].clientY - target.current.panY }
+        setPanStart(ps)
+        panStartRef.current = ps
+        isPanningRef.current = true
       }
-    },
-    []
-  )
+    }
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
+    const handleTouchMove = (e: TouchEvent) => {
       if (e.touches.length === 2 && touchRef.current) {
         e.preventDefault()
         const dx = e.touches[0].clientX - e.touches[1].clientX
@@ -280,31 +293,40 @@ export function useBracketInteraction({ contentWidth, contentHeight }: UseBracke
         const scale = dist / touchRef.current.dist
         const newZoom = Math.max(0.15, Math.min(3, touchRef.current.zoom * scale))
 
-        const rect = containerRef.current?.getBoundingClientRect()
-        if (rect) {
-          const cx = touchRef.current.cx - rect.left
-          const cy = touchRef.current.cy - rect.top
-          const s = newZoom / touchRef.current.zoom
-          target.current = {
-            zoom: newZoom,
-            panX: cx - s * (cx - touchRef.current.panX),
-            panY: cy - s * (cy - touchRef.current.panY),
-          }
-          startAnimation()
+        const rect = el.getBoundingClientRect()
+        const cx = touchRef.current.cx - rect.left
+        const cy = touchRef.current.cy - rect.top
+        const s = newZoom / touchRef.current.zoom
+        target.current = {
+          zoom: newZoom,
+          panX: cx - s * (cx - touchRef.current.panX),
+          panY: cy - s * (cy - touchRef.current.panY),
         }
-      } else if (e.touches.length === 1 && isPanning) {
-        const clamped = clampPan(e.touches[0].clientX - panStart.x, e.touches[0].clientY - panStart.y)
+        startAnimation()
+      } else if (e.touches.length === 1 && isPanningRef.current) {
+        e.preventDefault()
+        const ps = panStartRef.current
+        const clamped = clampPan(e.touches[0].clientX - ps.x, e.touches[0].clientY - ps.y)
         target.current = { ...target.current, panX: clamped.x, panY: clamped.y }
         startAnimation()
       }
-    },
-    [isPanning, panStart, clampPan, startAnimation]
-  )
+    }
 
-  const handleTouchEnd = useCallback(() => {
-    touchRef.current = null
-    setIsPanning(false)
-  }, [])
+    const handleTouchEnd = () => {
+      touchRef.current = null
+      setIsPanning(false)
+      isPanningRef.current = false
+    }
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: false })
+    el.addEventListener('touchmove', handleTouchMove, { passive: false })
+    el.addEventListener('touchend', handleTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart)
+      el.removeEventListener('touchmove', handleTouchMove)
+      el.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [clampPan, startAnimation]) // clampPan/startAnimation are stable callbacks
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
@@ -339,9 +361,6 @@ export function useBracketInteraction({ contentWidth, contentHeight }: UseBracke
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
     fitToScreen,
     toggleFullscreen,
     isFullscreen,

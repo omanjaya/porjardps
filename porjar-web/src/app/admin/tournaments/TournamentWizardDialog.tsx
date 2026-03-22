@@ -118,7 +118,7 @@ export function TournamentWizardDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-white border-stone-200 sm:max-w-lg p-0 overflow-hidden">
+      <DialogContent className="bg-white border-stone-200 w-[calc(100vw-2rem)] max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Progress bar */}
         {!createdTournament && (
           <div className="flex border-b border-stone-100">
@@ -128,7 +128,7 @@ export function TournamentWizardDialog({
           </div>
         )}
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {/* ─── Success Screen ─── */}
           {createdTournament ? (
             <div className="text-center py-4">
@@ -302,7 +302,7 @@ export function TournamentWizardDialog({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-stone-700">Best Of</label>
                     <div className="flex gap-1">

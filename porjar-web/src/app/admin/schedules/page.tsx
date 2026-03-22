@@ -506,7 +506,7 @@ export default function AdminSchedulesPage() {
                   <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Game</TableHead>
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Waktu</TableHead>
                   <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Venue</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
+                  <TableHead className="hidden md:table-cell text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
                   <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -547,7 +547,7 @@ export default function AdminSchedulesPage() {
                       <TableCell className="hidden sm:table-cell text-sm text-stone-500">
                         {schedule.venue ?? '-'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <StatusBadge status={schedule.status} />
                       </TableCell>
                       <TableCell className="text-right">

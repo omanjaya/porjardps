@@ -145,17 +145,17 @@ export default function AdminLivePage() {
                 {liveMatches.map((match) => (
                   <div
                     key={match.id}
-                    className="flex items-center gap-4 rounded-xl border-l-4 border-porjar-red bg-white border-y border-r border-y-stone-200 border-r-stone-200 shadow-sm px-4 py-3"
+                    className="flex flex-wrap items-center gap-2 sm:gap-4 rounded-xl border-l-4 border-porjar-red bg-white border-y border-r border-y-stone-200 border-r-stone-200 shadow-sm px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-stone-900">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <span className="text-xs sm:text-sm font-semibold text-stone-900 truncate max-w-[100px] sm:max-w-none">
                           {match.team_a?.name ?? 'TBD'}
                         </span>
-                        <span className="text-lg font-bold text-porjar-red tabular-nums">
+                        <span className="text-base sm:text-lg font-bold text-porjar-red tabular-nums">
                           {match.score_a} - {match.score_b}
                         </span>
-                        <span className="text-sm font-semibold text-stone-900">
+                        <span className="text-xs sm:text-sm font-semibold text-stone-900 truncate max-w-[100px] sm:max-w-none">
                           {match.team_b?.name ?? 'TBD'}
                         </span>
                       </div>
@@ -192,10 +192,10 @@ export default function AdminLivePage() {
                 {scheduledMatches.map((match) => (
                   <div
                     key={match.id}
-                    className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white shadow-sm px-4 py-3"
+                    className="flex flex-wrap items-center gap-2 sm:gap-4 rounded-xl border border-stone-200 bg-white shadow-sm px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
-                      <span className="text-sm font-medium text-stone-700">
+                      <span className="text-xs sm:text-sm font-medium text-stone-700 truncate">
                         {match.team_a?.name ?? 'TBD'} vs {match.team_b?.name ?? 'TBD'}
                       </span>
                       <p className="text-xs text-stone-400">
@@ -237,7 +237,7 @@ export default function AdminLivePage() {
                 {liveLobbies.map((lobby) => (
                   <div
                     key={lobby.id}
-                    className="flex items-center gap-4 rounded-xl border-l-4 border-porjar-red bg-white border-y border-r border-y-stone-200 border-r-stone-200 shadow-sm px-4 py-3"
+                    className="flex flex-wrap items-center gap-2 sm:gap-4 rounded-xl border-l-4 border-porjar-red bg-white border-y border-r border-y-stone-200 border-r-stone-200 shadow-sm px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-stone-900">{lobby.lobby_name}</p>
@@ -266,7 +266,7 @@ export default function AdminLivePage() {
                 {scheduledLobbies.map((lobby) => (
                   <div
                     key={lobby.id}
-                    className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white shadow-sm px-4 py-3"
+                    className="flex flex-wrap items-center gap-2 sm:gap-4 rounded-xl border border-stone-200 bg-white shadow-sm px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-stone-700">{lobby.lobby_name}</p>

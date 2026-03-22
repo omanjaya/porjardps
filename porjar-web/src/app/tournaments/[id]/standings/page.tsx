@@ -174,7 +174,7 @@ export default function StandingsPage() {
 
       {isBR ? (
         <Tabs defaultValue="overall">
-          <TabsList className="bg-stone-100 border border-stone-200 flex-wrap overflow-x-auto h-auto">
+          <TabsList className="bg-stone-100 border border-stone-200 overflow-x-auto scrollbar-hide h-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <TabsTrigger value="overall" className="text-stone-600 data-active:bg-porjar-red data-active:text-white">
               Keseluruhan
             </TabsTrigger>
@@ -218,8 +218,8 @@ export default function StandingsPage() {
                     <TableHead className="text-stone-600 font-semibold">Tim</TableHead>
                     <TableHead className="text-right text-stone-600 font-semibold">Total Poin</TableHead>
                     <TableHead className="text-right text-stone-600 font-semibold">Kills</TableHead>
-                    <TableHead className="text-right text-stone-600 font-semibold">Placement</TableHead>
-                    <TableHead className="text-right text-stone-600 font-semibold">Best</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right text-stone-600 font-semibold">Placement</TableHead>
+                    <TableHead className="hidden sm:table-cell text-right text-stone-600 font-semibold">Best</TableHead>
                     {qualificationThreshold != null && (
                       <TableHead className="text-center text-stone-600 font-semibold">Status</TableHead>
                     )}
@@ -267,10 +267,10 @@ export default function StandingsPage() {
                             <TableCell className="text-right text-stone-700 tabular-nums">
                               {s.total_kills}
                             </TableCell>
-                            <TableCell className="text-right text-stone-700 tabular-nums">
+                            <TableCell className="hidden sm:table-cell text-right text-stone-700 tabular-nums">
                               {s.total_placement_points}
                             </TableCell>
-                            <TableCell className="text-right text-stone-500 tabular-nums">
+                            <TableCell className="hidden sm:table-cell text-right text-stone-500 tabular-nums">
                               {s.best_placement ?? '-'}
                             </TableCell>
                             {qualificationThreshold != null && (

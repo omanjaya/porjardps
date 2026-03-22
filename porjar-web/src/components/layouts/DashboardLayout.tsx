@@ -101,7 +101,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <span className="text-sm text-porjar-muted">{user?.full_name ?? 'Player'}</span>
+            <span className="hidden sm:inline text-sm text-porjar-muted truncate max-w-[120px]">{user?.full_name ?? 'Player'}</span>
             <Button
               variant="ghost"
               size="sm"
@@ -116,7 +116,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Mobile nav */}
       <div className="sm:hidden sticky top-14 z-40 border-b border-porjar-border bg-white">
-        <nav className="mx-auto flex max-w-5xl items-center gap-1 overflow-x-auto px-4 py-1.5">
+        <nav className="mx-auto flex max-w-5xl items-center gap-0.5 overflow-x-auto px-3 py-1.5" style={{ scrollbarWidth: 'none' }}>
           {navLinks.map((link) => {
             const isActive =
               link.href === '/dashboard'

@@ -329,14 +329,14 @@ export default function LandingPage() {
           <h2 className="mt-2 text-3xl font-black text-stone-900 sm:text-4xl">Cabang E-Sport</h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
           {games.map((game) => (
             <a key={game.slug} href={`/games/${game.slug}`} className="game-card group relative overflow-hidden rounded-xl bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
               {/* Red top frame accent (like poster cards) */}
               <div className="h-1 w-full" style={{ background: RED }} />
 
               {/* Game image */}
-              <div className="relative h-36 overflow-hidden">
+              <div className="relative h-24 sm:h-36 overflow-hidden">
                 <div className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style={{ backgroundImage: `url(${game.bg})` }} />
                 <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent" />
               </div>
@@ -492,7 +492,7 @@ export default function LandingPage() {
             <Phone size={18} weight="duotone" style={{ color: RED }} />
             <h3 className="text-sm font-bold uppercase tracking-wider text-stone-700">Contact Person</h3>
           </div>
-          <div className="flex flex-wrap gap-6 text-sm text-stone-600">
+          <div className="flex flex-wrap gap-3 sm:gap-6 text-sm text-stone-600">
             <div><span className="font-bold text-stone-800">Bagus Eka</span> · +62 878-6156-9479</div>
             <div><span className="font-bold text-stone-800">Arik</span> · +62 877-6038-3825</div>
             <div><span className="font-bold text-stone-800">Geni</span> · +62 813-3960-0701</div>
@@ -503,7 +503,7 @@ export default function LandingPage() {
       {/* ═══════════ FOOTER ═══════════ */}
       <footer className="footer-section border-t border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-5 py-12">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:gap-8 sm:grid-cols-2 lg:grid-cols-4">
             <div className="footer-col">
               <div className="mb-3 flex items-center gap-2">
                 <Image src="/images/logo/kota-denpasar.webp" alt="Kota Denpasar" width={32} height={32} className="h-8 w-8 object-contain" />

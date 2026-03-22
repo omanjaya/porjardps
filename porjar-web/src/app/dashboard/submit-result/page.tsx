@@ -214,7 +214,7 @@ export default function SubmitResultPage() {
                       </span>
                     </div>
                     {match.type === 'bracket' ? (
-                      <p className="text-sm font-semibold text-porjar-text">
+                      <p className="text-sm font-semibold text-porjar-text line-clamp-2">
                         {match.team_a_name} vs {match.team_b_name}
                       </p>
                     ) : (

@@ -202,7 +202,7 @@ export default function TournamentDetailPage() {
         {/* Red top bar */}
         <div className="absolute inset-x-0 top-0 h-1 bg-porjar-red" />
 
-        <div className="relative px-6 py-8 md:px-10 md:py-12">
+        <div className="relative px-4 py-6 md:px-10 md:py-12">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
             {/* Game logo */}
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-red-50 border border-porjar-red/20">

@@ -170,7 +170,7 @@ export function ScheduleTimelineView({
                             </span>
                           </div>
 
-                          <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-stone-500">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 sm:gap-3 text-xs text-stone-500">
                             {/* Time */}
                             <span className="flex items-center gap-1">
                               <Clock size={12} />
@@ -241,10 +241,10 @@ export function ScheduleTimelineView({
                           const md = matchDetails[schedule.bracket_match_id]
                           const isCompleted = md.status === 'completed'
                           return (
-                            <div className="flex items-center justify-center gap-6">
+                            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
                               {/* Team A */}
                               <div className="flex-1 flex flex-col items-center text-center">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-sm overflow-hidden mb-2">
+                                <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-sm overflow-hidden mb-2">
                                   {md.logo_a ? (
                                     <img src={md.logo_a} alt="" className="h-10 w-10 object-contain" />
                                   ) : (
@@ -271,7 +271,7 @@ export function ScheduleTimelineView({
 
                               {/* Team B */}
                               <div className="flex-1 flex flex-col items-center text-center">
-                                <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-sm overflow-hidden mb-2">
+                                <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-white border border-stone-200 shadow-sm overflow-hidden mb-2">
                                   {md.logo_b ? (
                                     <img src={md.logo_b} alt="" className="h-10 w-10 object-contain" />
                                   ) : (

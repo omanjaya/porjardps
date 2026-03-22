@@ -161,7 +161,7 @@ function LoginForm() {
   return (
     <div className="overflow-hidden rounded-xl border border-porjar-border bg-white shadow-md">
       <div className="h-1 w-full bg-porjar-red" />
-      <div className="p-6">
+      <div className="p-4 sm:p-6">
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-porjar-text">Masuk</h2>
         <p className="mb-6 text-sm text-porjar-muted">
           Masuk ke akun PORJAR kamu

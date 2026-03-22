@@ -66,8 +66,8 @@ export function TournamentEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-white border-stone-200 sm:max-w-md">
-        <div className="p-6">
+      <DialogContent className="bg-white border-stone-200 w-[calc(100vw-2rem)] max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
           <h2 className="mb-4 text-lg font-bold text-stone-900">Edit Turnamen</h2>
           <div className="space-y-4">
             <div>
@@ -124,7 +124,7 @@ export function TournamentEditDialog({
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-stone-700">Best Of</label>
                 <div className="flex gap-1">

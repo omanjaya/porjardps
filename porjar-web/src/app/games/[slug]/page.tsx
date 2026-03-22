@@ -225,7 +225,7 @@ export default function GameDetailPage() {
                 </div>
 
                 {/* Right: Action Buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {game.game_type === 'bracket' && (
                     <Link
                       href={`/tournaments/${tournament.id}/bracket`}

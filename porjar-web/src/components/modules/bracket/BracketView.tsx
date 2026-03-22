@@ -86,9 +86,6 @@ export function BracketView({
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
-    handleTouchStart,
-    handleTouchMove,
-    handleTouchEnd,
     fitToScreen,
     toggleFullscreen,
     isFullscreen,
@@ -251,9 +248,6 @@ export function BracketView({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       <BracketBackground />
 
@@ -293,10 +287,10 @@ export function BracketView({
         onMatchClick={onMatchClick}
       />
 
-      {/* Mobile landscape hint */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 sm:hidden">
-        <div className="rounded-full bg-white/90 border border-stone-200 px-3 py-1 text-[10px] text-stone-500">
-          Pinch to zoom, drag to pan
+      {/* Mobile landscape hint — shown briefly at top-center, below round header */}
+      <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
+        <div className="rounded-full bg-white/90 border border-stone-200 px-3 py-1 text-[10px] text-stone-400">
+          Cubit untuk zoom · seret untuk geser
         </div>
       </div>
 

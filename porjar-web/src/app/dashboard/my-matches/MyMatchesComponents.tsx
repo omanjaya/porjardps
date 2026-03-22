@@ -145,10 +145,10 @@ export function CurrentMatchCard({
 
       {/* Match content */}
       <div className="p-5">
-        <div className="flex items-center justify-center gap-6">
+        <div className="flex items-center justify-center gap-3 sm:gap-6">
           {/* Team A (my team) */}
           <div className="flex-1 text-center">
-            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-xl bg-porjar-red/10">
+            <div className="mx-auto mb-2 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-xl bg-porjar-red/10">
               <span className="text-xl font-bold text-porjar-red">
                 {myTeam?.name?.charAt(0) ?? '?'}
               </span>
@@ -187,7 +187,7 @@ export function CurrentMatchCard({
 
           {/* Team B (opponent) */}
           <div className="flex-1 text-center">
-            <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-xl bg-stone-100">
+            <div className="mx-auto mb-2 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-xl bg-stone-100">
               <span className="text-xl font-bold text-stone-500">
                 {opponent?.name?.charAt(0) ?? '?'}
               </span>

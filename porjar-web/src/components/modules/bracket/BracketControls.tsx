@@ -36,9 +36,9 @@ export function BracketControls({
   onShare,
 }: BracketControlsProps) {
   return (
-    <div className="absolute top-14 right-4 z-30 flex flex-col items-end gap-2">
-      {/* Search bar */}
-      <div className="flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 shadow-sm">
+    <div className="absolute bottom-14 sm:bottom-auto sm:top-14 right-4 z-30 flex flex-col items-end gap-2">
+      {/* Search bar — hidden on mobile to avoid blocking bracket */}
+      <div className="hidden sm:flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 shadow-sm">
         <MagnifyingGlass size={14} className="text-stone-400 flex-shrink-0" />
         <input
           type="text"

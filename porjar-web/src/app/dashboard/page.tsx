@@ -162,7 +162,7 @@ export default function DashboardPage() {
               <StatusBadge status={data.next_match.status} />
             </div>
             <div className="p-5">
-              <div className="flex items-center justify-center gap-6">
+              <div className="flex items-center justify-center gap-3 sm:gap-6">
                 <div className="flex-1 text-center">
                   <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-porjar-red/10">
                     <span className="text-lg font-bold text-porjar-red">

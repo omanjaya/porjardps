@@ -334,8 +334,8 @@ export default function AdminTeamsPage() {
       />
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-1">
+      <div className="mb-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {statusFilters.map((sf) => (
             <button
               key={sf.value}
@@ -352,7 +352,7 @@ export default function AdminTeamsPage() {
         </div>
 
         {games.length > 0 && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             <button
               onClick={() => setActiveGame(null)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
@@ -370,7 +370,7 @@ export default function AdminTeamsPage() {
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 px-4 py-2.5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3 rounded-xl border border-stone-200 bg-stone-50 px-3 sm:px-4 py-2.5 shadow-sm">
           <span className="flex-1 text-sm font-medium text-stone-700">
             {selectedIds.size} tim dipilih
           </span>
@@ -417,7 +417,7 @@ export default function AdminTeamsPage() {
                   <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Game</TableHead>
                   <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Sekolah</TableHead>
                   <TableHead className="hidden sm:table-cell text-center text-stone-600 uppercase text-xs tracking-wider">Anggota</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Status</TableHead>
+                  <TableHead className="hidden md:table-cell text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Status</TableHead>
                   <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -441,9 +441,9 @@ export default function AdminTeamsPage() {
                     <TableCell className="text-stone-500 text-sm">{team.game.name}</TableCell>
                     <TableCell className="hidden sm:table-cell text-stone-500 text-sm">{team.school?.name ?? '-'}</TableCell>
                     <TableCell className="hidden sm:table-cell text-center text-stone-500 tabular-nums">{team.member_count}</TableCell>
-                    <TableCell><StatusBadge status={team.status} /></TableCell>
+                    <TableCell className="hidden md:table-cell"><StatusBadge status={team.status} /></TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex flex-wrap items-center justify-end gap-1">
                         {/* View detail */}
                         <Button size="xs" variant="ghost" onClick={() => openDetail(team)} className="text-stone-500 hover:text-stone-900 hover:bg-stone-100">
                           <Eye size={14} />

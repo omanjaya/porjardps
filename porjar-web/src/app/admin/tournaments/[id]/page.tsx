@@ -209,7 +209,7 @@ export default function AdminTournamentDetailPage() {
 
       {/* Tournament Info */}
       <div className="mb-6 rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-4 text-sm mb-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm mb-4">
           <div className="flex items-center gap-2">
             <span className="text-stone-500">Game:</span>
             <span className="font-semibold text-stone-900">{tournament.game?.name ?? '-'}</span>
@@ -278,9 +278,9 @@ export default function AdminTournamentDetailPage() {
                 <TableHeader>
                   <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
                     <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Nama Tim</TableHead>
-                    <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Sekolah</TableHead>
-                    <TableHead className="text-center text-stone-600 uppercase text-xs tracking-wider">Anggota</TableHead>
-                    <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
+                    <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Sekolah</TableHead>
+                    <TableHead className="hidden sm:table-cell text-center text-stone-600 uppercase text-xs tracking-wider">Anggota</TableHead>
+                    <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
                     <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -290,13 +290,13 @@ export default function AdminTournamentDetailPage() {
                       <TableCell>
                         <span className="font-medium text-stone-900">{team.name}</span>
                       </TableCell>
-                      <TableCell className="text-stone-500 text-sm">
+                      <TableCell className="hidden sm:table-cell text-stone-500 text-sm">
                         {team.school?.name ?? '-'}
                       </TableCell>
-                      <TableCell className="text-center text-stone-500 tabular-nums">
+                      <TableCell className="hidden sm:table-cell text-center text-stone-500 tabular-nums">
                         {team.member_count}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <StatusBadge status={team.status} />
                       </TableCell>
                       <TableCell className="text-right">

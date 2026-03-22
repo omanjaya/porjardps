@@ -191,7 +191,7 @@ function AdminSubmissionsContent() {
               className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
             >
               {/* Header */}
-              <div className="mb-4 flex items-start justify-between">
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-porjar-red/10">
                     <GameController size={22} weight="duotone" className="text-porjar-red" />
@@ -231,7 +231,7 @@ function AdminSubmissionsContent() {
 
               {/* Screenshots */}
               {(sub.screenshots ?? []).length > 0 && (
-                <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+                <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                   {(sub.screenshots ?? []).map((url, i) => (
                     <button
                       key={i}
@@ -261,7 +261,7 @@ function AdminSubmissionsContent() {
                       Kedua tim mengirim hasil yang sama
                     </span>
                   )}
-                  <div className="ml-auto flex items-center gap-2">
+                  <div className="ml-auto flex flex-wrap items-center gap-2">
                     <Button
                       size="sm"
                       onClick={() => handleApprove(sub.id)}

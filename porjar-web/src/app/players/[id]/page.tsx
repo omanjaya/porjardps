@@ -181,7 +181,7 @@ export default function PlayerProfilePage() {
           </h2>
 
           {/* Game Tabs */}
-          <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+          <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide pb-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
             {profile.game_stats.map((gs) => {
               const slug = gs.game.slug as GameSlug
               const config = GAME_CONFIG[slug]

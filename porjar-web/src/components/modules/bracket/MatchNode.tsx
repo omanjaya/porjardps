@@ -95,6 +95,12 @@ const TeamRow = React.memo(function TeamRow({
     >
       {/* Name */}
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
+        {/* Seed badge */}
+        {team?.seed != null && (
+          <span className="shrink-0 text-[9px] font-bold text-stone-400 tabular-nums w-4 text-right">
+            {team.seed}
+          </span>
+        )}
         {/* School logo → team logo → initial fallback (with error handling) */}
         <TeamLogo team={team} isEmpty={isEmpty} isByeSlot={isByeSlot} />
         <span

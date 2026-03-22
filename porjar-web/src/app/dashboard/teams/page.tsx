@@ -89,7 +89,7 @@ export default function MyTeamsPage() {
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h3 className="font-semibold text-stone-900">{team.name}</h3>
                     <StatusBadge status={team.status} />
                   </div>

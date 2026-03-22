@@ -211,8 +211,8 @@ export default function AdminSchoolsPage() {
       />
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-1">
+      <div className="mb-4 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {(['all', ...levelOptions] as const).map((level) => (
             <button
               key={level}
@@ -231,7 +231,7 @@ export default function AdminSchoolsPage() {
           placeholder="Cari sekolah..."
           value={search}
           onChange={(e) => { setSearch(e.target.value); setCurrentPage(1) }}
-          className="w-48 bg-white border-stone-300 text-sm focus:border-porjar-red"
+          className="w-full sm:w-48 bg-white border-stone-300 text-sm focus:border-porjar-red"
         />
       </div>
 
