@@ -134,10 +134,29 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 		}
 	}
 
-	// Auto-advance LB matches with 0 or 1 team (caused by WR BYEs producing no losers).
-	// Process in ascending round order so cascading works: an empty LB R1 produces no winner,
-	// then LB R2 may end up with only 1 team and also needs advancing.
+	// Auto-advance LB matches that will NEVER receive a team because all their feeders are BYEs.
+	// A LB match is safe to auto-advance (as empty bye) only if:
+	//   (a) it has 0 teams, AND
+	//   (b) no real (non-BYE) WR match will ever drop a loser into it, AND
+	//   (c) no real (non-BYE) LB match will ever advance a winner into it.
+	// Any LB match with at least one real feeder is left alone — teams arrive when those matches complete.
 	if tournament.Format == "double_elimination" {
+		// Build: LB match ID → will eventually receive a team from a real source?
+		hasRealFeeder := make(map[uuid.UUID]bool)
+		for _, m := range matches {
+			if m.Status == "bye" {
+				continue
+			}
+			// WR match → LB via loser_next_match_id
+			if m.LoserNextMatchID != nil {
+				hasRealFeeder[*m.LoserNextMatchID] = true
+			}
+			// LB match → next LB via next_match_id (non-BYE LB produces a winner)
+			if m.BracketPosition != nil && *m.BracketPosition == "losers" && m.NextMatchID != nil {
+				hasRealFeeder[*m.NextMatchID] = true
+			}
+		}
+
 		lbMatches := make([]*model.BracketMatch, 0)
 		for _, m := range matches {
 			if m.BracketPosition != nil && *m.BracketPosition == "losers" {
@@ -151,29 +170,31 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 			return lbMatches[i].MatchNumber < lbMatches[j].MatchNumber
 		})
 
+		now := time.Now()
 		for _, m := range lbMatches {
-			// Re-fetch to get current state (may have been updated by WR BYE processing or previous iterations)
+			if hasRealFeeder[m.ID] {
+				continue // a real match will feed this slot eventually — leave it alone
+			}
+			// Re-fetch to confirm current state
 			cur, err := s.bracketRepo.FindByID(ctx, m.ID)
 			if err != nil || cur == nil || cur.Status != "pending" {
 				continue
 			}
 			if cur.TeamAID != nil && cur.TeamBID != nil {
-				continue // two teams present — normal match, nothing to do
+				continue // two teams — normal match
 			}
 
-			now := time.Now()
 			cur.Status = "bye"
 			cur.CompletedAt = &now
-
 			if cur.TeamAID != nil {
 				cur.WinnerID = cur.TeamAID
 			} else if cur.TeamBID != nil {
 				cur.WinnerID = cur.TeamBID
 			}
-			// 0 teams: WinnerID stays nil — mark as empty bye, advance nothing
+			// 0 teams: WinnerID stays nil — empty bye, no advancement
 
 			if err := s.bracketRepo.Update(ctx, cur); err != nil {
-				slog.Error("failed to auto-advance LB bye match", "id", cur.ID, "error", err)
+				slog.Error("failed to mark empty LB match as bye", "id", cur.ID, "error", err)
 				continue
 			}
 			if cur.WinnerID != nil && cur.NextMatchID != nil {
