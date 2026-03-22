@@ -45,42 +45,22 @@ func TestGenerateDoubleElimination_8Teams(t *testing.T) {
 		t.Errorf("expected 1 grand final match, got %d", grandFinalCount)
 	}
 
-	// Losers bracket for 8 teams:
-	// LR1: 2 matches (4 losers from WR1 paired)
-	// LR2: 2 matches (2 losers from WR2 vs 2 winners from LR1)
-	// LR3: 1 match (2 winners from LR2)
-	// Total: 5 losers matches
-	// But with the minor round after LR2: we also get additional rounds
-	// LR1 (major, from WR1): 2 matches
-	// (no minor since WR2 drops come next)
-	// Actually for 8 teams:
-	// After WR1 drop: LR major = 2 matches, LR minor = 1 match (halving)
-	// After WR2 drop: LR major = 1 match (1 drop vs 1 survivor), no minor needed
-	// Total losers: 2 + 1 + 1 = 4
-	// Wait, let me trace through:
-	// WR1: 4 matches, WR2: 2 matches, WR3 (winners final): 1 match
-	// wRound=1: droppedFrom=4 matches, LR1 major: 4/2=2 matches, then minor: 2/2=1 match
-	// wRound=2: droppedFrom=2 matches, prevLosers=1 match
-	//   LR major: 2 matches (but prevLosers has 1, droppedFrom has 2... mismatch)
-	// Actually the code does lrCount = len(droppedFrom) for major rounds after first.
-	// For wRound=2: droppedFrom = WR2 = 2 matches, prevLosersRoundMatches = 1 match
-	// lrCount = len(droppedFrom) = 2, but prevLosersRoundMatches only has 1.
-	// This means the code iterates i=0,1 but prevLosersRoundMatches[1] would panic.
-	// The correct structure should match: losers from WR2 = 2 teams, survivors from LR minor = 1 team.
-	// For 8 teams, the standard double elim losers bracket is:
-	// LR1: 2 matches (4 WR1 losers)
-	// LR2: 2 matches (2 WR2 losers vs 2 LR1 winners)
-	// LR3: 1 match (LR2 winners face each other)
-	// Total losers = 5, total = 7 + 5 + 1 = 13
-
-	// For now, just verify totals are reasonable and no panics
-	t.Logf("Total matches: %d (winners=%d, losers=%d, grand_final=%d)", len(matches), winnersCount, losersCount, grandFinalCount)
-	t.Logf("Total rounds: %d", totalRounds)
-
-	// Total should be winners(7) + losers + grand_final(1)
-	if len(matches) != winnersCount+losersCount+grandFinalCount {
-		t.Errorf("match count mismatch")
+	// Losers bracket for 8 teams (WR final loser is eliminated, not dropped to LR):
+	// Step 1 - LR1 major: 4 WR1 losers paired → 2 matches
+	// wRound=2 - LR2 major: 2 WR2 losers vs 2 LR1 winners → 2 matches
+	// wRound=2 - LR3 minor: 2 LR2 winners halved → 1 match
+	// Total losers = 2+2+1 = 5
+	// Grand final: WR3 winner vs LR3 winner → 1 match
+	// Grand total: 7 + 5 + 1 = 13  (formula: 2n-3 = 2*8-3 = 13)
+	if losersCount != 5 {
+		t.Errorf("expected 5 losers matches for 8 teams, got %d", losersCount)
 	}
+
+	if len(matches) != 13 {
+		t.Errorf("expected 13 total matches for 8 teams (2n-3), got %d", len(matches))
+	}
+
+	t.Logf("Total matches: %d (winners=%d, losers=%d, grand_final=%d), rounds=%d", len(matches), winnersCount, losersCount, grandFinalCount, totalRounds)
 
 	// Verify all matches have tournament ID
 	for _, m := range matches {
@@ -88,6 +68,65 @@ func TestGenerateDoubleElimination_8Teams(t *testing.T) {
 			t.Error("tournament ID mismatch")
 		}
 	}
+}
+
+func TestGenerateDoubleElimination_4Teams(t *testing.T) {
+	// 4 teams: WR=3, LR=1, GF=1, Total=5 (2*4-3=5)
+	matches, _, err := GenerateDoubleElimination(uuid.New(), makeEntries(4))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wCount, lCount, gfCount := countByPosition(matches)
+	if wCount != 3 {
+		t.Errorf("4 teams: expected 3 winners matches, got %d", wCount)
+	}
+	if lCount != 1 {
+		t.Errorf("4 teams: expected 1 losers match, got %d", lCount)
+	}
+	if gfCount != 1 {
+		t.Errorf("4 teams: expected 1 grand final, got %d", gfCount)
+	}
+	if len(matches) != 5 {
+		t.Errorf("4 teams: expected 5 total matches, got %d", len(matches))
+	}
+}
+
+func TestGenerateDoubleElimination_16Teams(t *testing.T) {
+	// 16 teams: WR=15, LR=13, GF=1, Total=29 (2*16-3=29)
+	matches, _, err := GenerateDoubleElimination(uuid.New(), makeEntries(16))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	wCount, lCount, gfCount := countByPosition(matches)
+	if wCount != 15 {
+		t.Errorf("16 teams: expected 15 winners matches, got %d", wCount)
+	}
+	if lCount != 13 {
+		t.Errorf("16 teams: expected 13 losers matches, got %d", lCount)
+	}
+	if gfCount != 1 {
+		t.Errorf("16 teams: expected 1 grand final, got %d", gfCount)
+	}
+	if len(matches) != 29 {
+		t.Errorf("16 teams: expected 29 total matches, got %d", len(matches))
+	}
+}
+
+func countByPosition(matches []*model.BracketMatch) (winners, losers, grandFinal int) {
+	for _, m := range matches {
+		if m.BracketPosition == nil {
+			continue
+		}
+		switch *m.BracketPosition {
+		case "winners":
+			winners++
+		case "losers":
+			losers++
+		case "grand_final":
+			grandFinal++
+		}
+	}
+	return
 }
 
 func TestGenerateDoubleElimination_BracketPositionSet(t *testing.T) {
