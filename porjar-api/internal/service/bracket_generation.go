@@ -244,9 +244,10 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 		return
 	}
 
-	// If the LB match now has exactly one team and its status is still pending,
-	// the other slot will never be filled (the WR feeder was a BYE).
-	// Auto-advance the single team as a bye immediately.
+	// If the LB match now has exactly one team, it might need auto-advancing as a bye
+	// (when the other slot was a WR BYE and will never be filled).
+	// But NOT if there is a pending LB match that will eventually advance its winner here —
+	// that means this is a real match and the second team is still on its way.
 	nextMatch, err = s.bracketRepo.FindByID(ctx, nextMatch.ID)
 	if err != nil || nextMatch == nil || nextMatch.Status != "pending" {
 		return
@@ -260,6 +261,21 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 	if singleTeam == nil {
 		return
 	}
+
+	// Guard: check for any pending LB match whose winner will feed into this slot.
+	allMatches, listErr := s.bracketRepo.ListByTournament(ctx, match.TournamentID)
+	if listErr == nil {
+		for _, m := range allMatches {
+			if m.BracketPosition == nil || *m.BracketPosition != "losers" {
+				continue
+			}
+			if m.NextMatchID != nil && *m.NextMatchID == nextMatch.ID && m.Status == "pending" {
+				// A real LB match will advance a winner here — leave it alone.
+				return
+			}
+		}
+	}
+
 	now := time.Now()
 	nextMatch.Status = "bye"
 	nextMatch.WinnerID = singleTeam
