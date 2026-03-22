@@ -231,11 +231,40 @@ export function BracketView({
   // Round labels for match nodes — map actual round numbers to display labels
   const roundLabels = useMemo(() => {
     const labels: Record<number, string> = {}
-    visibleRounds.forEach((round, i) => {
-      labels[round] = getRoundLabel(i, visibleRoundCount, format)
-    })
+
+    if (format === 'double_elimination') {
+      // Determine bracket_position for each visible round
+      const roundPos = new Map<number, string>()
+      matches.forEach((m) => {
+        if (m.bracket_position && m.round != null) {
+          roundPos.set(m.round, m.bracket_position)
+        }
+      })
+
+      const wrRounds = visibleRounds.filter((r) => roundPos.get(r) === 'winners').sort((a, b) => a - b)
+      const lrRounds = visibleRounds.filter((r) => roundPos.get(r) === 'losers').sort((a, b) => a - b)
+
+      wrRounds.forEach((r, i) => {
+        if (i === wrRounds.length - 1) labels[r] = 'UB Final'
+        else if (wrRounds.length - 1 - i === 1) labels[r] = 'UB Semi'
+        else labels[r] = `UB Round ${i + 1}`
+      })
+
+      lrRounds.forEach((r, i) => {
+        labels[r] = i === lrRounds.length - 1 ? 'LB Final' : `LB Round ${i + 1}`
+      })
+
+      visibleRounds.forEach((r) => {
+        if (roundPos.get(r) === 'grand_final') labels[r] = 'Grand Final'
+      })
+    } else {
+      visibleRounds.forEach((round, i) => {
+        labels[round] = getRoundLabel(i, visibleRoundCount, format)
+      })
+    }
+
     return labels
-  }, [visibleRounds, visibleRoundCount, format])
+  }, [visibleRounds, visibleRoundCount, format, matches])
 
   return (
     <div
@@ -266,6 +295,7 @@ export function BracketView({
             columnWidth={MATCH_WIDTH}
             columnGap={ROUND_GAP}
             offsetX={PADDING_X}
+            labelOverrides={visibleRounds.map((r) => roundLabels[r] ?? '')}
           />
         </div>
       </div>

@@ -8,6 +8,7 @@ interface BracketRoundHeaderProps {
   columnWidth: number
   columnGap: number
   offsetX: number
+  labelOverrides?: string[] // per-column label override (double elim)
 }
 
 function getRoundLabel(
@@ -35,10 +36,11 @@ export function BracketRoundHeader({
   columnWidth,
   columnGap,
   offsetX,
+  labelOverrides,
 }: BracketRoundHeaderProps) {
   const labels: string[] = []
   for (let i = 0; i < rounds; i++) {
-    labels.push(getRoundLabel(i, rounds, format))
+    labels.push(labelOverrides?.[i] ?? getRoundLabel(i, rounds, format))
   }
 
   return (
@@ -60,7 +62,10 @@ export function BracketRoundHeader({
           <span
             className={cn(
               'inline-block rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wider',
-              'bg-stone-50 text-stone-600 border border-stone-200'
+              label.startsWith('UB') && 'bg-sky-50 text-sky-700 border border-sky-200',
+              label.startsWith('LB') && 'bg-amber-50 text-amber-700 border border-amber-200',
+              label === 'Grand Final' && 'bg-red-50 text-porjar-red border border-red-200',
+              !label.startsWith('UB') && !label.startsWith('LB') && label !== 'Grand Final' && 'bg-stone-50 text-stone-600 border border-stone-200'
             )}
           >
             {label}
