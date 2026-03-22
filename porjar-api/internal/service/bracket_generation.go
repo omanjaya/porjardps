@@ -150,6 +150,30 @@ func (s *BracketService) ResetBracket(ctx context.Context, tournamentID uuid.UUI
 	return nil
 }
 
+// advanceToLosers places a losers-bracket-bound team (loser from winners bracket) into the
+// designated losers bracket match via LoserNextMatchID.
+func (s *BracketService) advanceToLosers(ctx context.Context, match *model.BracketMatch, loserID uuid.UUID) {
+	if match.LoserNextMatchID == nil {
+		return
+	}
+
+	nextMatch, err := s.bracketRepo.FindByID(ctx, *match.LoserNextMatchID)
+	if err != nil || nextMatch == nil {
+		slog.Error("failed to find losers bracket match for loser advancement", "loser_next_match_id", match.LoserNextMatchID, "error", err)
+		return
+	}
+
+	if nextMatch.TeamAID == nil {
+		nextMatch.TeamAID = &loserID
+	} else if nextMatch.TeamBID == nil {
+		nextMatch.TeamBID = &loserID
+	}
+
+	if err := s.bracketRepo.Update(ctx, nextMatch); err != nil {
+		slog.Error("failed to advance loser to losers bracket match", "error", err)
+	}
+}
+
 // advanceWinner places the winner into the next match slot.
 func (s *BracketService) advanceWinner(ctx context.Context, match *model.BracketMatch, winnerID uuid.UUID) {
 	if match.NextMatchID == nil {

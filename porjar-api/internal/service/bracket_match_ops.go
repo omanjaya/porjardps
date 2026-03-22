@@ -236,11 +236,21 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		s.advanceWinner(ctx, match, winnerID)
 	}
 
-	// Update standings for loser (eliminated)
+	// Advance loser to losers bracket (double elimination)
+	// If LoserNextMatchID is set, the loser drops into the losers bracket instead of being eliminated.
+	if match.LoserNextMatchID != nil {
+		s.advanceToLosers(ctx, match, loserID)
+	}
+
+	// Update standings for loser
 	if s.standingsRepo != nil {
 		standing, err := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, loserID)
 		if err == nil && standing != nil {
-			standing.IsEliminated = true
+			// Only mark eliminated if there's no losers bracket path.
+			// In double elimination, losers from the winners bracket drop to the losers bracket.
+			if match.LoserNextMatchID == nil {
+				standing.IsEliminated = true
+			}
 			standing.Losses++
 			standing.MatchesPlayed++
 			if err := s.standingsRepo.Update(ctx, standing); err != nil {
