@@ -93,18 +93,6 @@ export function BracketView({
     handleMiniMapNavigate,
   } = useBracketInteraction({ contentWidth, contentHeight })
 
-  // Compute the Y routing lane for loser drop lines:
-  // midpoint between the bottom of all winners bracket matches and the top of all losers bracket matches.
-  // Loser drop lines go DOWN to this lane first, then RIGHT to the LR column — avoiding
-  // crossing through winners bracket match boxes.
-  const loserDropRouteY = useMemo(() => {
-    const wrMatches = positions.filter((p) => p.match.bracket_position === 'winners')
-    const lrMatches = positions.filter((p) => p.match.bracket_position === 'losers')
-    if (wrMatches.length === 0 || lrMatches.length === 0) return undefined
-    const wrBottom = wrMatches.reduce((max, p) => Math.max(max, p.y + MATCH_HEIGHT), 0)
-    const lrTop = lrMatches.reduce((min, p) => Math.min(min, p.y), Infinity)
-    return (wrBottom + lrTop) / 2
-  }, [positions])
 
   // Build connector data
   const connectors = useMemo(() => {
@@ -116,7 +104,6 @@ export function BracketView({
       isWinnerPath: boolean
       isLivePath: boolean
       isLoserPath?: boolean
-      routeY?: number
     }[] = []
 
     // Create a position lookup by match ID
@@ -163,7 +150,6 @@ export function BracketView({
             isWinnerPath: false,
             isLivePath: false,
             isLoserPath: true,
-            routeY: loserDropRouteY,
           })
         }
       }
@@ -171,7 +157,7 @@ export function BracketView({
 
     // Filter loser paths when toggled off
     return showLoserPaths ? result : result.filter((c) => !c.isLoserPath)
-  }, [positions, liveSet, showLoserPaths, loserDropRouteY])
+  }, [positions, liveSet, showLoserPaths])
 
   // Winner path highlight
   const winnerHighlightPaths = useMemo(() => {

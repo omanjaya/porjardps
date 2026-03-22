@@ -24,7 +24,6 @@ interface ConnectorData {
   isWinnerPath: boolean
   isLivePath: boolean
   isLoserPath?: boolean
-  routeY?: number
 }
 
 interface BracketCanvasProps {
@@ -126,7 +125,6 @@ export function BracketCanvas({
             isWinnerPath={conn.isWinnerPath}
             isLivePath={conn.isLivePath}
             isLoserPath={conn.isLoserPath}
-            routeY={conn.routeY}
           />
         ))}
       </svg>

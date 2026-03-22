@@ -8,7 +8,6 @@ interface ConnectorProps {
   isWinnerPath?: boolean
   isLivePath?: boolean
   isLoserPath?: boolean
-  routeY?: number // Intermediate Y for loser drop paths (go down first, then right)
 }
 
 export function BracketConnector({
@@ -19,17 +18,20 @@ export function BracketConnector({
   isWinnerPath = false,
   isLivePath = false,
   isLoserPath = false,
-  routeY,
 }: ConnectorProps) {
   // Siku-siku (right-angle) connector: horizontal → vertical → horizontal
-  // For loser drop paths (routeY provided): vertical → horizontal → vertical → horizontal
-  // This avoids the loser drop line crossing through winners bracket match boxes.
+  // For loser drop paths: cubic bezier curve so each line has a unique arc
+  // avoiding the parallel-lines problem of shared horizontal routing lanes.
   const ELBOW = 25
   const elbowX = toX - ELBOW
 
-  const d = routeY != null
-    ? `M ${fromX} ${fromY} V ${routeY} H ${elbowX} V ${toY} H ${toX}`
-    : `M ${fromX} ${fromY} H ${elbowX} V ${toY} H ${toX}`
+  let d: string
+  if (isLoserPath) {
+    const midX = (fromX + toX) / 2
+    d = `M ${fromX} ${fromY} C ${midX} ${fromY} ${midX} ${toY} ${toX} ${toY}`
+  } else {
+    d = `M ${fromX} ${fromY} H ${elbowX} V ${toY} H ${toX}`
+  }
 
   const strokeColor = isLivePath
     ? '#ef4444'
