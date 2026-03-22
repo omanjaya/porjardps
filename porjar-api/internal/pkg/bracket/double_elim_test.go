@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
 )
 
 func TestGenerateDoubleElimination_8Teams(t *testing.T) {
@@ -45,19 +46,20 @@ func TestGenerateDoubleElimination_8Teams(t *testing.T) {
 		t.Errorf("expected 1 grand final match, got %d", grandFinalCount)
 	}
 
-	// Losers bracket for 8 teams (WR final loser is eliminated, not dropped to LR):
-	// Step 1 - LR1 major: 4 WR1 losers paired → 2 matches
-	// wRound=2 - LR2 major: 2 WR2 losers vs 2 LR1 winners → 2 matches
-	// wRound=2 - LR3 minor: 2 LR2 winners halved → 1 match
-	// Total losers = 2+2+1 = 5
-	// Grand final: WR3 winner vs LR3 winner → 1 match
-	// Grand total: 7 + 5 + 1 = 13  (formula: 2n-3 = 2*8-3 = 13)
-	if losersCount != 5 {
-		t.Errorf("expected 5 losers matches for 8 teams, got %d", losersCount)
+	// Losers bracket for 8 teams (WR final loser drops into LB Final):
+	// LR1 major: 4 WR1 losers paired → 2 matches
+	// LR2 major: 2 WR2 losers vs 2 LR1 winners → 2 matches
+	// LR3 minor: 2 LR2 winners → 1 match
+	// LR4 (LB Final): WR3 loser vs LR3 winner → 1 match
+	// Total losers = 2+2+1+1 = 6
+	// Grand Final: WR3 winner vs LR4 winner → 1 match
+	// Grand total: 7 + 6 + 1 = 14  (formula: 2n-2 = 2*8-2 = 14)
+	if losersCount != 6 {
+		t.Errorf("expected 6 losers matches for 8 teams, got %d", losersCount)
 	}
 
-	if len(matches) != 13 {
-		t.Errorf("expected 13 total matches for 8 teams (2n-3), got %d", len(matches))
+	if len(matches) != 14 {
+		t.Errorf("expected 14 total matches for 8 teams (2n-2), got %d", len(matches))
 	}
 
 	t.Logf("Total matches: %d (winners=%d, losers=%d, grand_final=%d), rounds=%d", len(matches), winnersCount, losersCount, grandFinalCount, totalRounds)
@@ -71,7 +73,9 @@ func TestGenerateDoubleElimination_8Teams(t *testing.T) {
 }
 
 func TestGenerateDoubleElimination_4Teams(t *testing.T) {
-	// 4 teams: WR=3, LR=1, GF=1, Total=5 (2*4-3=5)
+	// 4 teams: WR=3, LR=2, GF=1, Total=6 (2*4-2=6)
+	// LR1: 2 WR1 losers → 1 match
+	// LR Final: WR Final loser vs LR1 winner → 1 match
 	matches, _, err := GenerateDoubleElimination(uuid.New(), makeEntries(4))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -80,19 +84,25 @@ func TestGenerateDoubleElimination_4Teams(t *testing.T) {
 	if wCount != 3 {
 		t.Errorf("4 teams: expected 3 winners matches, got %d", wCount)
 	}
-	if lCount != 1 {
-		t.Errorf("4 teams: expected 1 losers match, got %d", lCount)
+	if lCount != 2 {
+		t.Errorf("4 teams: expected 2 losers matches, got %d", lCount)
 	}
 	if gfCount != 1 {
 		t.Errorf("4 teams: expected 1 grand final, got %d", gfCount)
 	}
-	if len(matches) != 5 {
-		t.Errorf("4 teams: expected 5 total matches, got %d", len(matches))
+	if len(matches) != 6 {
+		t.Errorf("4 teams: expected 6 total matches (2n-2), got %d", len(matches))
 	}
 }
 
 func TestGenerateDoubleElimination_16Teams(t *testing.T) {
-	// 16 teams: WR=15, LR=13, GF=1, Total=29 (2*16-3=29)
+	// 16 teams: WR=15, LR=14, GF=1, Total=30 (2*16-2=30)
+	// LR1: 8 WR1 losers → 4 matches
+	// LR2: 4 WR2 losers vs 4 LR1 winners → 4 matches
+	// LR3 minor: 4 LR2 winners → 2 matches
+	// LR4: 2 WR3 losers vs 2 LR3 winners → 2 matches
+	// LR5 minor: 2 LR4 winners → 1 match
+	// LR Final: WR Final loser vs LR5 winner → 1 match
 	matches, _, err := GenerateDoubleElimination(uuid.New(), makeEntries(16))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -101,14 +111,14 @@ func TestGenerateDoubleElimination_16Teams(t *testing.T) {
 	if wCount != 15 {
 		t.Errorf("16 teams: expected 15 winners matches, got %d", wCount)
 	}
-	if lCount != 13 {
-		t.Errorf("16 teams: expected 13 losers matches, got %d", lCount)
+	if lCount != 14 {
+		t.Errorf("16 teams: expected 14 losers matches, got %d", lCount)
 	}
 	if gfCount != 1 {
 		t.Errorf("16 teams: expected 1 grand final, got %d", gfCount)
 	}
-	if len(matches) != 29 {
-		t.Errorf("16 teams: expected 29 total matches, got %d", len(matches))
+	if len(matches) != 30 {
+		t.Errorf("16 teams: expected 30 total matches (2n-2), got %d", len(matches))
 	}
 }
 

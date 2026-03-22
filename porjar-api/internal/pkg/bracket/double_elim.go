@@ -108,22 +108,30 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 	// --- Losers Bracket ---
 	// Standard double elimination losers bracket structure for n teams (power of 2):
 	//
-	// For 8 teams (WR1=4 matches, WR2=2 matches, WR3=1 match):
+	// Standard double elimination: every loser from the winners bracket gets a second
+	// chance in the losers bracket, INCLUDING the WR Final runner-up who enters the LB Final.
+	//
+	// For 8 teams (WR1=4, WR2=2, WR3 Final=1):
 	//   LR1 (major): 4 WR1 losers paired -> 2 matches
 	//   LR2 (major): 2 WR2 losers vs 2 LR1 winners -> 2 matches
 	//   LR3 (minor): 2 LR2 winners paired -> 1 match
-	//   Grand Final: WR3 winner vs LR3 winner
+	//   LR4 (LB Final): WR3 loser vs LR3 winner -> 1 match
+	//   Grand Final: WR3 winner vs LR4 winner
+	//   Total LB = 6, Total = 7 + 6 + 1 = 14 (formula: 2n-2)
 	//
-	// For 16 teams (WR1=8, WR2=4, WR3=2, WR4=1):
+	// For 16 teams (WR1=8, WR2=4, WR3=2, WR4 Final=1):
 	//   LR1 (major): 8 WR1 losers -> 4 matches
 	//   LR2 (major): 4 WR2 losers vs 4 LR1 winners -> 4 matches
 	//   LR3 (minor): 4 LR2 winners -> 2 matches
 	//   LR4 (major): 2 WR3 losers vs 2 LR3 winners -> 2 matches
 	//   LR5 (minor): 2 LR4 winners -> 1 match
-	//   Grand Final
+	//   LR6 (LB Final): WR4 loser vs LR5 winner -> 1 match
+	//   Grand Final: WR4 winner vs LR6 winner
+	//   Total LB = 14, Total = 15 + 14 + 1 = 30 (formula: 2n-2)
 	//
-	// Pattern: first major (pair WR1 losers), then for each subsequent winners round drop:
-	//   major round (drops vs survivors), then minor round (halve survivors) if count > 1
+	// Pattern: first major (pair WR1 losers), then for each subsequent winners round drop
+	// (including winners final): major round (drops vs survivors), then minor round
+	// (halve survivors) only when survivors > 1 after the major.
 
 	var losersMatches []*model.BracketMatch
 	losersRoundNum := winnersRounds // start numbering losers rounds after winners
@@ -163,9 +171,11 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 	}
 	prevLosersRoundMatches = lr1
 
-	// Step 2: For each subsequent winners round (2 through winnersRounds-1),
-	// create a major round (drops vs survivors) and then a minor round (halve)
-	for wRound := 2; wRound < winnersRounds; wRound++ {
+	// Step 2: For each subsequent winners round (2 through winnersRounds inclusive),
+	// create a major round (drops vs survivors) and then a minor round (halve).
+	// winnersRounds is included so that the WR Final loser drops into the LB Final
+	// (standard double elimination: runner-up always gets a second chance in LB).
+	for wRound := 2; wRound <= winnersRounds; wRound++ {
 		droppedFrom := winnersByRound[wRound]
 		dropCount := len(droppedFrom)
 		survivorCount := len(prevLosersRoundMatches)
