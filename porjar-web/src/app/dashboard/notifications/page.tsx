@@ -261,7 +261,7 @@ export default function NotificationsPage() {
       }
     }
     return groups
-  }, [notifications])
+  }, [displayedNotifications])
 
   const totalPages = meta?.total_pages ?? 1
 

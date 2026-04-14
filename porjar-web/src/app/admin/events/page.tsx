@@ -27,6 +27,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,8 +39,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap } from '@phosphor-icons/react'
+import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash } from '@phosphor-icons/react'
 import type { Event } from '@/types'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 type EventStatus = Event['status']
 
@@ -169,6 +171,13 @@ export default function AdminEventsPage() {
   const [form, setForm] = useState<EventFormData>(emptyForm)
   const [submitting, setSubmitting] = useState(false)
   const [slugManual, setSlugManual] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  const [bulkProcessing, setBulkProcessing] = useState(false)
 
   const loadEvents = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
@@ -207,6 +216,7 @@ export default function AdminEventsPage() {
     setEditingId(null)
     setForm(emptyForm)
     setSlugManual(false)
+    setDirty(false)
     setDialogOpen(true)
   }
 
@@ -241,11 +251,13 @@ export default function AdminEventsPage() {
       sort_order: event.sort_order ?? 0,
     })
     setSlugManual(true)
+    setDirty(false)
     setDialogOpen(true)
   }
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target
+    setDirty(true)
     setForm(prev => {
       const next = { ...prev, [name]: value }
       // Auto-generate slug from name if not manually edited
@@ -261,8 +273,15 @@ export default function AdminEventsPage() {
 
   function handleCheck(name: keyof EventFormData) {
     return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setDirty(true)
       setForm(prev => ({ ...prev, [name]: e.target.checked }))
     }
+  }
+
+  function handleCloseDialog(open: boolean) {
+    if (!open && dirty && !confirm('Perubahan belum disimpan. Tutup?')) return
+    if (!open) setDirty(false)
+    setDialogOpen(open)
   }
 
   async function handleSubmit() {
@@ -315,6 +334,7 @@ export default function AdminEventsPage() {
         toast.success('Event berhasil dibuat')
       }
 
+      setDirty(false)
       setDialogOpen(false)
       loadEvents()
     } catch {
@@ -328,6 +348,48 @@ export default function AdminEventsPage() {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
   }
+
+  function toggleOne(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  function toggleAll() {
+    const pageIds = events.map(e => e.id)
+    const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id))
+    if (allSelected) {
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)))
+    } else {
+      setSelectedIds(prev => Array.from(new Set([...prev, ...pageIds])))
+    }
+  }
+
+  function clearSelection() {
+    setSelectedIds([])
+  }
+
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0 || bulkProcessing) return
+    const ids = [...selectedIds]
+    setBulkProcessing(true)
+    try {
+      const results = await Promise.allSettled(
+        ids.map(id => api.delete(`/admin/events/${id}`))
+      )
+      const ok = results.filter(r => r.status === 'fulfilled').length
+      const fail = results.length - ok
+      if (ok > 0) toast.success(`${ok} event berhasil dihapus`)
+      if (fail > 0) toast.error(`${fail} event gagal dihapus`)
+      clearSelection()
+      setBulkConfirmOpen(false)
+      await loadEvents()
+    } finally {
+      setBulkProcessing(false)
+    }
+  }
+
+  const pageIds = events.map(e => e.id)
+  const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id))
+  const someSelected = pageIds.some(id => selectedIds.includes(id)) && !allSelected
 
   return (
     <AdminLayout>
@@ -355,10 +417,22 @@ export default function AdminEventsPage() {
           description="Buat event pertama untuk memulai"
         />
       ) : (
-        <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 overflow-hidden">
+        <div className={`rounded-xl border border-esi-border bg-white dark:bg-zinc-900 overflow-hidden ${selectedIds.length > 0 ? 'mb-32 sm:mb-24' : ''}`}>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-esi-red"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected
+                    }}
+                    onChange={toggleAll}
+                    aria-label="Pilih semua event"
+                  />
+                </TableHead>
                 <TableHead>Event</TableHead>
                 <TableHead>Slug</TableHead>
                 <TableHead>Status</TableHead>
@@ -369,8 +443,22 @@ export default function AdminEventsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map(event => (
-                <TableRow key={event.id}>
+              {events.map(event => {
+                const checked = selectedIds.includes(event.id)
+                return (
+                <TableRow
+                  key={event.id}
+                  className={checked ? 'bg-red-50/40 dark:bg-red-950/20' : undefined}
+                >
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-esi-red"
+                      checked={checked}
+                      onChange={() => toggleOne(event.id)}
+                      aria-label={`Pilih ${event.name}`}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: event.primary_color + '20' }}>
@@ -408,14 +496,71 @@ export default function AdminEventsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
             </TableBody>
           </Table>
         </div>
       )}
 
+      {/* Bulk delete confirmation dialog */}
+      <Dialog open={bulkConfirmOpen} onOpenChange={(o) => { if (!o && !bulkProcessing) setBulkConfirmOpen(false) }}>
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Hapus {selectedIds.length} Event</DialogTitle>
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
+              Apakah kamu yakin menghapus <strong className="text-stone-900 dark:text-zinc-100">{selectedIds.length} event</strong>? Semua turnamen, tim terdaftar, dan data match di event ini akan terhapus permanen.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setBulkConfirmOpen(false)}
+              disabled={bulkProcessing}
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleBulkDelete}
+              disabled={bulkProcessing}
+              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40"
+            >
+              {bulkProcessing ? 'Menghapus...' : 'Hapus Semua'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sticky bulk action bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg p-4 z-50">
+          <div className="mx-auto flex max-w-7xl flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+            <p className="text-sm text-stone-700 dark:text-zinc-200">
+              <b>{selectedIds.length}</b> event dipilih
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="outline"
+                onClick={clearSelection}
+                disabled={bulkProcessing}
+              >
+                Batal
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => setBulkConfirmOpen(true)}
+                disabled={bulkProcessing}
+              >
+                <Trash size={14} className="mr-1" /> Hapus Semua
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Event' : 'Buat Event Baru'}</DialogTitle>
@@ -609,7 +754,7 @@ export default function AdminEventsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="status">Status</Label>
-                  <Select value={form.status} onValueChange={(val) => setForm(prev => ({ ...prev, status: val as EventStatus }))}>
+                  <Select value={form.status} onValueChange={(val) => { setDirty(true); setForm(prev => ({ ...prev, status: val as EventStatus })) }}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -627,7 +772,7 @@ export default function AdminEventsPage() {
                     name="sort_order"
                     type="number"
                     value={form.sort_order}
-                    onChange={(e) => setForm(prev => ({ ...prev, sort_order: Number(e.target.value) || 0 }))}
+                    onChange={(e) => { setDirty(true); setForm(prev => ({ ...prev, sort_order: Number(e.target.value) || 0 })) }}
                     placeholder="0"
                   />
                 </div>
@@ -669,7 +814,7 @@ export default function AdminEventsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Batal</Button>
+            <Button variant="outline" onClick={() => handleCloseDialog(false)}>Batal</Button>
             <Button onClick={handleSubmit} disabled={submitting} className="bg-esi-red text-white hover:bg-esi-red/90">
               {submitting && <Spinner size={16} className="mr-1.5 animate-spin" />}
               {editingId ? 'Simpan' : 'Buat Event'}

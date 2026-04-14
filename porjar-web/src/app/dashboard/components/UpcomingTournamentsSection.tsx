@@ -1,16 +1,50 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { CaretRight } from '@phosphor-icons/react'
+import { CaretRight, Clock } from '@phosphor-icons/react'
 import { AnimatedCard } from '@/components/shared/AnimatedCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { CountdownTimer } from '@/components/shared/CountdownTimer'
 import { resolveMediaUrl } from '@/lib/api'
 import type { DashboardData } from '../hooks/useDashboardData'
 
+function useCountdown(targetDate: string | null | undefined): string {
+  const [remaining, setRemaining] = useState('')
+  useEffect(() => {
+    if (!targetDate) {
+      setRemaining('')
+      return
+    }
+    function update() {
+      const target = new Date(targetDate!).getTime()
+      const now = Date.now()
+      const diff = target - now
+      if (diff <= 0) { setRemaining('Mulai sekarang'); return }
+      const h = Math.floor(diff / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      if (h >= 24) { setRemaining(`${Math.floor(h / 24)} hari lagi`); return }
+      if (h > 0) { setRemaining(`${h}j ${m}m lagi`); return }
+      if (m > 0) { setRemaining(`${m}m ${s}s lagi`); return }
+      setRemaining(`${s}s lagi`)
+    }
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
+  }, [targetDate])
+  return remaining
+}
+
 export function UpcomingTournamentsSection({ data }: { data: DashboardData }) {
-  if (!data.next_match) return null
   const nextMatch = data.next_match
+  const showCountdown =
+    !!nextMatch?.scheduled_at &&
+    nextMatch.status !== 'live' &&
+    nextMatch.status !== 'completed' &&
+    nextMatch.status !== 'bye'
+  const countdown = useCountdown(showCountdown ? nextMatch?.scheduled_at : null)
+  if (!nextMatch) return null
 
   return (
     <AnimatedCard delay={225}>
@@ -26,7 +60,15 @@ export function UpcomingTournamentsSection({ data }: { data: DashboardData }) {
               </span>
             )}
           </div>
-          <StatusBadge status={nextMatch.status} />
+          <div className="flex items-center gap-1.5 shrink-0">
+            {showCountdown && countdown && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-esi-red/10 px-3 py-1 text-[11px] font-bold text-esi-red">
+                <Clock size={12} weight="fill" />
+                {countdown}
+              </span>
+            )}
+            <StatusBadge status={nextMatch.status} />
+          </div>
         </div>
         <div className="p-3 sm:p-5">
           <div className="flex items-center justify-center gap-2 sm:gap-6">

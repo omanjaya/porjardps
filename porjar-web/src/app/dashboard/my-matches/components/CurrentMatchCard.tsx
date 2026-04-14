@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Clock,
@@ -15,6 +15,33 @@ import {
   MonitorPlay,
   Lightning,
 } from '@phosphor-icons/react'
+
+function useCountdown(targetDate: string | null | undefined): string {
+  const [remaining, setRemaining] = useState('')
+  useEffect(() => {
+    if (!targetDate) {
+      setRemaining('')
+      return
+    }
+    function update() {
+      const target = new Date(targetDate!).getTime()
+      const now = Date.now()
+      const diff = target - now
+      if (diff <= 0) { setRemaining('Mulai sekarang'); return }
+      const h = Math.floor(diff / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      const s = Math.floor((diff % 60000) / 1000)
+      if (h >= 24) { setRemaining(`${Math.floor(h / 24)} hari lagi`); return }
+      if (h > 0) { setRemaining(`${h}j ${m}m lagi`); return }
+      if (m > 0) { setRemaining(`${m}m ${s}s lagi`); return }
+      setRemaining(`${s}s lagi`)
+    }
+    update()
+    const id = setInterval(update, 1000)
+    return () => clearInterval(id)
+  }, [targetDate])
+  return remaining
+}
 import { useAuthStore } from '@/store/auth-store'
 import { sanitizeUrl } from '@/lib/utils'
 import { CountdownTimer } from '@/components/shared/CountdownTimer'
@@ -52,6 +79,8 @@ export function CurrentMatchCard({
   const didWin = match.winner?.id === team.id
   const isLive = match.status === 'live'
   const isCompleted = match.status === 'completed'
+  const showCountdown = !isLive && !isCompleted && !!match.scheduled_at
+  const countdown = useCountdown(showCountdown ? match.scheduled_at : null)
 
   return (
     <div className={`rounded-xl border-2 shadow-sm overflow-hidden ${
@@ -66,11 +95,17 @@ export function CurrentMatchCard({
         }`}>
           {isLive ? 'Sedang Berlangsung' : isCompleted ? 'Selesai' : 'Match Berikutnya'}
         </span>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap justify-end">
           <span className={`text-[11px] ${isLive ? 'text-white/80' : 'text-esi-muted'}`}>
             R{match.round} M{match.match_number}
           </span>
           <StatusBadge status={match.status} />
+          {showCountdown && countdown && (
+            <div className="flex items-center gap-1.5 rounded-full bg-esi-red/10 px-3 py-1 text-xs font-bold text-esi-red">
+              <Clock size={12} weight="fill" />
+              {countdown}
+            </div>
+          )}
         </div>
       </div>
 

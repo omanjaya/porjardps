@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { FormDialog } from '@/components/shared/FormDialog'
 import { NEWS_CATEGORIES, type News, type NewsFormData } from '@/types'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 interface NewsFormDialogProps {
   open: boolean
@@ -45,6 +46,8 @@ const emptyForm: NewsFormData = {
 export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onSubmit }: NewsFormDialogProps) {
   const [form, setForm] = useState<NewsFormData>(emptyForm)
   const [slugTouched, setSlugTouched] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
 
   useEffect(() => {
     if (!open) return
@@ -63,9 +66,11 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
       setForm(emptyForm)
       setSlugTouched(false)
     }
+    setDirty(false)
   }, [open, mode, news])
 
   function handleTitleChange(value: string) {
+    setDirty(true)
     setForm((f) => ({
       ...f,
       title: value,
@@ -76,13 +81,22 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const ok = await onSubmit(form)
-    if (ok) onOpenChange(false)
+    if (ok) {
+      setDirty(false)
+      onOpenChange(false)
+    }
+  }
+
+  function handleOpenChange(next: boolean) {
+    if (!next && dirty && !confirm('Perubahan belum disimpan. Tutup?')) return
+    if (!next) setDirty(false)
+    onOpenChange(next)
   }
 
   return (
     <FormDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={handleOpenChange}
       title={mode === 'create' ? 'Tambah Berita' : 'Edit Berita'}
       description={mode === 'create' ? 'Buat artikel berita baru.' : 'Perbarui artikel berita.'}
       onSubmit={handleSubmit}
@@ -103,7 +117,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
         <Input
           placeholder="slug-berita"
           value={form.slug}
-          onChange={(e) => { setSlugTouched(true); setForm((f) => ({ ...f, slug: e.target.value })) }}
+          onChange={(e) => { setSlugTouched(true); setDirty(true); setForm((f) => ({ ...f, slug: e.target.value })) }}
           className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red font-mono text-sm"
         />
       </div>
@@ -111,7 +125,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
         <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">Kategori <span className="text-red-500">*</span></label>
         <select
           value={form.category}
-          onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+          onChange={(e) => { setDirty(true); setForm((f) => ({ ...f, category: e.target.value })) }}
           className="w-full rounded-lg border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red"
         >
           {NEWS_CATEGORIES.map((c) => (
@@ -125,7 +139,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
           rows={2}
           placeholder="Ringkasan singkat untuk ditampilkan di daftar"
           value={form.excerpt}
-          onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
+          onChange={(e) => { setDirty(true); setForm((f) => ({ ...f, excerpt: e.target.value })) }}
           className="w-full rounded-lg border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red"
         />
       </div>
@@ -135,7 +149,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
           rows={8}
           placeholder="Konten lengkap artikel (mendukung Markdown)"
           value={form.content}
-          onChange={(e) => setForm((f) => ({ ...f, content: e.target.value }))}
+          onChange={(e) => { setDirty(true); setForm((f) => ({ ...f, content: e.target.value })) }}
           className="w-full rounded-lg border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red"
         />
       </div>
@@ -145,7 +159,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
           type="url"
           placeholder="https://... atau /uploads/..."
           value={form.image_url}
-          onChange={(e) => setForm((f) => ({ ...f, image_url: e.target.value }))}
+          onChange={(e) => { setDirty(true); setForm((f) => ({ ...f, image_url: e.target.value })) }}
           className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
         />
       </div>
@@ -154,7 +168,7 @@ export function NewsFormDialog({ open, onOpenChange, mode, news, processing, onS
         <Input
           type="datetime-local"
           value={form.published_at}
-          onChange={(e) => setForm((f) => ({ ...f, published_at: e.target.value }))}
+          onChange={(e) => { setDirty(true); setForm((f) => ({ ...f, published_at: e.target.value })) }}
           className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
         />
       </div>

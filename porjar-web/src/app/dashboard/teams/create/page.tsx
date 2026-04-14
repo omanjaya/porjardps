@@ -18,8 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, MagnifyingGlass, PaperPlaneTilt, Info, Users, GameController, Buildings, ArrowSquareOut } from '@phosphor-icons/react'
+import { ArrowLeft, MagnifyingGlass, PaperPlaneTilt, Info, Users, GameController, Buildings, ArrowSquareOut, ShareNetwork, CheckCircle } from '@phosphor-icons/react'
 import type { Game, School, SchoolLevel } from '@/types'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 const SCHOOL_LEVELS: { value: SchoolLevel; label: string }[] = [
   { value: 'SD', label: 'SD' },
@@ -41,6 +42,8 @@ export default function CreateTeamPage() {
   const [teamName, setTeamName] = useState('')
   const [selectedGameId, setSelectedGameId] = useState<string>('')
   const [selectedSchoolId, setSelectedSchoolId] = useState<string>('')
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
 
   // School combobox state
   const [schoolSearch, setSchoolSearch] = useState('')
@@ -54,6 +57,9 @@ export default function CreateTeamPage() {
   const [requestName, setRequestName] = useState('')
   const [requestLevel, setRequestLevel] = useState<string>('')
   const [requestSubmitting, setRequestSubmitting] = useState(false)
+
+  // Success state with share CTA
+  const [createdTeam, setCreatedTeam] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated || authLoading) return
@@ -94,6 +100,7 @@ export default function CreateTeamPage() {
   }, [schools, schoolSearch])
 
   function selectSchool(school: School) {
+    setDirty(true)
     setSelectedSchoolId(school.id)
     setSelectedSchoolName(`${school.name} (${school.level})`)
     setSchoolSearch('')
@@ -119,18 +126,52 @@ export default function CreateTeamPage() {
 
     setSubmitting(true)
     try {
-      await api.post('/teams', {
+      const created = await api.post<{ id: string; name?: string }>('/teams', {
         name: teamName.trim(),
         game_id: selectedGameId,
         school_id: selectedSchoolId,
       })
+      setDirty(false)
       toast.success('Tim berhasil dibuat! Menunggu persetujuan admin.')
-      router.push('/dashboard/teams')
+      if (created?.id) {
+        setCreatedTeam({ id: created.id, name: teamName.trim() })
+      } else {
+        router.push('/dashboard/teams')
+      }
     } catch {
       toast.error('Gagal membuat tim')
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function handleShareTeam() {
+    if (!createdTeam) return
+    const shareUrl = `${window.location.origin}/dashboard/teams/${createdTeam.id}`
+    const shareData = {
+      title: `Tim ${createdTeam.name}`,
+      text: `Lihat tim saya di ESI Denpasar`,
+      url: shareUrl,
+    }
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share(shareData)
+        return
+      }
+    } catch (err) {
+      // User cancelled or share failed — fall through to clipboard
+      if (err instanceof Error && err.name === 'AbortError') return
+    }
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+        toast.success('Link tim disalin!')
+        return
+      }
+    } catch {
+      // fall through
+    }
+    toast.error('Tidak bisa menyalin link. Silakan salin manual.')
   }
 
   async function handleSchoolRequest() {
@@ -183,6 +224,51 @@ export default function CreateTeamPage() {
 
       <ProfileCompletionGate from="team-create">
       <div className="mx-auto max-w-lg">
+        {createdTeam ? (
+          <div className="rounded-xl border-2 border-emerald-300 dark:border-emerald-800/60 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 dark:from-emerald-950/40 dark:via-zinc-900 dark:to-emerald-950/20 p-5 sm:p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                <CheckCircle size={26} weight="fill" className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-base sm:text-lg font-bold text-stone-900 dark:text-zinc-100">
+                  Tim <span className="text-esi-red">{createdTeam.name}</span> berhasil dibuat!
+                </h2>
+                <p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">
+                  Tim kamu sekarang menunggu persetujuan admin. Bagikan link tim ke calon anggota kamu sekarang.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleShareTeam}
+                className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg bg-esi-red px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-esi-red-dark"
+              >
+                <ShareNetwork size={16} weight="bold" />
+                Share Tim
+              </button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.push(`/dashboard/teams/${createdTeam.id}`)}
+                className="min-h-[44px] flex-1 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300"
+              >
+                Lihat Detail Tim
+              </Button>
+            </div>
+            <div className="mt-3 text-center">
+              <button
+                type="button"
+                onClick={() => router.push('/dashboard/teams')}
+                className="text-xs text-stone-500 dark:text-zinc-500 hover:text-esi-red transition-colors"
+              >
+                Kembali ke daftar tim
+              </button>
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Top info banner */}
         <div className="mb-6 rounded-xl border border-blue-200 dark:border-blue-800/50 bg-blue-50 dark:bg-blue-950/30 p-4 flex gap-3">
           <Info size={20} weight="fill" className="flex-shrink-0 text-blue-600 dark:text-blue-400 mt-0.5" />
@@ -207,7 +293,7 @@ export default function CreateTeamPage() {
               </label>
               <Input
                 value={teamName}
-                onChange={(e) => setTeamName(e.target.value)}
+                onChange={(e) => { setDirty(true); setTeamName(e.target.value) }}
                 placeholder="Masukkan nama tim"
                 className="min-h-[44px] bg-white dark:bg-zinc-800 border-stone-300 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:border-esi-red"
               />
@@ -229,7 +315,7 @@ export default function CreateTeamPage() {
               <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">
                 Cabang E-Sport
               </label>
-              <Select value={selectedGameId} onValueChange={(v) => setSelectedGameId(v ?? '')}>
+              <Select value={selectedGameId} onValueChange={(v) => { setDirty(true); setSelectedGameId(v ?? '') }}>
                 <SelectTrigger className="min-h-[44px] w-full bg-white dark:bg-zinc-800 border-stone-300 dark:border-zinc-700 text-stone-900 dark:text-zinc-100">
                   <SelectValue placeholder="Pilih game" />
                 </SelectTrigger>
@@ -435,6 +521,8 @@ export default function CreateTeamPage() {
             </div>
           )}
         </form>
+        </>
+        )}
       </div>
       </ProfileCompletionGate>
     </DashboardLayout>

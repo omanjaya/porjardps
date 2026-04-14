@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -12,22 +13,29 @@ import { FaqEditor } from './components/FaqEditor'
 import { AboutEditor } from './components/AboutEditor'
 import { ContactEditor } from './components/ContactEditor'
 import type { FaqItem, AboutItem, ContactItem } from '@/types/site-settings'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 export default function AdminSiteSettingsPage() {
   const { settings, setSettings, loading, saving, save } = useSiteSettings()
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
 
   function setFaqs(faqs: FaqItem[]) {
+    setDirty(true)
     setSettings({ ...settings, faqs })
   }
   function setAbout(about_items: AboutItem[]) {
+    setDirty(true)
     setSettings({ ...settings, about_items })
   }
   function setContacts(contacts: ContactItem[]) {
+    setDirty(true)
     setSettings({ ...settings, contacts })
   }
 
   async function handleSave() {
-    await save(settings)
+    const ok = await save(settings)
+    if (ok) setDirty(false)
   }
 
   if (loading) {

@@ -14,6 +14,30 @@ export interface ConfirmAction {
 export function useTeamCrud(reload: () => Promise<void>) {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [processing, setProcessing] = useState(false)
+  const [inlineStatusLoading, setInlineStatusLoading] = useState<string | null>(null)
+
+  async function handleInlineStatusChange(
+    teamId: string,
+    teamName: string,
+    newStatus: 'approved' | 'rejected',
+  ) {
+    setInlineStatusLoading(teamId)
+    try {
+      if (newStatus === 'approved') {
+        await api.put(`/admin/teams/${teamId}/approve`)
+        toast.success(`${teamName} disetujui`)
+      } else {
+        await api.put(`/admin/teams/${teamId}/reject`, { reason: 'Ditolak oleh admin' })
+        toast.success(`${teamName} ditolak`)
+      }
+      await reload()
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message ?? 'Gagal mengubah status'
+      toast.error(msg)
+    } finally {
+      setInlineStatusLoading(null)
+    }
+  }
 
   // Create
   const [createOpen, setCreateOpen] = useState(false)
@@ -89,6 +113,8 @@ export function useTeamCrud(reload: () => Promise<void>) {
     setConfirmAction,
     processing,
     handleAction,
+    inlineStatusLoading,
+    handleInlineStatusChange,
     createOpen,
     setCreateOpen,
     createForm,

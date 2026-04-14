@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { api, ApiError, resolveMediaUrl } from '@/lib/api'
 import { convertToWebP } from '@/lib/imageUtils'
 import { useAuthStore } from '@/store/auth-store'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,8 @@ export default function ProfilePage() {
   }, [])
 
   const [savingProfile, setSavingProfile] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
 
   // Avatar upload
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -178,6 +181,7 @@ export default function ProfilePage() {
         phone: phone.trim() || null,
       })
       setUser(updated)
+      setDirty(false)
       toast.success('Profil berhasil disimpan')
       // Honor return-to-intent from ProfileCompletionGate
       if (fromIntent === 'team-create') {
@@ -351,7 +355,7 @@ export default function ProfilePage() {
               <label className="mb-1.5 block text-xs font-medium text-stone-600 dark:text-zinc-400">Nama Lengkap</label>
               <Input
                 value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
+                onChange={(e) => { setDirty(true); setFullName(e.target.value) }}
                 placeholder="Nama lengkap"
                 className={`bg-white dark:bg-zinc-800 dark:text-zinc-100 focus:border-esi-red ${nameMissing ? 'border-red-400 dark:border-red-500' : 'border-stone-200 dark:border-zinc-700'}`}
                 maxLength={100}
@@ -361,7 +365,7 @@ export default function ProfilePage() {
               <label className="mb-1.5 block text-xs font-medium text-stone-600 dark:text-zinc-400">Nomor Telepon</label>
               <Input
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => { setDirty(true); setPhone(e.target.value) }}
                 placeholder="08xx-xxxx-xxxx"
                 className={`bg-white dark:bg-zinc-800 dark:text-zinc-100 focus:border-esi-red ${phoneMissing ? 'border-red-400 dark:border-red-500' : 'border-stone-200 dark:border-zinc-700'}`}
                 type="tel"

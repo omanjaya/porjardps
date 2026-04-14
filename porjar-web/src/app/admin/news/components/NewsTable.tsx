@@ -22,6 +22,9 @@ interface NewsTableProps {
   onPageChange: (page: number) => void
   onEdit: (item: News) => void
   onDelete: (item: News) => void
+  selectedIds: number[]
+  onToggleOne: (id: number) => void
+  onToggleAll: () => void
 }
 
 function formatDate(iso: string): string {
@@ -40,7 +43,13 @@ export function NewsTable({
   onPageChange,
   onEdit,
   onDelete,
+  selectedIds,
+  onToggleOne,
+  onToggleAll,
 }: NewsTableProps) {
+  const pageIds = news.map((n) => n.id)
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.includes(id))
+  const someSelected = pageIds.some((id) => selectedIds.includes(id)) && !allSelected
   return (
     <>
       <div className="mb-4 text-sm text-stone-500 dark:text-zinc-400">
@@ -56,6 +65,18 @@ export function NewsTable({
             <Table>
               <TableHeader>
                 <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent bg-stone-50 dark:bg-zinc-800/50">
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-esi-red"
+                      checked={allSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = someSelected
+                      }}
+                      onChange={onToggleAll}
+                      aria-label="Pilih semua berita di halaman ini"
+                    />
+                  </TableHead>
                   <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Judul</TableHead>
                   <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Kategori</TableHead>
                   <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Tanggal Publikasi</TableHead>
@@ -63,8 +84,26 @@ export function NewsTable({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {news.map((item) => (
-                  <TableRow key={item.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-950/30">
+                {news.map((item) => {
+                  const checked = selectedIds.includes(item.id)
+                  return (
+                  <TableRow
+                    key={item.id}
+                    className={`border-stone-100 dark:border-zinc-700 ${
+                      checked
+                        ? 'bg-red-50/40 dark:bg-red-950/20'
+                        : 'hover:bg-red-50 dark:hover:bg-red-950/30'
+                    }`}
+                  >
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-esi-red"
+                        checked={checked}
+                        onChange={() => onToggleOne(item.id)}
+                        aria-label={`Pilih ${item.title}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="font-medium text-stone-900 dark:text-zinc-100 line-clamp-1">{item.title}</span>
@@ -102,7 +141,8 @@ export function NewsTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </div>

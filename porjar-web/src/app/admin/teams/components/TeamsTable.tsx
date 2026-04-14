@@ -10,7 +10,13 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { CheckCircle, XCircle, PencilSimple, Trash, Eye } from '@phosphor-icons/react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { CheckCircle, XCircle, PencilSimple, Trash, Eye, CaretDown, SpinnerGap } from '@phosphor-icons/react'
 import type { Team } from '@/types'
 import type { ConfirmAction } from '../hooks/useTeamCrud'
 
@@ -24,6 +30,8 @@ interface Props {
   onView: (team: Team) => void
   onEdit: (team: Team) => void
   onConfirm: (a: ConfirmAction) => void
+  onInlineStatusChange: (teamId: string, teamName: string, newStatus: 'approved' | 'rejected') => void
+  inlineStatusLoading: string | null
   currentPage: number
   totalPages: number
   perPage: number
@@ -41,6 +49,8 @@ export function TeamsTable({
   onView,
   onEdit,
   onConfirm,
+  onInlineStatusChange,
+  inlineStatusLoading,
   currentPage,
   totalPages,
   perPage,
@@ -73,7 +83,9 @@ export function TeamsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teams.map((team) => (
+            {teams.map((team) => {
+              const isLoading = inlineStatusLoading === team.id
+              return (
               <TableRow key={team.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-950/30">
                 <TableCell className="pl-4">
                   {team.status === 'pending' && (
@@ -92,7 +104,46 @@ export function TeamsTable({
                 <TableCell className="text-stone-500 dark:text-zinc-400 text-sm">{team.game.name}</TableCell>
                 <TableCell className="hidden sm:table-cell text-stone-500 dark:text-zinc-400 text-sm">{team.school?.name ?? '-'}</TableCell>
                 <TableCell className="hidden sm:table-cell text-center text-stone-500 dark:text-zinc-400 tabular-nums">{team.member_count}</TableCell>
-                <TableCell className="hidden md:table-cell"><StatusBadge status={team.status} /></TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {team.status === 'pending' ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        disabled={isLoading}
+                        render={
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400 transition-colors hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                            aria-label={`Ubah status ${team.name}`}
+                          >
+                            {isLoading ? (
+                              <SpinnerGap size={10} className="animate-spin" />
+                            ) : null}
+                            Menunggu
+                            <CaretDown size={10} weight="bold" />
+                          </button>
+                        }
+                      />
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onClick={() => onInlineStatusChange(team.id, team.name, 'approved')}
+                          disabled={isLoading}
+                        >
+                          <CheckCircle size={14} className="text-green-600" />
+                          <span>Setujui</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => onInlineStatusChange(team.id, team.name, 'rejected')}
+                          disabled={isLoading}
+                        >
+                          <XCircle size={14} className="text-red-600" />
+                          <span>Tolak</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <StatusBadge status={team.status} />
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-wrap items-center justify-end gap-1">
                     <Button size="xs" variant="ghost" onClick={() => onView(team)} className="text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100 hover:bg-stone-100 dark:hover:bg-zinc-700 dark:bg-zinc-800">
@@ -103,13 +154,24 @@ export function TeamsTable({
                     </Button>
                     {team.status === 'pending' && (
                       <>
-                        <Button size="xs" onClick={() => onConfirm({ teamId: team.id, teamName: team.name, action: 'approve' })} className="bg-green-600 hover:bg-green-700">
-                          <CheckCircle size={14} className="mr-0.5" />
-                          Approve
+                        <Button
+                          size="xs"
+                          onClick={() => onInlineStatusChange(team.id, team.name, 'approved')}
+                          disabled={isLoading}
+                          className="bg-green-600 hover:bg-green-700 h-6 w-6 p-0"
+                          aria-label={`Setujui ${team.name}`}
+                        >
+                          <CheckCircle size={14} />
                         </Button>
-                        <Button size="xs" variant="destructive" onClick={() => onConfirm({ teamId: team.id, teamName: team.name, action: 'reject' })}>
-                          <XCircle size={14} className="mr-0.5" />
-                          Reject
+                        <Button
+                          size="xs"
+                          variant="destructive"
+                          onClick={() => onInlineStatusChange(team.id, team.name, 'rejected')}
+                          disabled={isLoading}
+                          className="h-6 w-6 p-0"
+                          aria-label={`Tolak ${team.name}`}
+                        >
+                          <XCircle size={14} />
                         </Button>
                       </>
                     )}
@@ -119,7 +181,8 @@ export function TeamsTable({
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+              )
+            })}
           </TableBody>
         </Table>
       </div>

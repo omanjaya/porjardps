@@ -131,6 +131,8 @@ export default function AdminTeamsPage() {
           onView={assign.openDetail}
           onEdit={(team) => { crud.setEditTeam(team); crud.setEditName(team.name) }}
           onConfirm={crud.setConfirmAction}
+          onInlineStatusChange={crud.handleInlineStatusChange}
+          inlineStatusLoading={crud.inlineStatusLoading}
           currentPage={paged.currentPage}
           totalPages={paged.totalPages}
           perPage={paged.perPage}

@@ -77,7 +77,7 @@ export default function EventTeamsPage() {
           {visible.map((t) => (
             <Link
               key={t.id}
-              href={`/teams/${t.id}`}
+              href={`/events/${event.slug}/teams/${t.id}`}
               className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 hover:shadow-md transition"
             >
               <div className="flex items-center gap-3">
