@@ -71,6 +71,12 @@ func (h *EventAnnouncementHandler) Create(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
+	if len(req.Title) > 255 {
+		return response.BadRequest(c, "Judul terlalu panjang (maks 255 karakter)")
+	}
+	if len(req.Message) > 2000 {
+		return response.BadRequest(c, "Pesan terlalu panjang (maks 2000 karakter)")
+	}
 	var createdBy *uuid.UUID
 	if uidStr, ok := c.Locals("userID").(string); ok && uidStr != "" {
 		if uid, err := uuid.Parse(uidStr); err == nil {

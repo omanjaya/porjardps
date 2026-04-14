@@ -135,6 +135,9 @@ func (h *SchoolRequestHandler) Reject(c *fiber.Ctx) error {
 	if req.Reason == "" {
 		return response.BadRequest(c, "Alasan penolakan wajib diisi")
 	}
+	if len(req.Reason) > 500 {
+		return response.BadRequest(c, "Alasan terlalu panjang (maks 500 karakter)")
+	}
 
 	if err := h.service.Reject(c.Context(), id, req.Reason); err != nil {
 		return response.HandleError(c, err)

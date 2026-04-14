@@ -83,6 +83,12 @@ func (h *NewsHandler) Create(c *fiber.Ctx) error {
 	if strings.TrimSpace(req.Title) == "" || strings.TrimSpace(req.Slug) == "" {
 		return response.BadRequest(c, "Title dan slug wajib diisi")
 	}
+	if len(req.Title) > 255 {
+		return response.BadRequest(c, "Judul terlalu panjang (maks 255 karakter)")
+	}
+	if len(req.Content) > 10000 {
+		return response.BadRequest(c, "Konten terlalu panjang (maks 10000 karakter)")
+	}
 	n := &model.News{
 		Title:    strings.TrimSpace(req.Title),
 		Slug:     strings.TrimSpace(req.Slug),
@@ -105,6 +111,12 @@ func (h *NewsHandler) Update(c *fiber.Ctx) error {
 	var req newsBody
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Format request tidak valid")
+	}
+	if len(req.Title) > 255 {
+		return response.BadRequest(c, "Judul terlalu panjang (maks 255 karakter)")
+	}
+	if len(req.Content) > 10000 {
+		return response.BadRequest(c, "Konten terlalu panjang (maks 10000 karakter)")
 	}
 	existing, err := h.service.GetByID(c.Context(), id)
 	if err != nil {
