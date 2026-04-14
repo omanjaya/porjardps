@@ -25,6 +25,7 @@ export function EditUserDialog({ open, onOpenChange, user, processing, onSubmit 
         phone: user.phone ?? '',
         tingkat: user.tingkat ?? '',
         nisn: user.nisn ?? '',
+        nomor_pertandingan: user.nomor_pertandingan ?? '',
       })
     } else if (!open) {
       setForm(emptyEditForm)
@@ -99,6 +100,16 @@ export function EditUserDialog({ open, onOpenChange, user, processing, onSubmit 
           onChange={(e) => setForm((f) => ({ ...f, nisn: e.target.value.replace(/\D/g, '').slice(0, 16) }))}
           className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red font-mono"
         />
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">Nomor Pertandingan</label>
+        <Input
+          placeholder="Mis. ML-01, FF-15"
+          value={form.nomor_pertandingan}
+          onChange={(e) => setForm((f) => ({ ...f, nomor_pertandingan: e.target.value }))}
+          className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red font-mono"
+        />
+        <p className="mt-1 text-xs text-stone-500 dark:text-zinc-500">Nomor kit turnamen (kosongkan untuk menghapus)</p>
       </div>
     </FormDialog>
   )

@@ -24,6 +24,7 @@ export function useUserCrud(refetch: () => Promise<void> | void) {
       }
       if (form.phone) payload.phone = form.phone
       if (form.tingkat) payload.tingkat = form.tingkat
+      if (form.nomor_pertandingan) payload.nomor_pertandingan = form.nomor_pertandingan
       await api.post('/admin/users', payload)
       toast.success(`Pengguna ${form.full_name} berhasil ditambahkan`)
       await refetch()
@@ -51,6 +52,8 @@ export function useUserCrud(refetch: () => Promise<void> | void) {
       if (form.phone) payload.phone = form.phone
       if (form.tingkat) payload.tingkat = form.tingkat
       if (form.nisn) payload.nisn = form.nisn
+      // Always send nomor_pertandingan so empty string can clear an existing value
+      payload.nomor_pertandingan = form.nomor_pertandingan
       await api.put(`/admin/users/${user.id}`, payload)
       toast.success(`Data ${form.full_name} berhasil diperbarui`)
       await refetch()

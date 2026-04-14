@@ -83,7 +83,17 @@ export function UsersTable({
                             <UserCircle size={20} className="text-stone-400 dark:text-zinc-500" />
                           )}
                         </div>
-                        <span className="font-medium text-stone-900 dark:text-zinc-100">{user.full_name}</span>
+                        <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-stone-900 dark:text-zinc-100 truncate">{user.full_name}</span>
+                          {user.nomor_pertandingan && (
+                            <span
+                              className="inline-flex items-center rounded-md border border-esi-red/30 bg-esi-red/5 dark:bg-esi-red/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-esi-red"
+                              title="Nomor Pertandingan"
+                            >
+                              {user.nomor_pertandingan}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-stone-500 dark:text-zinc-400">{user.email}</TableCell>

@@ -175,13 +175,14 @@ func (h *AdminHandler) ChangeUserRole(c *fiber.Ctx) error {
 }
 
 type createUserRequest struct {
-	FullName string  `json:"full_name"`
-	Email    string  `json:"email"`
-	Password string  `json:"password"`
-	Role     string  `json:"role"`
-	Phone    *string `json:"phone"`
-	Tingkat  *string `json:"tingkat"`
-	NISN     *string `json:"nisn"`
+	FullName          string  `json:"full_name"`
+	Email             string  `json:"email"`
+	Password          string  `json:"password"`
+	Role              string  `json:"role"`
+	Phone             *string `json:"phone"`
+	Tingkat           *string `json:"tingkat"`
+	NISN              *string `json:"nisn"`
+	NomorPertandingan *string `json:"nomor_pertandingan"`
 }
 
 func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
@@ -223,16 +224,17 @@ func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
 
 	now := time.Now()
 	user := &model.User{
-		ID:           uuid.New(),
-		Email:        req.Email,
-		PasswordHash: string(hash),
-		FullName:     req.FullName,
-		Role:         req.Role,
-		Phone:        req.Phone,
-		Tingkat:      req.Tingkat,
-		NISN:         req.NISN,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:                uuid.New(),
+		Email:             req.Email,
+		PasswordHash:      string(hash),
+		FullName:          req.FullName,
+		Role:              req.Role,
+		Phone:             req.Phone,
+		Tingkat:           req.Tingkat,
+		NISN:              req.NISN,
+		NomorPertandingan: req.NomorPertandingan,
+		CreatedAt:         now,
+		UpdatedAt:         now,
 	}
 
 	if err := h.userRepo.Create(c.Context(), user); err != nil {
@@ -243,11 +245,12 @@ func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
 }
 
 type updateUserRequest struct {
-	FullName *string `json:"full_name"`
-	Email    *string `json:"email"`
-	Phone    *string `json:"phone"`
-	Tingkat  *string `json:"tingkat"`
-	NISN     *string `json:"nisn"`
+	FullName          *string `json:"full_name"`
+	Email             *string `json:"email"`
+	Phone             *string `json:"phone"`
+	Tingkat           *string `json:"tingkat"`
+	NISN              *string `json:"nisn"`
+	NomorPertandingan *string `json:"nomor_pertandingan"`
 }
 
 func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
@@ -288,6 +291,14 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 	}
 	if req.NISN != nil {
 		user.NISN = req.NISN
+	}
+	if req.NomorPertandingan != nil {
+		// Empty string → clear field (set to nil)
+		if *req.NomorPertandingan == "" {
+			user.NomorPertandingan = nil
+		} else {
+			user.NomorPertandingan = req.NomorPertandingan
+		}
 	}
 
 	user.UpdatedAt = time.Now()

@@ -29,6 +29,7 @@ export interface CreateUserForm {
   role: UserRole
   phone: string
   tingkat: string
+  nomor_pertandingan: string
 }
 
 export interface EditUserForm {
@@ -37,6 +38,7 @@ export interface EditUserForm {
   phone: string
   tingkat: string
   nisn: string
+  nomor_pertandingan: string
 }
 
 export const emptyCreateForm: CreateUserForm = {
@@ -46,6 +48,7 @@ export const emptyCreateForm: CreateUserForm = {
   role: 'player',
   phone: '',
   tingkat: '',
+  nomor_pertandingan: '',
 }
 
 export const emptyEditForm: EditUserForm = {
@@ -54,6 +57,7 @@ export const emptyEditForm: EditUserForm = {
   phone: '',
   tingkat: '',
   nisn: '',
+  nomor_pertandingan: '',
 }
 
 export interface CredentialData {

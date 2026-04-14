@@ -44,31 +44,68 @@ import type { Event } from '@/types'
 type EventStatus = Event['status']
 
 interface EventFormData {
+  // Informasi Dasar
   name: string
   slug: string
   short_name: string
+  description: string
+  // Tampilan
   primary_color: string
-  status: EventStatus
+  secondary_color: string
+  logo_url: string
+  banner_url: string
+  // Jadwal
+  start_date: string
+  end_date: string
+  registration_start: string
+  registration_end: string
+  // Lokasi
   venue: string
   city: string
   organizer: string
-  start_date: string
-  end_date: string
+  // Kontak & Sosmed
+  contact_phone: string
+  contact_email: string
+  instagram_url: string
+  website_url: string
+  // Pengumuman
+  announcement: string
+  announcement_active: boolean
+  // Status & Flag
+  status: EventStatus
+  registration_open: boolean
+  rules_published: boolean
   requires_school: boolean
+  sort_order: number
 }
 
 const emptyForm: EventFormData = {
   name: '',
   slug: '',
   short_name: '',
+  description: '',
   primary_color: '#dc2626',
-  status: 'draft',
+  secondary_color: '#1f2937',
+  logo_url: '',
+  banner_url: '',
+  start_date: '',
+  end_date: '',
+  registration_start: '',
+  registration_end: '',
   venue: '',
   city: 'Denpasar, Bali',
   organizer: 'ESI Kota Denpasar',
-  start_date: '',
-  end_date: '',
+  contact_phone: '',
+  contact_email: '',
+  instagram_url: '',
+  website_url: '',
+  announcement: '',
+  announcement_active: false,
+  status: 'draft',
+  registration_open: false,
+  rules_published: false,
   requires_school: false,
+  sort_order: 0,
 }
 
 const STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
@@ -94,6 +131,33 @@ function slugify(text: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .trim()
+}
+
+// Convert an ISO string (or empty) to the value <input type="datetime-local"> expects: YYYY-MM-DDTHH:mm
+function toDateTimeLocal(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Convert a datetime-local string (YYYY-MM-DDTHH:mm) to an ISO string for the API, or null if empty.
+function fromDateTimeLocal(value: string): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+// Section wrapper for grouping form fields.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <fieldset className="rounded-lg border border-esi-border bg-stone-50/50 dark:bg-zinc-900/40 p-4">
+      <legend className="px-2 text-sm font-semibold text-esi-text">{title}</legend>
+      <div className="space-y-4">{children}</div>
+    </fieldset>
+  )
 }
 
 export default function AdminEventsPage() {
@@ -152,20 +216,35 @@ export default function AdminEventsPage() {
       name: event.name,
       slug: event.slug,
       short_name: event.short_name || '',
+      description: event.description || '',
       primary_color: event.primary_color || '#dc2626',
-      status: event.status,
+      secondary_color: event.secondary_color || '#1f2937',
+      logo_url: event.logo_url || '',
+      banner_url: event.banner_url || '',
+      start_date: toDateTimeLocal(event.start_date),
+      end_date: toDateTimeLocal(event.end_date),
+      registration_start: toDateTimeLocal(event.registration_start),
+      registration_end: toDateTimeLocal(event.registration_end),
       venue: event.venue || '',
       city: event.city || '',
       organizer: event.organizer || '',
-      start_date: event.start_date || '',
-      end_date: event.end_date || '',
+      contact_phone: event.contact_phone || '',
+      contact_email: event.contact_email || '',
+      instagram_url: event.instagram_url || '',
+      website_url: event.website_url || '',
+      announcement: event.announcement || '',
+      announcement_active: event.announcement_active ?? false,
+      status: event.status,
+      registration_open: event.registration_open ?? false,
+      rules_published: event.rules_published ?? false,
       requires_school: event.requires_school ?? false,
+      sort_order: event.sort_order ?? 0,
     })
     setSlugManual(true)
     setDialogOpen(true)
   }
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const { name, value } = e.target
     setForm(prev => {
       const next = { ...prev, [name]: value }
@@ -180,6 +259,12 @@ export default function AdminEventsPage() {
     })
   }
 
+  function handleCheck(name: keyof EventFormData) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setForm(prev => ({ ...prev, [name]: e.target.checked }))
+    }
+  }
+
   async function handleSubmit() {
     if (!form.name.trim()) {
       toast.error('Nama event wajib diisi')
@@ -192,14 +277,34 @@ export default function AdminEventsPage() {
 
     try {
       setSubmitting(true)
+      // Emptry string -> null for nullable fields; dates go through ISO conversion.
       const payload = {
-        ...form,
+        name: form.name,
+        slug: form.slug,
+        short_name: form.short_name || null,
+        description: form.description || null,
+        primary_color: form.primary_color,
+        secondary_color: form.secondary_color || null,
+        logo_url: form.logo_url || null,
+        banner_url: form.banner_url || null,
+        start_date: fromDateTimeLocal(form.start_date),
+        end_date: fromDateTimeLocal(form.end_date),
+        registration_start: fromDateTimeLocal(form.registration_start),
+        registration_end: fromDateTimeLocal(form.registration_end),
         venue: form.venue || null,
         city: form.city || null,
         organizer: form.organizer || null,
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
-        short_name: form.short_name || null,
+        contact_phone: form.contact_phone || null,
+        contact_email: form.contact_email || null,
+        instagram_url: form.instagram_url || null,
+        website_url: form.website_url || null,
+        announcement: form.announcement || null,
+        announcement_active: form.announcement_active,
+        status: form.status,
+        registration_open: form.registration_open,
+        rules_published: form.rules_published,
+        requires_school: form.requires_school,
+        sort_order: Number(form.sort_order) || 0,
       }
 
       if (editingId) {
@@ -311,95 +416,256 @@ export default function AdminEventsPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? 'Edit Event' : 'Buat Event Baru'}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="name">Nama Event *</Label>
-              <Input id="name" name="name" value={form.name} onChange={handleChange} placeholder="ESI Kota Denpasar 2026" />
-            </div>
+          <div className="space-y-5 py-2">
+            {/* Informasi Dasar */}
+            <Section title="Informasi Dasar">
+              <div>
+                <Label htmlFor="name">Nama Event *</Label>
+                <Input id="name" name="name" value={form.name} onChange={handleChange} placeholder="ESI Kota Denpasar 2026" />
+              </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="slug">Slug *</Label>
-                <Input id="slug" name="slug" value={form.slug} onChange={handleChange} placeholder="esi-denpasar-2026" />
-              </div>
-              <div>
-                <Label htmlFor="short_name">Nama Singkat</Label>
-                <Input id="short_name" name="short_name" value={form.short_name} onChange={handleChange} placeholder="ESI 2026" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Select value={form.status} onValueChange={(val) => setForm(prev => ({ ...prev, status: val as EventStatus }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map(opt => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="primary_color">Warna Utama</Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    id="primary_color"
-                    name="primary_color"
-                    value={form.primary_color}
-                    onChange={handleChange}
-                    className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
-                  />
-                  <Input id="primary_color_text" name="primary_color" value={form.primary_color} onChange={handleChange} className="font-mono text-sm" aria-label="Kode warna utama" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="slug">Slug *</Label>
+                  <Input id="slug" name="slug" value={form.slug} onChange={handleChange} placeholder="esi-denpasar-2026" />
+                </div>
+                <div>
+                  <Label htmlFor="short_name">Nama Singkat</Label>
+                  <Input id="short_name" name="short_name" value={form.short_name} onChange={handleChange} placeholder="ESI 2026" />
                 </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="venue">Venue</Label>
-                <Input id="venue" name="venue" value={form.venue} onChange={handleChange} placeholder="Graha Yowana Suci" />
+                <Label htmlFor="description">Deskripsi</Label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  rows={3}
+                  placeholder="Deskripsi singkat event"
+                  className="flex min-h-[80px] w-full rounded-md border border-esi-border bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-esi-text placeholder:text-esi-muted focus:outline-none focus:ring-2 focus:ring-esi-red/40 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+            </Section>
+
+            {/* Tampilan */}
+            <Section title="Tampilan">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="primary_color">Warna Utama</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="primary_color"
+                      name="primary_color"
+                      value={form.primary_color}
+                      onChange={handleChange}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
+                    />
+                    <Input
+                      name="primary_color"
+                      value={form.primary_color}
+                      onChange={handleChange}
+                      className="font-mono text-sm"
+                      aria-label="Kode warna utama"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="secondary_color">Warna Sekunder</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      id="secondary_color"
+                      name="secondary_color"
+                      value={form.secondary_color}
+                      onChange={handleChange}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
+                    />
+                    <Input
+                      name="secondary_color"
+                      value={form.secondary_color}
+                      onChange={handleChange}
+                      className="font-mono text-sm"
+                      aria-label="Kode warna sekunder"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="logo_url">URL Logo</Label>
+                  <Input id="logo_url" name="logo_url" type="url" value={form.logo_url} onChange={handleChange} placeholder="https://..." />
+                </div>
+                <div>
+                  <Label htmlFor="banner_url">URL Banner</Label>
+                  <Input id="banner_url" name="banner_url" type="url" value={form.banner_url} onChange={handleChange} placeholder="https://..." />
+                </div>
+              </div>
+            </Section>
+
+            {/* Jadwal */}
+            <Section title="Jadwal">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_date">Tanggal Mulai</Label>
+                  <Input id="start_date" name="start_date" type="datetime-local" value={form.start_date} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label htmlFor="end_date">Tanggal Selesai</Label>
+                  <Input id="end_date" name="end_date" type="datetime-local" value={form.end_date} onChange={handleChange} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="registration_start">Pendaftaran Dibuka</Label>
+                  <Input id="registration_start" name="registration_start" type="datetime-local" value={form.registration_start} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label htmlFor="registration_end">Pendaftaran Ditutup</Label>
+                  <Input id="registration_end" name="registration_end" type="datetime-local" value={form.registration_end} onChange={handleChange} />
+                </div>
+              </div>
+            </Section>
+
+            {/* Lokasi */}
+            <Section title="Lokasi">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="venue">Venue</Label>
+                  <Input id="venue" name="venue" value={form.venue} onChange={handleChange} placeholder="Graha Yowana Suci" />
+                </div>
+                <div>
+                  <Label htmlFor="city">Kota</Label>
+                  <Input id="city" name="city" value={form.city} onChange={handleChange} placeholder="Denpasar, Bali" />
+                </div>
               </div>
               <div>
-                <Label htmlFor="city">Kota</Label>
-                <Input id="city" name="city" value={form.city} onChange={handleChange} placeholder="Denpasar, Bali" />
+                <Label htmlFor="organizer">Penyelenggara</Label>
+                <Input id="organizer" name="organizer" value={form.organizer} onChange={handleChange} placeholder="ESI Kota Denpasar" />
               </div>
-            </div>
+            </Section>
 
-            <div>
-              <Label htmlFor="organizer">Penyelenggara</Label>
-              <Input id="organizer" name="organizer" value={form.organizer} onChange={handleChange} placeholder="ESI Kota Denpasar" />
-            </div>
+            {/* Kontak & Sosmed */}
+            <Section title="Kontak & Sosmed">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="contact_phone">Nomor Telepon</Label>
+                  <Input id="contact_phone" name="contact_phone" type="tel" value={form.contact_phone} onChange={handleChange} placeholder="+62 812-3456-7890" />
+                </div>
+                <div>
+                  <Label htmlFor="contact_email">Email</Label>
+                  <Input id="contact_email" name="contact_email" type="email" value={form.contact_email} onChange={handleChange} placeholder="info@porjar.id" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="instagram_url">Instagram URL</Label>
+                  <Input id="instagram_url" name="instagram_url" type="url" value={form.instagram_url} onChange={handleChange} placeholder="https://instagram.com/..." />
+                </div>
+                <div>
+                  <Label htmlFor="website_url">Website URL</Label>
+                  <Input id="website_url" name="website_url" type="url" value={form.website_url} onChange={handleChange} placeholder="https://..." />
+                </div>
+              </div>
+            </Section>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Pengumuman */}
+            <Section title="Pengumuman">
               <div>
-                <Label htmlFor="start_date">Tanggal Mulai</Label>
-                <Input id="start_date" name="start_date" type="date" value={form.start_date} onChange={handleChange} />
+                <Label htmlFor="announcement">Pengumuman</Label>
+                <textarea
+                  id="announcement"
+                  name="announcement"
+                  value={form.announcement}
+                  onChange={handleChange}
+                  rows={4}
+                  placeholder="Tulis pengumuman yang akan ditampilkan di halaman event"
+                  className="flex min-h-[96px] w-full rounded-md border border-esi-border bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-esi-text placeholder:text-esi-muted focus:outline-none focus:ring-2 focus:ring-esi-red/40 disabled:cursor-not-allowed disabled:opacity-50"
+                />
               </div>
-              <div>
-                <Label htmlFor="end_date">Tanggal Selesai</Label>
-                <Input id="end_date" name="end_date" type="date" value={form.end_date} onChange={handleChange} />
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="announcement_active"
+                  checked={form.announcement_active}
+                  onChange={handleCheck('announcement_active')}
+                  className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
+                />
+                <Label htmlFor="announcement_active">Tampilkan pengumuman (aktif)</Label>
               </div>
-            </div>
+            </Section>
 
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="requires_school"
-                checked={form.requires_school}
-                onChange={(e) => setForm(prev => ({ ...prev, requires_school: e.target.checked }))}
-                className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
-              />
-              <Label htmlFor="requires_school">Wajib sekolah (tim harus terdaftar di sekolah, tidak boleh duplikat)</Label>
-            </div>
+            {/* Status & Flag */}
+            <Section title="Status & Flag">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={form.status} onValueChange={(val) => setForm(prev => ({ ...prev, status: val as EventStatus }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="sort_order">Urutan (Sort Order)</Label>
+                  <Input
+                    id="sort_order"
+                    name="sort_order"
+                    type="number"
+                    value={form.sort_order}
+                    onChange={(e) => setForm(prev => ({ ...prev, sort_order: Number(e.target.value) || 0 }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="registration_open"
+                    checked={form.registration_open}
+                    onChange={handleCheck('registration_open')}
+                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
+                  />
+                  <Label htmlFor="registration_open">Pendaftaran dibuka</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="rules_published"
+                    checked={form.rules_published}
+                    onChange={handleCheck('rules_published')}
+                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
+                  />
+                  <Label htmlFor="rules_published">Peraturan dipublikasikan</Label>
+                </div>
+                <div className="flex items-center gap-3 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    id="requires_school"
+                    checked={form.requires_school}
+                    onChange={handleCheck('requires_school')}
+                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
+                  />
+                  <Label htmlFor="requires_school">Wajib sekolah (tim harus terdaftar di sekolah, tidak boleh duplikat)</Label>
+                </div>
+              </div>
+            </Section>
           </div>
 
           <DialogFooter>
