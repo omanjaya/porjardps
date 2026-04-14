@@ -89,7 +89,7 @@ export default function CoachResultsPage() {
         title="Hasil Pertandingan"
         description="Semua hasil pertandingan tim sekolah"
         breadcrumbs={[
-          { label: 'Coach', href: '/coach' },
+          { label: 'Dashboard', href: '/coach' },
           { label: 'Hasil' },
         ]}
       />

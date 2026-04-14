@@ -68,7 +68,7 @@ export default function MyEventsPage() {
         description="Event yang tim kamu ikuti"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Event Saya' },
+          { label: 'Event' },
         ]}
       />
 

@@ -57,6 +57,8 @@ type PlayerTeamInfo struct {
 	SchoolName   string             `json:"school_name"`
 	LogoURL      *string            `json:"logo_url"`
 	TournamentID *string            `json:"tournament_id,omitempty"`
+	Status       string             `json:"status,omitempty"`
+	CreatedAt    string             `json:"created_at,omitempty"`
 	Members      []PlayerTeamMember `json:"members"`
 }
 
@@ -203,6 +205,8 @@ func (s *PlayerDashboardService) getPlayerTeamInfo(ctx context.Context, userID u
 		GameSlug:   game.Slug,
 		SchoolName: schoolName,
 		LogoURL:    team.LogoURL,
+		Status:     team.Status,
+		CreatedAt:  team.CreatedAt.Format(time.RFC3339),
 		Members:    members,
 	}
 	return teamInfo, &teamID, nil

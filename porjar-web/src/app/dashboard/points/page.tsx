@@ -53,7 +53,7 @@ export default function MyPointsPage() {
         description="Riwayat poin yang didapat dari event"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Poin Saya' },
+          { label: 'Poin' },
         ]}
       />
 

@@ -103,7 +103,7 @@ function LeaderboardsContent() {
     <PublicLayout>
       <PageHeader
         title="Leaderboard"
-        description="Peringkat tim, pemain, dan sekolah berdasarkan poin event"
+        description="Leaderboard Semua Event — peringkat tim, pemain, dan sekolah berdasarkan poin"
         breadcrumbs={[{ label: 'Leaderboard' }]}
       />
 

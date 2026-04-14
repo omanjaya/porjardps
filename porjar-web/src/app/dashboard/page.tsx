@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import {
   Users,
   Sword,
@@ -18,7 +20,10 @@ import {
   CheckCircle,
   Hourglass,
   Warning,
+  ArrowClockwise,
+  Info,
 } from '@phosphor-icons/react'
+import { relativeTime } from '@/lib/relativeTime'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { AnimatedCard } from '@/components/shared/AnimatedCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -38,7 +43,7 @@ import { MyEventsWidget } from './components/MyEventsWidget'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const { data, pastMatches, eventSettings, myStanding, totalTeams } = useDashboardData()
+  const { data, pastMatches, eventSettings, myStanding, totalTeams, reload } = useDashboardData()
   const searchParams = useSearchParams()
   const isWelcome = searchParams?.get('welcome') === '1'
   const { requiredDone } = useOnboardingChecklist(user, !!data?.team, {
@@ -49,6 +54,18 @@ export default function DashboardPage() {
 
   // Load all user teams to surface pending/rejected statuses at dashboard level
   const [myTeams, setMyTeams] = useState<Team[]>([])
+  const [reloadingTeams, setReloadingTeams] = useState(false)
+  const reloadMyTeams = useCallback(async () => {
+    setReloadingTeams(true)
+    try {
+      const t = await api.get<Team[]>('/teams/my')
+      setMyTeams(Array.isArray(t) ? t : [])
+    } catch {
+      setMyTeams([])
+    } finally {
+      setReloadingTeams(false)
+    }
+  }, [])
   useEffect(() => {
     let cancelled = false
     api
@@ -57,6 +74,32 @@ export default function DashboardPage() {
       .catch(() => { if (!cancelled) setMyTeams([]) })
     return () => { cancelled = true }
   }, [])
+
+  // Personal WS notifications: react to approval / rejection in real time.
+  const userChannels = useMemo(() => (user?.id ? [`user:${user.id}`] : []), [user?.id])
+  useWebSocket({
+    channels: userChannels,
+    messageTypes: ['team_approved', 'team_rejected', 'submission_approved', 'submission_rejected'],
+    onMessage: (msg) => {
+      const payload = (msg.data ?? {}) as Record<string, unknown>
+      const teamName = typeof payload.team_name === 'string' ? payload.team_name : 'Tim'
+      if (msg.type === 'team_approved') {
+        toast.success(`Tim "${teamName}" telah disetujui!`)
+        reloadMyTeams()
+        reload()
+      } else if (msg.type === 'team_rejected') {
+        toast.error(`Tim "${teamName}" ditolak`)
+        reloadMyTeams()
+        reload()
+      } else if (msg.type === 'submission_approved') {
+        toast.success('Submission kamu disetujui')
+        reload()
+      } else if (msg.type === 'submission_rejected') {
+        toast.error('Submission kamu ditolak')
+        reload()
+      }
+    },
+  })
   const pendingTeams = myTeams.filter((t) => t.status === 'pending')
   const rejectedTeams = myTeams.filter((t) => t.status === 'rejected')
   const primaryTeamStatus =
@@ -147,21 +190,48 @@ export default function DashboardPage() {
           </Link>
         )}
         {pendingTeams.length > 0 && (
-          <Link
-            href={`/dashboard/teams/${pendingTeams[0].id}`}
-            className="flex items-center gap-3 rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 shadow-sm transition-all hover:border-amber-400 hover:shadow-md"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50">
-              <Hourglass size={22} weight="bold" className="text-amber-700 dark:text-amber-300" />
+          <div className="rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/50 shrink-0">
+                <Hourglass size={22} weight="bold" className="text-amber-700 dark:text-amber-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                  {pendingTeams.length} tim kamu menunggu persetujuan
+                </p>
+                {pendingTeams[0].created_at && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300 truncate">
+                    Diajukan {relativeTime(pendingTeams[0].created_at)}
+                  </p>
+                )}
+                <p
+                  className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-amber-700/80 dark:text-amber-300/80"
+                  title="Admin biasanya review dalam 24 jam"
+                >
+                  <Info size={12} weight="bold" />
+                  Admin biasanya review dalam 24 jam
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); reloadMyTeams(); reload() }}
+                disabled={reloadingTeams}
+                className="inline-flex items-center justify-center h-9 w-9 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 shrink-0"
+                aria-label="Muat ulang status tim"
+                title="Muat ulang status tim"
+              >
+                <ArrowClockwise size={16} weight="bold" className={reloadingTeams ? 'animate-spin' : ''} />
+              </button>
+              <Link
+                href={`/dashboard/teams/${pendingTeams[0].id}`}
+                className="inline-flex items-center justify-center h-9 w-9 rounded-lg text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 shrink-0"
+                aria-label="Lihat detail tim"
+                title="Lihat detail tim"
+              >
+                <ArrowRight size={18} />
+              </Link>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                {pendingTeams.length} tim kamu menunggu persetujuan
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-300 truncate">Admin akan meninjau segera</p>
-            </div>
-            <ArrowRight size={18} className="text-amber-600 shrink-0" />
-          </Link>
+          </div>
         )}
 
         {/* Celebration when all steps done and arriving via welcome link */}
@@ -251,7 +321,24 @@ export default function DashboardPage() {
                 {primaryTeamStatus === 'pending' && (
                   <div className="mt-2 flex items-start gap-2 rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-2.5 py-2 text-xs text-amber-800 dark:text-amber-300">
                     <Hourglass size={14} weight="bold" className="mt-0.5 shrink-0" />
-                    <span>Tim menunggu persetujuan admin</span>
+                    <div className="flex-1 min-w-0">
+                      <p>Tim menunggu persetujuan admin</p>
+                      {data.team.created_at && (
+                        <p className="text-[11px] text-amber-700 dark:text-amber-300/80">
+                          Diajukan {relativeTime(data.team.created_at)} · Admin biasanya review dalam 24 jam
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { reloadMyTeams(); reload() }}
+                      disabled={reloadingTeams}
+                      className="shrink-0 inline-flex items-center gap-1 rounded-md border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 px-2 py-1 text-[11px] font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50"
+                      aria-label="Muat ulang status tim"
+                    >
+                      <ArrowClockwise size={12} weight="bold" className={reloadingTeams ? 'animate-spin' : ''} />
+                      Muat Ulang
+                    </button>
                   </div>
                 )}
                 {primaryTeamStatus === 'rejected' && (

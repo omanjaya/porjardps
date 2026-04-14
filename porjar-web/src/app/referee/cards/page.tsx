@@ -1,11 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   IdentificationCard,
   CheckCircle,
   XCircle,
   Funnel,
+  CaretRight,
 } from '@phosphor-icons/react'
 import { RefereeLayout } from '@/components/layouts/RefereeLayout'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -42,6 +44,13 @@ export default function RefereeCardsPage() {
 
   return (
     <RefereeLayout>
+      {/* Breadcrumb */}
+      <div className="mb-3 flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
+        <Link href="/referee" className="hover:text-esi-red transition-colors">Dashboard</Link>
+        <CaretRight size={12} />
+        <span className="text-stone-900 dark:text-zinc-100 font-medium">Kartu</span>
+      </div>
+
       {/* Sticky header */}
       <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-stone-200 dark:border-zinc-700 bg-stone-50/95 dark:bg-zinc-950/95 backdrop-blur-sm px-4 pb-3 pt-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
         <div className="flex items-center gap-2.5 mb-3">

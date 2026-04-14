@@ -7,7 +7,7 @@ import type { SubmissionData } from '@/components/modules/submission/SubmissionC
 import type { ActiveMatch } from './useActiveMatches'
 
 interface Params {
-  loadData: () => void
+  loadData: (submissionId?: string) => void
   setSelectedMatch: (m: ActiveMatch | null) => void
 }
 
@@ -53,7 +53,7 @@ export function useSubmissionForm({ loadData, setSelectedMatch }: Params) {
 
     setSubmitting(true)
     try {
-      const res = await api.post<{ status?: string }>('/submissions', {
+      const res = await api.post<{ status?: string; id?: string; job_id?: string }>('/submissions', {
         match_id: selectedMatch.id,
         match_type: selectedMatch.type === 'group' ? 'group' : 'bracket',
         claimed_score_a: a,
@@ -64,10 +64,10 @@ export function useSubmissionForm({ loadData, setSelectedMatch }: Params) {
       resetForm()
       if (res?.status === 'queued') {
         toast.success('Submission sedang diproses...')
-        setTimeout(() => loadData(), 3000)
+        setTimeout(() => loadData(res?.job_id), 3000)
       } else {
         toast.success('Hasil pertandingan berhasil dikirim!')
-        loadData()
+        loadData(res?.id)
       }
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'details' in err) {
@@ -89,7 +89,7 @@ export function useSubmissionForm({ loadData, setSelectedMatch }: Params) {
 
     setSubmitting(true)
     try {
-      const res = await api.post<{ status?: string }>('/submissions', {
+      const res = await api.post<{ status?: string; id?: string; job_id?: string }>('/submissions', {
         match_id: selectedMatch.id,
         match_type: 'battle_royale',
         map_number: selectedMatch.current_map ?? 1,
@@ -104,10 +104,10 @@ export function useSubmissionForm({ loadData, setSelectedMatch }: Params) {
       resetForm()
       if (res?.status === 'queued') {
         toast.success('Submission sedang diproses...')
-        setTimeout(() => loadData(), 3000)
+        setTimeout(() => loadData(res?.job_id), 3000)
       } else {
         toast.success('Hasil pertandingan berhasil dikirim!')
-        loadData()
+        loadData(res?.id)
       }
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'details' in err) {

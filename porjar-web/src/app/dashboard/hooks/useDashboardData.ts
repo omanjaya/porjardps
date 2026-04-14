@@ -17,6 +17,7 @@ export interface DashboardData {
     members: TeamMember[]
     status?: string
     rejection_reason?: string | null
+    created_at?: string
   } | null
   next_match: BracketMatch | null
 }

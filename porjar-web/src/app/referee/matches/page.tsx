@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
+import Link from 'next/link'
 import {
   Sword,
   IdentificationCard,
@@ -10,6 +11,7 @@ import {
   Lightning,
   Broadcast,
   ArrowsClockwise,
+  CaretRight,
 } from '@phosphor-icons/react'
 import { RefereeLayout } from '@/components/layouts/RefereeLayout'
 import { Button } from '@/components/ui/button'
@@ -164,6 +166,13 @@ export default function RefereeMatchesPage() {
 
   return (
     <RefereeLayout>
+      {/* Breadcrumb */}
+      <div className="mb-3 flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
+        <Link href="/referee" className="hover:text-esi-red transition-colors">Dashboard</Link>
+        <CaretRight size={12} />
+        <span className="text-stone-900 dark:text-zinc-100 font-medium">Pertandingan</span>
+      </div>
+
       {/* Sticky header */}
       <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 border-b border-stone-200 dark:border-zinc-700 bg-stone-50/95 dark:bg-zinc-950/95 backdrop-blur-sm px-4 pb-3 pt-4 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6">
         <div className="flex items-center justify-between gap-3">

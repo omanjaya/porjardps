@@ -11,6 +11,7 @@ export interface Team {
   status: TeamStatus
   seed: number | null
   logo_url: string | null
+  created_at?: string
 }
 
 export interface TeamDetail extends Team {

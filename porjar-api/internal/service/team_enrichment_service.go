@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
@@ -46,6 +47,7 @@ type EnrichedTeam struct {
 	School      *TeamSchoolInfo      `json:"school"`
 	Captain     *TeamCaptainInfo     `json:"captain"`
 	MemberCount int                  `json:"member_count"`
+	CreatedAt   string               `json:"created_at,omitempty"`
 	Members     []EnrichedTeamMember `json:"members"`
 }
 
@@ -87,6 +89,7 @@ func (s *TeamService) enrichTeam(ctx context.Context, t *model.Team) *EnrichedTe
 		School:      school,
 		Captain:     captain,
 		MemberCount: memberCount,
+		CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 	}
 }
 
@@ -197,6 +200,7 @@ func (s *TeamService) ListEnriched(ctx context.Context, filter model.TeamFilter)
 			School:      school,
 			Captain:     captain,
 			MemberCount: memberCountMap[t.ID],
+			CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	return enriched, total, nil
@@ -331,6 +335,7 @@ func (s *TeamService) GetMyTeamsEnriched(ctx context.Context, userID uuid.UUID) 
 			School:      school,
 			Captain:     captain,
 			MemberCount: memberCountMap[t.ID],
+			CreatedAt:   t.CreatedAt.Format(time.RFC3339),
 		})
 	}
 	return enriched, nil

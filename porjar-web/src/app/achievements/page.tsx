@@ -101,6 +101,7 @@ export default function AchievementsPage() {
     <PublicLayout>
       <PageHeader
         title="Pencapaian"
+        description="Prestasi Semua Event"
         breadcrumbs={[{ label: 'Pencapaian' }]}
       />
 

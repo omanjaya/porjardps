@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Clock,
   Crown,
+  CaretRight,
 } from '@phosphor-icons/react'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/store/auth-store'
@@ -159,6 +160,13 @@ export default function PlayerStatsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
+          <Link href="/dashboard" className="hover:text-esi-red transition-colors">Dashboard</Link>
+          <CaretRight size={12} />
+          <span className="text-stone-900 dark:text-zinc-100 font-medium">Statistik</span>
+        </div>
+
         {/* Page Header */}
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-esi-red/10">

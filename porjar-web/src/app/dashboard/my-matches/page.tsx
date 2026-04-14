@@ -4,9 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   Sword,
+  Trophy,
   Clock,
   Lightning,
   ArrowCounterClockwise,
+  CaretRight,
+  ArrowRight,
 } from '@phosphor-icons/react'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/store/auth-store'
@@ -41,6 +44,7 @@ export default function MyMatchesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [liveAlert, setLiveAlert] = useState<string | null>(null)
+  const [hasAnyTeam, setHasAnyTeam] = useState<boolean>(false)
 
   useEffect(() => {
     if (!isAuthenticated || authLoading) return
@@ -86,6 +90,16 @@ export default function MyMatchesPage() {
     try {
       const result = await api.get<MyMatchData>('/player/my-matches')
       setData(result)
+      if (!result.team) {
+        try {
+          const teams = await api.get<unknown[]>('/teams/my')
+          setHasAnyTeam(Array.isArray(teams) && teams.length > 0)
+        } catch {
+          setHasAnyTeam(false)
+        }
+      } else {
+        setHasAnyTeam(true)
+      }
     } catch {
       setError('Gagal memuat data pertandingan. Periksa koneksi internet kamu.')
     } finally {
@@ -101,6 +115,13 @@ export default function MyMatchesPage() {
         </div>
       ) : (
         <div className="space-y-6">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
+            <Link href="/dashboard" className="hover:text-esi-red transition-colors">Dashboard</Link>
+            <CaretRight size={12} />
+            <span className="text-stone-900 dark:text-zinc-100 font-medium">Pertandingan</span>
+          </div>
+
           {/* Error state */}
           {error && (
             <div className="rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 p-6 text-center">
@@ -182,10 +203,23 @@ export default function MyMatchesPage() {
           ) : !error ? (
             <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-6 shadow-sm">
               <EmptyState
-                icon={Sword}
+                icon={Trophy}
                 title="Belum ada pertandingan"
-                description="Kamu belum terdaftar di tim manapun. Hubungi panitia atau guru pembina untuk informasi lebih lanjut."
+                description={
+                  hasAnyTeam
+                    ? 'Pertandingan akan muncul setelah tim kamu terjadwal di turnamen.'
+                    : 'Buat tim dulu untuk mendapat pertandingan.'
+                }
               />
+              <div className="mt-4 flex justify-center">
+                <Link
+                  href={hasAnyTeam ? '/events' : '/dashboard/teams/create'}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-esi-red px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 transition"
+                >
+                  {hasAnyTeam ? 'Lihat Event' : 'Buat Tim'}
+                  <ArrowRight size={14} weight="bold" />
+                </Link>
+              </div>
             </div>
           ) : null}
         </div>

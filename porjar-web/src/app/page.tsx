@@ -11,6 +11,7 @@ import { ActiveEventBanner } from '@/components/landing/sections/ActiveEventBann
 import { AnnouncementSection } from '@/components/landing/sections/AnnouncementSection'
 import { HeroSection } from '@/components/landing/sections/HeroSection'
 import { StatsSection } from '@/components/landing/sections/StatsSection'
+import { CommandPalette } from '@/components/shared/CommandPalette'
 
 // Below fold — dynamic imports (lazy loaded, still SSR for SEO)
 const NewsSection = dynamic(() => import('@/components/landing/sections/NewsSection'), { ssr: true })
@@ -47,6 +48,9 @@ export default function ESILandingPage() {
           }),
         }}
       />
+
+      {/* ═══ COMMAND PALETTE (Ctrl/Cmd+K) ═══ */}
+      <CommandPalette />
 
       {/* ═══ NAVIGATION ═══ */}
       <LandingNavbar activeEvent={activeEvent} />

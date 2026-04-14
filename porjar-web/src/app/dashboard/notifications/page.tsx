@@ -13,6 +13,7 @@ import {
   UsersThree,
   FunnelSimple,
   ArrowRight,
+  CaretRight,
 } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
 import { toast } from 'sonner'
@@ -267,6 +268,13 @@ export default function NotificationsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-5">
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400">
+          <Link href="/dashboard" className="hover:text-esi-red transition-colors">Dashboard</Link>
+          <CaretRight size={12} />
+          <span className="text-stone-900 dark:text-zinc-100 font-medium">Notifikasi</span>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

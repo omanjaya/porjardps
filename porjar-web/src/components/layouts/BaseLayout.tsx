@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { NotificationBell } from '@/components/shared/NotificationBell'
 import { ForcePasswordChange } from '@/components/shared/ForcePasswordChange'
 import { OfflineIndicator } from '@/components/shared/OfflineIndicator'
+import { CommandPalette } from '@/components/shared/CommandPalette'
 import type { LayoutConfig } from './configs/types'
 
 interface BaseLayoutProps {
@@ -84,6 +85,9 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
     <div className="flex min-h-[100dvh] bg-esi-bg">
       {/* Offline indicator (PWA) */}
       <OfflineIndicator />
+
+      {/* Global command palette (Ctrl/Cmd+K) */}
+      <CommandPalette />
 
       {/* Force password change modal */}
       {user?.needs_password_change && <ForcePasswordChange />}

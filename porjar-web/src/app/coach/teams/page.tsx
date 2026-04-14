@@ -58,7 +58,7 @@ export default function CoachTeamsPage() {
         title="Tim Sekolah"
         description="Semua tim esport dari sekolah kamu"
         breadcrumbs={[
-          { label: 'Coach', href: '/coach' },
+          { label: 'Dashboard', href: '/coach' },
           { label: 'Tim' },
         ]}
       />

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { CheckCircle, House, PaperPlaneTilt } from '@phosphor-icons/react'
+import { CheckCircle, House, PaperPlaneTilt, ListChecks } from '@phosphor-icons/react'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -64,10 +64,12 @@ export default function SubmitResultPage() {
   const [selectedMatch, setSelectedMatch] = useState<ActiveMatch | null>(null)
   const [editingFullSub, setEditingFullSub] = useState<SubmissionData | null>(null)
   const [justSubmitted, setJustSubmitted] = useState(false)
+  const [submittedId, setSubmittedId] = useState<string | null>(null)
 
   // Wrap loadData so a successful submission triggers the success screen.
-  const loadDataAndCelebrate = () => {
+  const loadDataAndCelebrate = (submissionId?: string) => {
     setJustSubmitted(true)
+    setSubmittedId(submissionId ?? null)
     loadData()
   }
 
@@ -125,14 +127,26 @@ export default function SubmitResultPage() {
           <p className="mt-2 text-sm text-esi-muted max-w-sm mx-auto">
             Admin akan verifikasi dalam 15 menit. Kamu akan mendapat notifikasi setelah hasil diverifikasi.
           </p>
+          {submittedId && (
+            <div className="text-xs text-stone-500 dark:text-zinc-400 mt-2">
+              ID Pengajuan: <span className="font-mono font-bold text-esi-text">#{submittedId.slice(0, 8)}</span>
+            </div>
+          )}
           <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
             <Button
-              onClick={() => setJustSubmitted(false)}
+              onClick={() => { setJustSubmitted(false); setSubmittedId(null) }}
               className="min-h-[48px] bg-esi-red text-white hover:brightness-110"
             >
               <PaperPlaneTilt size={18} weight="fill" className="mr-1.5" />
               Submit Match Lain
             </Button>
+            <Link
+              href="/dashboard/my-matches"
+              className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 text-sm font-semibold text-esi-text hover:bg-stone-50 dark:hover:bg-zinc-800"
+            >
+              <ListChecks size={18} weight="duotone" />
+              Lihat Status
+            </Link>
             <Link
               href="/dashboard"
               className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 text-sm font-semibold text-esi-text hover:bg-stone-50 dark:hover:bg-zinc-800"

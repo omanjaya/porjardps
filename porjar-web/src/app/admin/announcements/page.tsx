@@ -16,6 +16,7 @@ import {
   type AnnouncementPriority,
 } from './hooks/useAnnouncements'
 import { AnnouncementFormDialog } from './dialogs/AnnouncementFormDialog'
+import { DeleteAnnouncementDialog } from './dialogs/DeleteAnnouncementDialog'
 
 const PRIORITY_STYLES: Record<AnnouncementPriority, { label: string; className: string }> = {
   low: {
@@ -68,6 +69,7 @@ export default function AdminAnnouncementsPage() {
   const [eventsLoading, setEventsLoading] = useState(true)
   const [selectedEventId, setSelectedEventId] = useState<string>('')
   const [showCreate, setShowCreate] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Announcement | null>(null)
 
   const { items, loading, processing, list, create, remove } = useAnnouncements()
 
@@ -115,10 +117,9 @@ export default function AdminAnnouncementsPage() {
     [create, selectedEvent],
   )
 
-  const handleDelete = useCallback(
+  const handleDeleteConfirm = useCallback(
     async (a: Announcement) => {
-      if (!confirm(`Hapus pengumuman "${a.title}"?`)) return
-      await remove(a.id)
+      return remove(a.id)
     },
     [remove],
   )
@@ -202,7 +203,7 @@ export default function AdminAnnouncementsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleDelete(a)}
+                    onClick={() => setDeleteTarget(a)}
                     disabled={processing}
                     className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
                   >
@@ -221,6 +222,14 @@ export default function AdminAnnouncementsPage() {
         onOpenChange={setShowCreate}
         processing={processing}
         onSubmit={handleCreate}
+      />
+
+      <DeleteAnnouncementDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null) }}
+        announcement={deleteTarget}
+        processing={processing}
+        onConfirm={handleDeleteConfirm}
       />
     </AdminLayout>
   )

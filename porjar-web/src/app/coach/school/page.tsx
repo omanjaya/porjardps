@@ -96,7 +96,14 @@ export default function CoachSchoolPage() {
 
   return (
     <CoachLayout>
-      <PageHeader title="Pengaturan Sekolah" description="Kelola logo dan informasi sekolah" />
+      <PageHeader
+        title="Pengaturan Sekolah"
+        description="Kelola logo dan informasi sekolah"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/coach' },
+          { label: 'Sekolah' },
+        ]}
+      />
 
       <input
         ref={fileInputRef}

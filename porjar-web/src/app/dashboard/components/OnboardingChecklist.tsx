@@ -35,6 +35,11 @@ export function OnboardingChecklist({
   // Find the first incomplete step index
   const currentStepIndex = steps.findIndex((s) => !s.done)
 
+  // Progress indicator stats
+  const doneCount = steps.filter((s) => s.done).length
+  const totalCount = steps.length
+  const progress = totalCount > 0 ? (doneCount / totalCount) * 100 : 0
+
   return (
     <div
       className={`rounded-xl border shadow-sm ${
@@ -100,6 +105,26 @@ export function OnboardingChecklist({
           </span>
         </Link>
       )}
+
+      {/* Progress indicator */}
+      <div className="relative mb-4">
+        <div className="flex justify-between text-xs text-stone-500 dark:text-zinc-400 mb-1">
+          <span>Langkah {doneCount} dari {totalCount}</span>
+          <span className="font-semibold text-esi-text">{Math.round(progress)}%</span>
+        </div>
+        <div
+          className="h-2 bg-stone-200 dark:bg-zinc-800 rounded-full overflow-hidden"
+          role="progressbar"
+          aria-valuenow={Math.round(progress)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <div
+            className="h-full bg-esi-red transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
 
       <div className="relative space-y-2">
         {steps.map((step, i) => {

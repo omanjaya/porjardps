@@ -19,6 +19,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { ProfileCompletionGate } from '@/components/shared/ProfileCompletionGate'
 import { toast } from 'sonner'
 import { CheckCircle, Users, Medal, ArrowRight, SignIn, CalendarBlank, Trophy, UsersThree } from '@phosphor-icons/react'
+import { relativeTime } from '@/lib/relativeTime'
 import type { EventRegistration } from '@/types'
 
 interface MyTeam {
@@ -271,7 +272,14 @@ export default function EventRegisterPage() {
                     {reg.team.status ? <StatusBadge status={reg.team.status} /> : <span className="text-stone-400 dark:text-zinc-500 text-xs">—</span>}
                   </TableCell>
                   <TableCell className="text-stone-500 dark:text-zinc-400">
-                    {new Date(reg.registered_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    <div>
+                      {new Date(reg.registered_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    {reg.team.status === 'pending' && (
+                      <div className="text-[11px] text-amber-600 dark:text-amber-400">
+                        Diajukan {relativeTime(reg.registered_at)}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

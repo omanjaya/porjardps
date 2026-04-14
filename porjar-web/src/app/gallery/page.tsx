@@ -32,7 +32,7 @@ export default function GalleryPage() {
     <PublicLayout>
       <PageHeader
         title="Galeri & Highlight"
-        description="Kumpulan foto dan momen terbaik dari ESI Denpasar Esport 2026"
+        description="Galeri Semua Event — kumpulan foto dan momen terbaik"
         breadcrumbs={[
           { label: 'Beranda', href: '/' },
           { label: 'Galeri' },

@@ -13,7 +13,7 @@ import type { LayoutConfig } from './types'
 
 export const playerConfig: LayoutConfig = {
   role: 'player',
-  roleLabel: 'Player',
+  roleLabel: 'Pemain',
   baseHref: '/dashboard',
   allowedRoles: [],
   defaultUserLabel: 'Player',
