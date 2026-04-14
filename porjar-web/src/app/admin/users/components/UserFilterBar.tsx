@@ -34,6 +34,7 @@ export function UserFilterBar({ filterRole, onFilterRoleChange, search, onSearch
         value={search}
         onChange={(e) => onSearchChange(e.target.value)}
         className="w-full sm:w-56 bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-sm focus:border-esi-red"
+        aria-label="Cari pengguna"
       />
     </div>
   )

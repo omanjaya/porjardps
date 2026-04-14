@@ -42,9 +42,9 @@ type UpdateScheduleInput struct {
 }
 
 func (s *ScheduleService) Create(ctx context.Context, input CreateScheduleInput) (*model.Schedule, error) {
-	// TODO BUG 20: Validate that tournament exists, BracketMatchID belongs to tournament,
-	// and BRLobbyID belongs to tournament. tournamentRepo/bracketRepo/brLobbyRepo are not
-	// currently available in ScheduleService; add them when needed.
+	// TODO: Validate that BracketMatchID/BRLobbyID belong to the specified tournament.
+	// tournamentRepo/bracketRepo/brLobbyRepo are not currently available in ScheduleService;
+	// add them when cross-entity validation is needed.
 
 	status := input.Status
 	if status == "" {

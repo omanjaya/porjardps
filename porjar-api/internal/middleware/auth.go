@@ -73,7 +73,13 @@ func AuthMiddlewareWithBlacklist(jwtSecret string, rdb *redis.Client, userRepo m
 		if rdb != nil {
 			blacklistKey := fmt.Sprintf("blacklist_at:%s", tokenStr)
 			if val, _ := rdb.Get(c.UserContext(), blacklistKey).Result(); val != "" {
-				return c.Status(401).JSON(fiber.Map{"error": "Token telah diinvalidasi"})
+				return c.Status(401).JSON(fiber.Map{
+					"success": false,
+					"error": fiber.Map{
+						"code":    "TOKEN_INVALIDATED",
+						"message": "Token telah diinvalidasi",
+					},
+				})
 			}
 		}
 

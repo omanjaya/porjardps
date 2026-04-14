@@ -35,6 +35,7 @@ export function SchoolFilterBar({ filterLevel, onFilterLevel, search, onSearch }
         value={search}
         onChange={(e) => onSearch(e.target.value)}
         className="w-full sm:w-48 bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-sm focus:border-esi-red"
+        aria-label="Cari sekolah"
       />
     </div>
   )

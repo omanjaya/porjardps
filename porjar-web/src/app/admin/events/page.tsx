@@ -358,7 +358,7 @@ export default function AdminEventsPage() {
                     onChange={handleChange}
                     className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
                   />
-                  <Input name="primary_color" value={form.primary_color} onChange={handleChange} className="font-mono text-sm" />
+                  <Input id="primary_color_text" name="primary_color" value={form.primary_color} onChange={handleChange} className="font-mono text-sm" aria-label="Kode warna utama" />
                 </div>
               </div>
             </div>

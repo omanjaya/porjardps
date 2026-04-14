@@ -43,14 +43,6 @@ function getTeamColor(name: string): string {
   return TEAM_COLORS[hash % TEAM_COLORS.length]
 }
 
-const defaultGames: { slug: GameSlug; name: string }[] = [
-  { slug: 'hok', name: 'Honor of Kings' },
-  { slug: 'ml', name: 'Mobile Legends' },
-  { slug: 'ff', name: 'Free Fire' },
-  { slug: 'pubgm', name: 'PUBG Mobile' },
-  { slug: 'efootball', name: 'eFootball' },
-]
-
 function useDebounce(value: string, delay: number) {
   const [d, setD] = useState(value)
   useEffect(() => {
@@ -74,7 +66,7 @@ export default function TeamsDirectoryPage() {
   const search = useDebounce(searchInput, 300)
 
   const [teams, setTeams] = useState<Team[]>([])
-  const [games, setGames] = useState<{ slug: GameSlug; name: string }[]>(defaultGames)
+  const [games, setGames] = useState<{ slug: GameSlug; name: string }[]>([])
   const [schools, setSchools] = useState<School[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [loading, setLoading] = useState(true)

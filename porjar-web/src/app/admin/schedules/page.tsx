@@ -37,6 +37,7 @@ import { ScheduleGeneratorDialog } from './ScheduleGeneratorDialog'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn, mediaUrl } from '@/lib/utils'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import Image from 'next/image'
 import type { Schedule, GameSlug, PaginationMeta, Tournament } from '@/types'
 
 import { ScheduleFormDialog, emptyForm } from './ScheduleFormDialog'
@@ -535,7 +536,7 @@ export default function AdminSchedulesPage() {
                       <TableCell className="hidden sm:table-cell">
                         {gameConfig ? (
                           <div className="flex items-center gap-1.5">
-                            <img src={gameConfig.logo} alt="" className="h-5 w-5 object-contain" />
+                            <Image src={gameConfig.logo} alt="" width={20} height={20} className="h-5 w-5 object-contain" unoptimized />
                             <span className="text-xs text-stone-600 dark:text-zinc-400">{schedule.game?.name}</span>
                           </div>
                         ) : (

@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Image from 'next/image'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn } from '@/lib/utils'
 import type { ScheduleStatus, Tournament, GameSlug } from '@/types'
@@ -96,7 +97,7 @@ export function ScheduleFormDialog({
                     <SelectItem key={t.id} value={t.id} className="text-stone-900 dark:text-zinc-100">
                       <div className="flex items-center gap-2">
                         {config?.logo && (
-                          <img src={config.logo} alt="" className="h-4 w-4 object-contain" />
+                          <Image src={config.logo} alt="" width={16} height={16} className="h-4 w-4 object-contain" unoptimized />
                         )}
                         {t.name}
                       </div>

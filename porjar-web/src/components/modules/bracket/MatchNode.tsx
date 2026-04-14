@@ -188,7 +188,7 @@ export const MatchNode = React.memo(function MatchNode({
     <button
       onClick={() => !swapMode && onClick?.(match.id)}
       className={cn(
-        'group relative w-[240px] rounded-md border text-left transition-all duration-200',
+        'group relative w-[200px] sm:w-[240px] rounded-md border text-left transition-all duration-200',
         'bg-white dark:bg-zinc-900 shadow-sm',
         !swapMode && 'hover:scale-[1.02] hover:shadow-md hover:z-10',
         swapMode && 'cursor-default',

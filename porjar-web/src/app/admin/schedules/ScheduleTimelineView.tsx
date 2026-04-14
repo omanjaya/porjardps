@@ -12,6 +12,7 @@ import {
 import { GAME_CONFIG } from '@/constants/games'
 import { cn } from '@/lib/utils'
 import { STATUS_CONFIG } from './ScheduleFormDialog'
+import Image from 'next/image'
 import type { Schedule, GameSlug } from '@/types'
 
 // ─── Game color mapping for timeline cards ───
@@ -147,7 +148,7 @@ export function ScheduleTimelineView({
                           )}
                         >
                           {gameConfig?.logo ? (
-                            <img src={gameConfig.logo} alt={schedule.game?.name ?? ''} className="h-6 w-6 object-contain" />
+                            <Image src={gameConfig.logo} alt={schedule.game?.name ?? ''} width={24} height={24} className="h-6 w-6 object-contain" unoptimized />
                           ) : (
                             <CalendarBlank size={18} className="text-stone-400 dark:text-zinc-500" />
                           )}
@@ -246,7 +247,7 @@ export function ScheduleTimelineView({
                               <div className="flex-1 flex flex-col items-center text-center">
                                 <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 shadow-sm overflow-hidden mb-2">
                                   {md.logo_a ? (
-                                    <img src={md.logo_a} alt="" className="h-10 w-10 object-contain" />
+                                    <Image src={md.logo_a} alt="" width={40} height={40} className="h-10 w-10 object-contain" unoptimized />
                                   ) : (
                                     <span className="text-xl font-bold text-esi-red">{(md.team_a ?? '?')[0]}</span>
                                   )}
@@ -273,7 +274,7 @@ export function ScheduleTimelineView({
                               <div className="flex-1 flex flex-col items-center text-center">
                                 <div className="flex h-10 w-10 sm:h-14 sm:w-14 items-center justify-center rounded-xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 shadow-sm overflow-hidden mb-2">
                                   {md.logo_b ? (
-                                    <img src={md.logo_b} alt="" className="h-10 w-10 object-contain" />
+                                    <Image src={md.logo_b} alt="" width={40} height={40} className="h-10 w-10 object-contain" unoptimized />
                                   ) : (
                                     <span className="text-xl font-bold text-stone-500 dark:text-zinc-400">{(md.team_b ?? '?')[0]}</span>
                                   )}
