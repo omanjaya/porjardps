@@ -115,7 +115,8 @@ function FeaturedEventCard({ event }: { event: Event }) {
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group relative block overflow-hidden rounded-2xl border-2 border-green-300 dark:border-green-700 shadow-lg transition-all hover:shadow-2xl hover:-translate-y-1"
+      className="group relative block overflow-hidden rounded-2xl border-2 border-green-300 dark:border-green-700 border-l-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5"
+      style={{ borderLeftColor: event.primary_color || '#C41E2A' }}
     >
       <div className="relative overflow-hidden" style={{ background: event.primary_color || '#C41E2A' }}>
         <div className="pointer-events-none absolute inset-0">
@@ -166,7 +167,7 @@ function FeaturedEventCard({ event }: { event: Event }) {
           {/* CTA */}
           <div className="shrink-0">
             <span className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-bold transition group-hover:shadow-lg" style={{ color: event.primary_color || '#C41E2A' }}>
-              Masuk Event <ArrowRight size={16} weight="bold" className="transition-transform group-hover:translate-x-1" />
+              Masuk Event <ArrowRight size={16} weight="bold" className="transition-transform duration-300 group-hover:translate-x-2" />
             </span>
           </div>
         </div>
@@ -183,7 +184,8 @@ function EventCard({ event }: { event: Event }) {
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1"
+      className="group relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 border-l-4 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5"
+      style={{ borderLeftColor: isCompleted ? '#44403c' : (event.primary_color || '#C41E2A') }}
     >
       {/* Color header */}
       <div className="relative h-24 overflow-hidden" style={{ background: isCompleted ? '#44403c' : (event.primary_color || '#C41E2A') }}>
@@ -204,7 +206,7 @@ function EventCard({ event }: { event: Event }) {
       </div>
 
       <div className="p-5">
-        <StatusBadge status={event.status} />
+        <StatusBadge status={event.status} className="text-sm px-3 py-1" />
 
         <h3 className="mt-3 text-lg font-bold text-stone-900 dark:text-zinc-100 group-hover:text-esi-red transition-colors leading-tight">
           {event.name}
@@ -215,8 +217,8 @@ function EventCard({ event }: { event: Event }) {
 
         {/* Champion for completed */}
         {isCompleted && champion && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-            <Crown size={12} weight="fill" /> Juara: {champion}
+          <div className="mt-2 flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/30 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+            <Crown size={16} weight="fill" /> Juara: {champion}
           </div>
         )}
 
@@ -244,7 +246,7 @@ function EventCard({ event }: { event: Event }) {
 
         <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-esi-red transition-colors group-hover:gap-2">
           {isCompleted ? 'Lihat Hasil' : 'Lihat Event'}
-          <ArrowRight size={14} weight="bold" className="transition-transform group-hover:translate-x-1" />
+          <ArrowRight size={14} weight="bold" className="transition-transform duration-300 group-hover:translate-x-2" />
         </div>
       </div>
     </Link>

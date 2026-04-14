@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
+import { EnvelopeSimple, Lock, Eye, EyeSlash } from '@phosphor-icons/react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth-store'
@@ -82,6 +83,7 @@ function LoginForm() {
   const { login } = useAuthStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
 
@@ -214,9 +216,9 @@ function LoginForm() {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-esi-border bg-white dark:bg-zinc-900 shadow-md">
-      <div className="h-1 w-full bg-esi-red" />
-      <div className="p-4 sm:p-6">
+    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
+      <div className="h-2 w-full bg-esi-red" />
+      <div className="p-6 sm:p-8">
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-esi-text">Masuk</h2>
         <p className="mb-6 text-sm text-esi-muted">
           Masuk ke akun ESI kamu
@@ -242,14 +244,17 @@ function LoginForm() {
             <label htmlFor="email" className="text-sm font-medium text-esi-text">
               Email atau Username
             </label>
-            <Input
-              id="email"
-              type="text"
-              placeholder="email@kamu.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
-            />
+            <div className="relative">
+              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="email"
+                type="text"
+                placeholder="email@kamu.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="h-11 sm:h-12 pl-9 border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-2 focus:ring-esi-red/20 transition-all duration-200"
+              />
+            </div>
             {errors.email && (
               <p className="text-xs text-esi-red">{errors.email}</p>
             )}
@@ -259,14 +264,26 @@ function LoginForm() {
             <label htmlFor="password" className="text-sm font-medium text-esi-text">
               Password
             </label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Masukkan password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
-            />
+            <div className="relative">
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 sm:h-12 pl-9 pr-10 border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-2 focus:ring-esi-red/20 transition-all duration-200"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted/60 hover:text-esi-text transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              >
+                {showPassword ? <EyeSlash weight="bold" className="h-4 w-4" /> : <Eye weight="bold" className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && (
               <p className="text-xs text-esi-red">{errors.password}</p>
             )}
@@ -274,7 +291,7 @@ function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full bg-esi-red text-white hover:brightness-110"
+            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 transition-all duration-200"
             disabled={isLoading || cooldownRemaining > 0}
           >
             {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Masuk...</> : 'Masuk'}
@@ -292,6 +309,10 @@ function LoginForm() {
           <Link href="/register" className="font-medium text-esi-red hover:brightness-110">
             Daftar
           </Link>
+        </p>
+
+        <p className="text-center text-xs text-stone-400 dark:text-zinc-500 mt-6">
+          Sudah 2.000+ pelajar bergabung di ESI Denpasar
         </p>
       </div>
     </div>

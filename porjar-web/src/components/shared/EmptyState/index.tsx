@@ -29,8 +29,8 @@ export function EmptyState({
 }: EmptyStateProps) {
   const isSm = size === 'sm'
   const containerPad = isSm ? 'py-8' : 'py-16'
-  const iconBoxSize = isSm ? 'h-12 w-12' : 'h-16 w-16'
-  const iconPx = isSm ? 24 : 32
+  const iconBoxSize = isSm ? 'h-14 w-14' : 'h-20 w-20'
+  const iconPx = isSm ? 28 : 48
   const titleSize = isSm ? 'text-base' : 'text-lg'
   const mb = isSm ? 'mb-3' : 'mb-4'
 
@@ -43,8 +43,8 @@ export function EmptyState({
   }
 
   return (
-    <div className={`flex flex-col items-center justify-center ${containerPad} text-center`}>
-      <div className={`${mb} flex ${iconBoxSize} items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800`}>
+    <div className={`flex flex-col items-center justify-center ${containerPad} text-center border border-dashed border-stone-300 dark:border-zinc-600 rounded-2xl p-8`}>
+      <div className={`${mb} flex ${iconBoxSize} items-center justify-center rounded-full bg-gradient-to-br from-stone-100 to-stone-50 dark:from-zinc-800 dark:to-zinc-900`}>
         {iconNode}
       </div>
       <h3 className={`${titleSize} font-semibold text-stone-900 dark:text-zinc-100`}>{title}</h3>
@@ -52,7 +52,7 @@ export function EmptyState({
         <p className="mt-1 max-w-sm text-sm text-stone-500 dark:text-zinc-400">{description}</p>
       )}
       {actionLabel && onAction && (
-        <Button onClick={onAction} className="mt-4 bg-esi-red hover:bg-esi-red-dark text-white" size="sm">
+        <Button onClick={onAction} className="mt-4 bg-esi-red hover:bg-esi-red-dark text-white shadow-md hover:shadow-lg transition-shadow" size="default">
           {actionLabel}
         </Button>
       )}

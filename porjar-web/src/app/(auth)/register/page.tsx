@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { User, EnvelopeSimple, Phone, Lock, Eye, EyeSlash } from '@phosphor-icons/react'
+import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/store/auth-store'
@@ -20,6 +22,8 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   })
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(false)
   const [consentGiven, setConsentGiven] = useState(false)
@@ -94,24 +98,44 @@ export default function RegisterPage() {
     }
   }
 
-  const inputClasses = "border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
+  const inputClasses = "h-11 sm:h-12 pl-9 border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-2 focus:ring-esi-red/20 transition-all duration-200"
 
   return (
-    <div className="overflow-hidden rounded-xl border border-esi-border bg-white dark:bg-zinc-900 shadow-md">
-      <div className="h-1 w-full bg-esi-red" />
-      <div className="p-6">
+    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
+      <div className="h-2 w-full bg-esi-red" />
+      <div className="p-6 sm:p-8">
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-esi-text">Buat Akun</h2>
         <p className="mb-4 text-sm text-esi-muted">
           Langkah 1 dari 3: Buat akun, lalu buat tim, lalu registrasi ke event
         </p>
 
         {/* Step indicator */}
-        <div className="mb-6 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide">
-          <span className="rounded bg-esi-red px-2 py-1 text-white">1. Buat Akun</span>
-          <span className="text-esi-muted">→</span>
-          <span className="rounded border border-esi-border px-2 py-1 text-esi-muted">2. Buat Tim</span>
-          <span className="text-esi-muted">→</span>
-          <span className="rounded border border-esi-border px-2 py-1 text-esi-muted">3. Registrasi Event</span>
+        <div className="mb-6 flex items-center justify-center gap-2">
+          {[
+            { num: 1, label: 'Buat Akun' },
+            { num: 2, label: 'Buat Tim' },
+            { num: 3, label: 'Registrasi' },
+          ].map((step) => (
+            <div key={step.num} className="flex items-center gap-2">
+              <div className="flex flex-col items-center gap-1">
+                <div className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold transition-all',
+                  step.num === 1
+                    ? 'bg-esi-red text-white shadow-md shadow-red-500/20'
+                    : 'bg-stone-200 text-stone-500 dark:bg-zinc-700 dark:text-zinc-400'
+                )}>
+                  {step.num}
+                </div>
+                <span className={cn(
+                  'text-[10px] font-semibold uppercase tracking-wide',
+                  step.num === 1 ? 'text-esi-red' : 'text-esi-muted'
+                )}>
+                  {step.label}
+                </span>
+              </div>
+              {step.num < 3 && <div className="mb-4 h-0.5 w-8 bg-stone-200 dark:bg-zinc-700" />}
+            </div>
+          ))}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -125,14 +149,17 @@ export default function RegisterPage() {
             <label htmlFor="full_name" className="text-sm font-medium text-esi-text">
               Nama Lengkap
             </label>
-            <Input
-              id="full_name"
-              type="text"
-              placeholder="Nama lengkap"
-              value={form.full_name}
-              onChange={(e) => updateField('full_name', e.target.value)}
-              className={inputClasses}
-            />
+            <div className="relative">
+              <User weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="full_name"
+                type="text"
+                placeholder="Nama lengkap"
+                value={form.full_name}
+                onChange={(e) => updateField('full_name', e.target.value)}
+                className={inputClasses}
+              />
+            </div>
             {errors.full_name && (
               <p className="text-xs text-esi-red">{errors.full_name}</p>
             )}
@@ -142,14 +169,17 @@ export default function RegisterPage() {
             <label htmlFor="email" className="text-sm font-medium text-esi-text">
               Email
             </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@example.com"
-              value={form.email}
-              onChange={(e) => updateField('email', e.target.value)}
-              className={inputClasses}
-            />
+            <div className="relative">
+              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="email@example.com"
+                value={form.email}
+                onChange={(e) => updateField('email', e.target.value)}
+                className={inputClasses}
+              />
+            </div>
             {errors.email && (
               <p className="text-xs text-esi-red">{errors.email}</p>
             )}
@@ -159,14 +189,17 @@ export default function RegisterPage() {
             <label htmlFor="phone" className="text-sm font-medium text-esi-text">
               No. Telepon <span className="text-esi-muted">(opsional)</span>
             </label>
-            <Input
-              id="phone"
-              type="tel"
-              placeholder="08xxxxxxxxxx"
-              value={form.phone}
-              onChange={(e) => updateField('phone', e.target.value)}
-              className={inputClasses}
-            />
+            <div className="relative">
+              <Phone weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="08xxxxxxxxxx"
+                value={form.phone}
+                onChange={(e) => updateField('phone', e.target.value)}
+                className={inputClasses}
+              />
+            </div>
             {errors.phone && (
               <p className="text-xs text-esi-red">{errors.phone}</p>
             )}
@@ -176,14 +209,26 @@ export default function RegisterPage() {
             <label htmlFor="password" className="text-sm font-medium text-esi-text">
               Password
             </label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Minimal 8 karakter"
-              value={form.password}
-              onChange={(e) => updateField('password', e.target.value)}
-              className={inputClasses}
-            />
+            <div className="relative">
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Minimal 8 karakter"
+                value={form.password}
+                onChange={(e) => updateField('password', e.target.value)}
+                className={cn(inputClasses, 'pr-10')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted/60 hover:text-esi-text transition-colors"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              >
+                {showPassword ? <EyeSlash weight="bold" className="h-4 w-4" /> : <Eye weight="bold" className="h-4 w-4" />}
+              </button>
+            </div>
             {form.password && (
               <div className="space-y-1">
                 <div className="flex gap-1">
@@ -213,14 +258,26 @@ export default function RegisterPage() {
             <label htmlFor="confirmPassword" className="text-sm font-medium text-esi-text">
               Konfirmasi Password
             </label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="Ulangi password"
-              value={form.confirmPassword}
-              onChange={(e) => updateField('confirmPassword', e.target.value)}
-              className={inputClasses}
-            />
+            <div className="relative">
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Ulangi password"
+                value={form.confirmPassword}
+                onChange={(e) => updateField('confirmPassword', e.target.value)}
+                className={cn(inputClasses, 'pr-10')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted/60 hover:text-esi-text transition-colors"
+                tabIndex={-1}
+                aria-label={showConfirmPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+              >
+                {showConfirmPassword ? <EyeSlash weight="bold" className="h-4 w-4" /> : <Eye weight="bold" className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.confirmPassword && (
               <p className="text-xs text-esi-red">{errors.confirmPassword}</p>
             )}
@@ -236,7 +293,7 @@ export default function RegisterPage() {
                 onChange={(e) => setConsentGiven(e.target.checked)}
                 className="mt-0.5 h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
               />
-              <label htmlFor="consent" className="text-xs text-stone-500 leading-relaxed">
+              <label htmlFor="consent" className="text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">
                 Saya menyetujui{' '}
                 <a href="/privacy" className="text-esi-red underline">kebijakan privasi</a>
                 {' '}dan penggunaan data pribadi saya sesuai UU PDP No. 27 Tahun 2022.
@@ -249,7 +306,7 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            className="w-full bg-esi-red text-white hover:brightness-110"
+            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 transition-all duration-200"
             disabled={isLoading}
           >
             {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Membuat akun...</> : 'Buat Akun & Lanjut'}
@@ -261,6 +318,10 @@ export default function RegisterPage() {
           <Link href="/login" className="font-medium text-esi-red hover:brightness-110">
             Masuk
           </Link>
+        </p>
+
+        <p className="text-center text-xs text-stone-400 dark:text-zinc-500 mt-6">
+          Sudah 2.000+ pelajar bergabung di ESI Denpasar
         </p>
       </div>
     </div>
