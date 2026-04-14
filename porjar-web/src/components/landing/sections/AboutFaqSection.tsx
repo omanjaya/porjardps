@@ -94,7 +94,7 @@ export const AboutFaqSection = forwardRef<HTMLElement, AboutFaqSectionProps>(fun
           {items.map((item) => {
             const Icon = getIcon(item.icon)
             return (
-              <div key={item.title} className="about-item anim-card rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 text-center transition-all hover:shadow-md">
+              <div key={item.title} className="about-item anim-card rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950">
                   <Icon size={24} weight="duotone" style={{ color: RED }} />
                 </div>
@@ -111,16 +111,16 @@ export const AboutFaqSection = forwardRef<HTMLElement, AboutFaqSectionProps>(fun
           {faqItems.map((item, idx) => {
             const open = openFaq === idx
             return (
-              <div key={item.question} className="faq-item anim-fade rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
+              <div key={item.question} className={`faq-item anim-fade rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden border-l-3 transition-colors ${open ? 'border-l-esi-red' : 'border-l-transparent'}`}>
                 <button
                   onClick={() => setOpenFaq(open ? null : idx)}
-                  className="flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-stone-50 dark:hover:bg-zinc-800/50"
+                  className="group flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-stone-50 dark:hover:bg-zinc-800/50"
                 >
-                  <span className="text-sm font-bold text-stone-900 dark:text-zinc-100">{item.question}</span>
-                  <CaretDown size={16} className={`flex-shrink-0 text-stone-400 dark:text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+                  <span className="text-base font-bold text-stone-900 dark:text-zinc-100">{item.question}</span>
+                  <CaretDown size={16} className={`flex-shrink-0 text-stone-400 dark:text-zinc-500 transition-all group-hover:text-esi-red ${open ? 'rotate-180' : ''}`} />
                 </button>
                 {open && (
-                  <div className="px-4 pb-4 text-sm text-stone-600 dark:text-zinc-400">{item.answer}</div>
+                  <div className="mx-4 mb-4 rounded-lg bg-stone-50 dark:bg-zinc-800/50 p-3 text-sm text-stone-600 dark:text-zinc-400">{item.answer}</div>
                 )}
               </div>
             )

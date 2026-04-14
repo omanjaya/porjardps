@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CalendarBlank, Clock, MapPin } from '@phosphor-icons/react'
+import { CalendarBlank, Clock, MapPin, GameController } from '@phosphor-icons/react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { useEvent } from '@/contexts/EventContext'
@@ -11,12 +11,14 @@ interface ScheduleItem {
   id: number
   title?: string
   match_name?: string
+  tournament_name?: string
   scheduled_at?: string
   start_time?: string
   venue?: string
   location?: string
   tournament_id?: number
   event_id?: string | number | null
+  game_name?: string
 }
 
 export default function EventSchedulePage() {
@@ -76,37 +78,54 @@ export default function EventSchedulePage() {
           {items.map((s) => {
             const when = s.scheduled_at ?? s.start_time
             const where = s.venue ?? s.location
+            const displayName = s.title ?? s.match_name ?? s.tournament_name ?? `Match #${s.id}`
+            const borderColor = event.primary_color ?? '#ef4444'
             return (
               <div
                 key={s.id}
-                className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="rounded-xl border border-stone-200 dark:border-zinc-700 border-l-[3px] bg-white dark:bg-zinc-900 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-all hover:shadow-sm"
+                style={{ borderLeftColor: borderColor }}
               >
-                <div className="flex items-start gap-3">
-                  <CalendarBlank
-                    size={20}
-                    style={{ color: event.primary_color }}
-                    className="mt-0.5 shrink-0"
-                  />
-                  <div>
-                    <h3 className="font-bold text-stone-800 dark:text-zinc-100">
-                      {s.title ?? s.match_name ?? `Match #${s.id}`}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  <div
+                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: `${borderColor}15` }}
+                  >
+                    <GameController
+                      size={18}
+                      weight="duotone"
+                      style={{ color: borderColor }}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-stone-800 dark:text-zinc-100 truncate">
+                      {displayName}
                     </h3>
-                    {where && (
-                      <p className="text-xs text-stone-500 mt-1 flex items-center gap-1">
-                        <MapPin size={12} /> {where}
-                      </p>
-                    )}
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      {s.game_name && (
+                        <span className="text-xs font-medium text-stone-500 dark:text-zinc-400">
+                          {s.game_name}
+                        </span>
+                      )}
+                      {where && (
+                        <span className="text-xs text-stone-500 dark:text-zinc-400 flex items-center gap-1">
+                          <MapPin size={12} className="shrink-0" /> {where}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 {when && (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-zinc-400">
-                    <Clock size={12} />
-                    {new Date(when).toLocaleString('id-ID', {
-                      day: 'numeric',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                  <div className="shrink-0 flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-zinc-800 px-3 py-1.5">
+                    <Clock size={14} className="text-stone-500 dark:text-zinc-400" />
+                    <span className="font-mono text-sm font-bold text-stone-700 dark:text-zinc-300">
+                      {new Date(when).toLocaleString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
                   </div>
                 )}
               </div>

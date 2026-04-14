@@ -145,17 +145,17 @@ export default function CaraBertandingPage() {
 
   const needs = [
     {
-      emoji: '📱',
+      icon: DeviceMobile,
       title: 'Akun & Device',
       desc: 'Smartphone atau komputer yang kompatibel dengan game pilihan.',
     },
     {
-      emoji: '🎮',
+      icon: GameController,
       title: 'Akun Game',
       desc: 'Mobile Legends ID, Free Fire UID, PUBG Mobile ID, dll sesuai cabang.',
     },
     {
-      emoji: '📋',
+      icon: FileText,
       title: 'Dokumen',
       desc: 'NISN, kartu pelajar, dan surat izin orang tua/wali.',
     },
@@ -210,12 +210,12 @@ export default function CaraBertandingPage() {
             return (
               <li key={i} className="relative">
                 <span
-                  className="absolute -left-[37px] sm:-left-[41px] flex h-8 w-8 items-center justify-center rounded-full bg-esi-red text-white text-xs font-black shadow-md ring-4 ring-white dark:ring-zinc-950"
+                  className="absolute -left-[37px] sm:-left-[41px] flex h-10 w-10 items-center justify-center rounded-full bg-esi-red text-white text-sm font-black shadow-md ring-4 ring-white dark:ring-zinc-950"
                   aria-hidden
                 >
                   {i + 1}
                 </span>
-                <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 sm:p-5 shadow-sm transition-all hover:border-esi-red/40 hover:shadow-md">
+                <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-gradient-to-r from-white to-stone-50 dark:from-zinc-900 dark:to-zinc-800 p-4 sm:p-5 shadow-sm transition-all hover:border-esi-red/40 hover:shadow-md">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-esi-red/10">
                       <Icon size={22} weight="duotone" className="text-esi-red" />
@@ -230,7 +230,7 @@ export default function CaraBertandingPage() {
                       {(!step.authOnly || isAuthenticated) && (
                         <Link
                           href={step.ctaHref}
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-esi-red px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:brightness-110"
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-esi-red px-4 py-2.5 min-h-[44px] text-xs font-bold text-white shadow-sm transition hover:brightness-110"
                         >
                           {step.ctaLabel}
                           <ArrowRight size={12} weight="bold" />
@@ -251,26 +251,23 @@ export default function CaraBertandingPage() {
           Apa yang Dibutuhkan?
         </h2>
         <div className="grid gap-4 sm:grid-cols-3">
-          {needs.map((n) => (
-            <div
-              key={n.title}
-              className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm"
-            >
-              <div className="text-3xl mb-2" aria-hidden>
-                {n.emoji}
+          {needs.map((n) => {
+            const NeedIcon = n.icon
+            return (
+              <div
+                key={n.title}
+                className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-gradient-to-r from-white to-stone-50 dark:from-zinc-900 dark:to-zinc-800 p-5 shadow-sm"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-esi-red text-white mb-3" aria-hidden>
+                  <NeedIcon size={20} weight="duotone" />
+                </div>
+                <h3 className="font-bold text-sm text-stone-900 dark:text-zinc-100 mb-1">
+                  {n.title}
+                </h3>
+                <p className="text-xs text-stone-600 dark:text-zinc-400 leading-relaxed">{n.desc}</p>
               </div>
-              <h3 className="font-bold text-sm text-stone-900 dark:text-zinc-100 mb-1">
-                {n.title}
-              </h3>
-              <p className="text-xs text-stone-600 dark:text-zinc-400 leading-relaxed">{n.desc}</p>
-            </div>
-          ))}
-        </div>
-        {/* Hidden icon imports for tree-shaking friendliness */}
-        <div className="hidden">
-          <DeviceMobile />
-          <GameController />
-          <FileText />
+            )
+          })}
         </div>
       </section>
 
@@ -286,15 +283,22 @@ export default function CaraBertandingPage() {
 
       {/* Section 5: Help */}
       <section className="mb-10 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 sm:p-6 shadow-sm">
-        <h2 className="mb-1 text-lg font-bold text-stone-900 dark:text-zinc-100">Butuh Bantuan?</h2>
-        <p className="mb-4 text-sm text-stone-600 dark:text-zinc-400">
-          Hubungi panitia lewat kontak berikut:
-        </p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+            <WhatsappLogo size={22} weight="fill" className="text-green-600 dark:text-green-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-stone-900 dark:text-zinc-100">Butuh Bantuan?</h2>
+            <p className="text-sm text-stone-600 dark:text-zinc-400">
+              Hubungi panitia lewat kontak berikut
+            </p>
+          </div>
+        </div>
         <div className="space-y-2 mb-4">
           {CONTACTS.map((c) => (
             <div
               key={c.phone}
-              className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-4 py-2.5"
+              className="flex items-center justify-between gap-3 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-4 py-3"
             >
               <div className="min-w-0">
                 <p className="text-sm font-bold text-stone-900 dark:text-zinc-100 truncate">
@@ -306,9 +310,9 @@ export default function CaraBertandingPage() {
                 href={`https://wa.me/${c.phone}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-green-700 transition-colors"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 min-h-[44px] text-xs font-bold text-white hover:bg-green-700 transition-colors"
               >
-                <WhatsappLogo size={14} weight="fill" />
+                <WhatsappLogo size={16} weight="fill" />
                 WhatsApp
               </a>
             </div>

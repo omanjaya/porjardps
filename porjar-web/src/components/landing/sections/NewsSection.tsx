@@ -83,7 +83,7 @@ function NewsCard({ item, featured = false }: { item: NewsItem; featured?: boole
   return (
     <Link
       href={href}
-      className={`news-card anim-card group flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-esi-surface-dark border border-esi-border dark:border-esi-border-dark shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all ${
+      className={`news-card anim-card group flex flex-col rounded-2xl overflow-hidden bg-white dark:bg-esi-surface-dark border border-esi-border dark:border-esi-border-dark shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 ${
         featured ? 'lg:row-span-2 lg:col-span-1' : ''
       }`}
     >
@@ -97,7 +97,7 @@ function NewsCard({ item, featured = false }: { item: NewsItem; featured?: boole
       )}
       <div className="p-5 flex flex-col flex-1">
         {item.category && (
-          <span className="inline-flex self-start items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-esi-red/10 text-esi-red mb-3">
+          <span className="inline-flex self-start items-center px-3 py-1 rounded-full text-xs font-bold bg-esi-red/15 text-esi-red mb-3">
             {item.category}
           </span>
         )}

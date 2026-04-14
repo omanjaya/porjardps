@@ -23,8 +23,8 @@ export function GallerySection({ galleryMedia }: Props) {
           </div>
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-stone-900 dark:text-zinc-100">Momen Terbaik</h2>
         </div>
-        <Link href="/gallery" className="inline-flex items-center gap-1 text-sm font-semibold transition hover:gap-2" style={{ color: RED }}>
-          Galeri Lengkap <ArrowRight size={14} weight="bold" />
+        <Link href="/gallery" className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition hover:brightness-110" style={{ background: RED }}>
+          Lihat Galeri Lengkap <ArrowRight size={14} weight="bold" />
         </Link>
       </div>
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
@@ -32,7 +32,7 @@ export function GallerySection({ galleryMedia }: Props) {
           <Link
             key={m.id}
             href="/gallery"
-            className="gallery-tile anim-card group relative aspect-square overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800"
+            className="gallery-tile anim-card group relative aspect-square overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 shadow-sm bg-stone-100 dark:bg-zinc-800"
           >
             <Image
               src={resolveMediaUrl(m.thumbnail_url || m.file_url) ?? ''}
@@ -42,6 +42,9 @@ export function GallerySection({ galleryMedia }: Props) {
               className="object-cover transition-transform group-hover:scale-110"
               unoptimized
             />
+            <div className="absolute inset-0 flex items-end bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+              {m.title && <span className="w-full truncate px-3 py-2 text-xs font-semibold text-white">{m.title}</span>}
+            </div>
           </Link>
         ))}
       </div>

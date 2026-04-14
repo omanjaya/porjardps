@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { X, CheckCircle, ArrowRight, Trophy } from '@phosphor-icons/react'
+import { X, CheckCircle, ArrowRight, Trophy, Circle } from '@phosphor-icons/react'
 import { useOnboardingChecklist, type OnboardingUser } from '../hooks/useOnboardingChecklist'
 import type { Event } from '@/types'
 
@@ -32,15 +32,27 @@ export function OnboardingChecklist({
   const isWelcome = variant === 'welcome'
   const event = activeEvent ?? resolvedEvent
 
+  // Find the first incomplete step index
+  const currentStepIndex = steps.findIndex((s) => !s.done)
+
   return (
     <div
       className={`rounded-xl border shadow-sm ${
         isWelcome
-          ? 'border-esi-red/30 bg-gradient-to-br from-esi-red/5 via-white to-blue-50/60 dark:from-esi-red/10 dark:via-zinc-900 dark:to-blue-950/20 p-5 sm:p-6'
+          ? 'border-esi-red/30 bg-gradient-to-br from-esi-red/5 via-white to-blue-50/60 dark:from-esi-red/10 dark:via-zinc-900 dark:to-blue-950/20 p-5 sm:p-6 relative overflow-hidden'
           : 'border-blue-200 dark:border-blue-800/50 bg-blue-50/50 dark:bg-blue-950/30 p-4'
       }`}
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
+      {/* Subtle decorative dots for welcome variant */}
+      {isWelcome && (
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+          <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-esi-red/5" />
+          <div className="absolute -left-2 bottom-8 h-16 w-16 rounded-full bg-blue-400/5" />
+          <div className="absolute right-16 bottom-2 h-10 w-10 rounded-full bg-amber-400/5" />
+        </div>
+      )}
+
+      <div className="relative flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           {isWelcome ? (
             <>
@@ -72,7 +84,7 @@ export function OnboardingChecklist({
       {isWelcome && event && (
         <Link
           href={`/events/${event.slug}`}
-          className="mb-4 flex items-center gap-3 rounded-lg border border-esi-red/20 bg-white dark:bg-zinc-900 p-3 transition-all hover:border-esi-red/40 hover:shadow-sm"
+          className="relative mb-4 flex items-center gap-3 rounded-lg border border-esi-red/20 bg-white dark:bg-zinc-900 p-3 transition-all hover:border-esi-red/40 hover:shadow-sm"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-esi-red/10">
             <Trophy size={20} weight="duotone" className="text-esi-red" />
@@ -89,49 +101,60 @@ export function OnboardingChecklist({
         </Link>
       )}
 
-      <div className="space-y-2">
-        {steps.map((step) => {
+      <div className="relative space-y-2">
+        {steps.map((step, i) => {
           const StepIcon = step.icon
+          const isCurrent = i === currentStepIndex
           return (
             <Link
               key={step.key}
               href={step.href}
               title={step.tooltip}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all ${
+              className={`flex items-center gap-3 rounded-lg border-l-2 px-3 py-2.5 transition-all ${
                 step.done
-                  ? 'bg-green-50/80 dark:bg-green-950/30 border border-green-200 dark:border-green-800/50'
-                  : 'bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 hover:border-blue-300 dark:hover:border-blue-700 hover:shadow-sm'
+                  ? 'border-l-green-500 bg-green-50/80 dark:bg-green-950/30 border-r border-t border-b border-r-green-200 border-t-green-200 border-b-green-200 dark:border-r-green-800/50 dark:border-t-green-800/50 dark:border-b-green-800/50'
+                  : isCurrent
+                    ? 'border-l-amber-500 bg-white dark:bg-zinc-900 border-r border-t border-b border-r-amber-200 border-t-amber-200 border-b-amber-200 dark:border-r-amber-800/50 dark:border-t-amber-800/50 dark:border-b-amber-800/50 hover:shadow-sm'
+                    : 'border-l-stone-300 dark:border-l-zinc-600 bg-white dark:bg-zinc-900 border-r border-t border-b border-r-stone-200 border-t-stone-200 border-b-stone-200 dark:border-r-zinc-700 dark:border-t-zinc-700 dark:border-b-zinc-700 hover:border-l-stone-400 hover:shadow-sm'
               }`}
             >
               <div
                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-                  step.done ? 'bg-green-100' : 'bg-blue-100'
+                  step.done
+                    ? 'bg-green-100 dark:bg-green-900/40'
+                    : isCurrent
+                      ? 'bg-amber-100 dark:bg-amber-900/40'
+                      : 'bg-stone-100 dark:bg-zinc-800'
                 }`}
               >
                 {step.done ? (
-                  <CheckCircle size={16} weight="fill" className="text-green-600" />
+                  <CheckCircle size={16} weight="fill" className="text-green-600 dark:text-green-400" />
+                ) : isCurrent ? (
+                  <Circle size={14} weight="fill" className="text-amber-500" />
                 ) : (
-                  <StepIcon size={14} className="text-blue-600" />
+                  <Circle size={14} className="text-stone-400 dark:text-zinc-500" />
                 )}
               </div>
               <span
                 className={`flex-1 text-sm ${
                   step.done
                     ? 'text-green-700 dark:text-green-300 line-through'
-                    : 'font-medium text-esi-text'
+                    : isCurrent
+                      ? 'font-semibold text-esi-text'
+                      : 'font-medium text-stone-500 dark:text-zinc-400'
                 }`}
               >
                 {step.label}
               </span>
               {!step.done && step.cta && (
-                <span className="hidden sm:inline text-xs font-semibold text-blue-600">
+                <span className="hidden sm:inline-flex px-3 py-1.5 rounded-lg bg-esi-red/10 text-esi-red text-xs font-semibold hover:bg-esi-red/20 transition-colors">
                   {step.cta}
                 </span>
               )}
               {step.done ? (
-                <CheckCircle size={16} weight="fill" className="text-green-500" />
+                <CheckCircle size={16} weight="fill" className="text-green-500 sm:block hidden" />
               ) : (
-                <ArrowRight size={14} className="text-blue-500" />
+                <ArrowRight size={14} className="text-stone-400 dark:text-zinc-500 sm:hidden" />
               )}
             </Link>
           )
@@ -140,7 +163,7 @@ export function OnboardingChecklist({
 
       <Link
         href="/cara-bertanding"
-        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+        className="mt-4 flex items-center gap-2 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-3 py-2.5 text-xs font-semibold text-stone-600 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-esi-red dark:hover:text-esi-red transition-colors"
       >
         Masih bingung? Lihat Cara Bertanding <ArrowRight size={12} />
       </Link>

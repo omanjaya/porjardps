@@ -67,51 +67,63 @@ export default function MyTeamsPage() {
         />
       ) : (
         <div className="space-y-3">
-          {teams.map((team) => (
-            <Link
-              key={team.id}
-              href={`/dashboard/teams/${team.id}`}
-              className="block rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 sm:p-4 shadow-sm transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800/50"
-            >
-              <div className="flex items-center gap-3 sm:gap-4">
-                {/* Logo */}
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-zinc-800">
-                  {team.logo_url ? (
-                    <img
-                      src={mediaUrl(team.logo_url)!}
-                      alt=""
-                      className="h-12 w-12 rounded-xl object-cover"
-                    />
-                  ) : (
-                    <GameController size={24} className="text-stone-400 dark:text-zinc-500" />
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-stone-900 dark:text-zinc-100">{team.name}</h3>
-                    <StatusBadge status={team.status} />
+          {teams.map((team) => {
+            const statusBorderColor =
+              team.status === 'approved'
+                ? 'border-l-green-500'
+                : team.status === 'pending'
+                  ? 'border-l-amber-500'
+                  : 'border-l-stone-300 dark:border-l-zinc-600'
+            return (
+              <Link
+                key={team.id}
+                href={`/dashboard/teams/${team.id}`}
+                className={`block rounded-xl border border-stone-200 dark:border-zinc-700 border-l-[3px] ${statusBorderColor} bg-white dark:bg-zinc-900 p-3 sm:p-4 shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all duration-200`}
+              >
+                <div className="flex items-center gap-3 sm:gap-4">
+                  {/* Logo */}
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-zinc-800">
+                    {team.logo_url ? (
+                      <img
+                        src={mediaUrl(team.logo_url)!}
+                        alt=""
+                        className="h-12 w-12 rounded-xl object-cover"
+                      />
+                    ) : (
+                      <GameController size={24} className="text-stone-400 dark:text-zinc-500" />
+                    )}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-400 dark:text-zinc-500">
-                    <span>{team.game.name}</span>
-                    {team.school && <span>{team.school.name}</span>}
-                    <div className="flex items-center gap-1">
-                      <Users size={10} />
-                      <span>{team.member_count} anggota</span>
+
+                  {/* Info */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-stone-900 dark:text-zinc-100">{team.name}</h3>
+                      <StatusBadge status={team.status} />
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-stone-400 dark:text-zinc-500">
+                      <span>{team.game.name}</span>
+                      {team.school && <span>{team.school.name}</span>}
+                      <div className="flex items-center gap-1">
+                        <Users size={10} />
+                        <span>
+                          {team.member_count <= 3
+                            ? `${team.member_count} anggota`
+                            : `3 anggota +${team.member_count - 3} lainnya`}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Seed */}
-                {team.seed != null && (
-                  <span className="rounded-full bg-amber-50 dark:bg-amber-950/30 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
-                    Seed #{team.seed}
-                  </span>
-                )}
-              </div>
-            </Link>
-          ))}
+                  {/* Seed */}
+                  {team.seed != null && (
+                    <span className="rounded-full bg-amber-50 dark:bg-amber-950/30 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
+                      Seed #{team.seed}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
     </DashboardLayout>
