@@ -146,14 +146,19 @@ function LeaderboardsContent() {
               columns={['#', 'Tim', 'Sekolah', 'Poin']}
               empty={teamEntries.length === 0}
               rows={teamEntries.map((e) => (
-                <TableRow key={e.team_id} className="border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50">
+                <TableRow key={e.team_id} className={cn(
+                  'border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50',
+                  e.rank === 1 && 'bg-amber-50/50 dark:bg-amber-950/20 shadow-sm shadow-amber-200/30 dark:shadow-amber-900/20 border-l-2 border-l-amber-400',
+                  e.rank === 2 && 'bg-stone-50/30 dark:bg-zinc-800/20',
+                  e.rank === 3 && 'bg-orange-50/30 dark:bg-orange-950/10',
+                )}>
                   <TableCell className="font-bold text-stone-700 dark:text-zinc-300">
-                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} {e.rank}</div>
+                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} <span className="tabular-nums">{e.rank}</span></div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {e.team_logo_url && <Image src={e.team_logo_url} alt="" width={24} height={24} className="rounded-full" />}
-                      <span className="font-medium text-stone-900 dark:text-zinc-100">{e.team_name}</span>
+                      <span className={cn('font-medium text-stone-900 dark:text-zinc-100', e.rank === 1 && 'font-bold')}>{e.team_name}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-stone-500 dark:text-zinc-400">{e.school_name ?? '-'}</TableCell>
@@ -169,9 +174,14 @@ function LeaderboardsContent() {
               columns={['#', 'Pemain', 'Poin']}
               empty={userEntries.length === 0}
               rows={userEntries.map((e) => (
-                <TableRow key={e.user_id} className="border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50">
+                <TableRow key={e.user_id} className={cn(
+                  'border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50',
+                  e.rank === 1 && 'bg-amber-50/50 dark:bg-amber-950/20 shadow-sm shadow-amber-200/30 dark:shadow-amber-900/20 border-l-2 border-l-amber-400',
+                  e.rank === 2 && 'bg-stone-50/30 dark:bg-zinc-800/20',
+                  e.rank === 3 && 'bg-orange-50/30 dark:bg-orange-950/10',
+                )}>
                   <TableCell className="font-bold text-stone-700 dark:text-zinc-300">
-                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} {e.rank}</div>
+                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} <span className="tabular-nums">{e.rank}</span></div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -191,9 +201,14 @@ function LeaderboardsContent() {
               columns={['#', 'Sekolah', 'Tim', 'Poin']}
               empty={schoolEntries.length === 0}
               rows={schoolEntries.map((e) => (
-                <TableRow key={e.school_id} className="border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50">
+                <TableRow key={e.school_id} className={cn(
+                  'border-stone-100 dark:border-zinc-800 hover:bg-stone-50 dark:hover:bg-zinc-800/50',
+                  e.rank === 1 && 'bg-amber-50/50 dark:bg-amber-950/20 shadow-sm shadow-amber-200/30 dark:shadow-amber-900/20 border-l-2 border-l-amber-400',
+                  e.rank === 2 && 'bg-stone-50/30 dark:bg-zinc-800/20',
+                  e.rank === 3 && 'bg-orange-50/30 dark:bg-orange-950/10',
+                )}>
                   <TableCell className="font-bold text-stone-700 dark:text-zinc-300">
-                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} {e.rank}</div>
+                    <div className="flex items-center gap-1.5">{rankIcon(e.rank)} <span className="tabular-nums">{e.rank}</span></div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">

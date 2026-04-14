@@ -65,6 +65,13 @@ export function DashboardStats({
               </div>
             </div>
           </div>
+          {/* Decorative sparkline bar */}
+          <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-zinc-800">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-green-500 via-esi-red to-amber-500 transition-all duration-500"
+              style={{ width: `${totalTeams > 0 ? Math.max(10, Math.round(((totalTeams - (myStanding.rank_position - 1)) / totalTeams) * 100)) : 0}%` }}
+            />
+          </div>
         </div>
       </div>
     </AnimatedCard>

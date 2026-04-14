@@ -115,10 +115,16 @@ function NewsCard({ item, featured = false }: { item: NewsItem; featured?: boole
           {item.excerpt}
         </p>
         <div className="mt-4 flex items-center justify-between text-xs text-esi-muted dark:text-esi-muted-dark">
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarBlank weight="bold" />
-            {formatDateShort(item.date)}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5">
+              <CalendarBlank weight="bold" />
+              {formatDateShort(item.date)}
+            </span>
+            <span className="text-esi-muted/60 dark:text-esi-muted-dark/60">
+              {Math.max(1, Math.ceil((item.excerpt?.length ?? 0) / 200))} min
+            </span>
+            <span className="hidden sm:inline text-esi-muted/50 dark:text-esi-muted-dark/50">ESI Denpasar</span>
+          </div>
           <span className="inline-flex items-center gap-1 font-semibold text-esi-red group-hover:gap-2 transition-all">
             Baca selengkapnya
             <ArrowRight weight="bold" />

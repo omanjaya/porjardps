@@ -115,7 +115,7 @@ function FeaturedEventCard({ event }: { event: Event }) {
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group relative block overflow-hidden rounded-2xl border-2 border-green-300 dark:border-green-700 border-l-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5"
+      className="group relative block overflow-hidden rounded-2xl border-2 border-green-300 dark:border-green-700 border-l-4 shadow-lg transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5 will-change-transform"
       style={{ borderLeftColor: event.primary_color || '#C41E2A' }}
     >
       <div className="relative overflow-hidden" style={{ background: event.primary_color || '#C41E2A' }}>
@@ -124,6 +124,8 @@ function FeaturedEventCard({ event }: { event: Event }) {
             <polygon points="80,0 250,0 250,200 0,200" fill="white" />
           </svg>
         </div>
+        {/* Shimmer sweep */}
+        <div className="pointer-events-none absolute inset-0 -translate-x-full animate-[shimmer_3s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         {/* Live badge */}
         <div className="absolute top-4 right-4 flex items-center gap-1.5 rounded-full bg-green-500 px-3 py-1 text-xs font-bold text-white shadow-md">
           <span className="h-2 w-2 rounded-full bg-white animate-pulse" /> LIVE
@@ -184,11 +186,14 @@ function EventCard({ event }: { event: Event }) {
   return (
     <Link
       href={`/events/${event.slug}`}
-      className="group relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 border-l-4 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5"
+      className="group relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 border-l-4 bg-white dark:bg-zinc-900 shadow-sm transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50 dark:hover:shadow-black/30 hover:-translate-y-1.5 will-change-transform"
       style={{ borderLeftColor: isCompleted ? '#44403c' : (event.primary_color || '#C41E2A') }}
     >
       {/* Color header */}
       <div className="relative h-24 overflow-hidden" style={{ background: isCompleted ? '#44403c' : (event.primary_color || '#C41E2A') }}>
+        {isCompleted && (
+          <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, white 10px, white 11px)' }} />
+        )}
         <div className="pointer-events-none absolute inset-0">
           <svg className="absolute right-0 top-0 h-full w-[120px] opacity-[0.1]" preserveAspectRatio="none" viewBox="0 0 120 120" fill="none">
             <polygon points="30,0 120,0 120,120 0,120" fill="white" />
@@ -223,7 +228,7 @@ function EventCard({ event }: { event: Event }) {
         )}
 
         {/* Meta */}
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-400 dark:text-zinc-500">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs tabular-nums text-stone-400 dark:text-zinc-500">
           {event.start_date && (
             <span className="flex items-center gap-1">
               <CalendarBlank size={12} />

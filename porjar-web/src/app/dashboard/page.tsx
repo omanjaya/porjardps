@@ -238,6 +238,9 @@ export default function DashboardPage() {
               </div>
               <div className="rounded-lg border border-esi-border bg-esi-bg p-4">
                 <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2 ring-esi-red/30 bg-esi-red/10 text-xs font-bold text-esi-red">
+                    {data.team.name.charAt(0).toUpperCase()}
+                  </div>
                   <p className="text-sm font-bold text-esi-text">{data.team.name}</p>
                   {primaryTeamStatus && <StatusBadge status={primaryTeamStatus} />}
                   {(primaryTeamStatus === 'approved' || primaryTeamStatus === 'active') && (

@@ -307,8 +307,8 @@ export default function SchedulePage() {
             }
             return groups.map(group => (
               <div key={group.key}>
-                {/* Day header */}
-                <div className="mb-3 flex items-center gap-3">
+                {/* Day header — sticky */}
+                <div className="sticky top-[120px] z-10 mb-3 flex items-center gap-3 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-sm py-1.5 -mx-1 px-1 rounded-lg">
                   <div className={cn(
                     'rounded-xl px-3 py-1.5 text-xs font-bold',
                     group.isToday ? 'bg-esi-red text-white' : 'bg-stone-100 dark:bg-zinc-800 text-stone-700 dark:text-zinc-300'
@@ -322,7 +322,7 @@ export default function SchedulePage() {
 
                 {/* Schedule cards */}
                 <div className="space-y-2">
-                  {group.items.map(s => {
+                  {group.items.map((s, idx) => {
                     const gSlug = s.game?.slug as GameSlug | undefined
                     const gCfg = gSlug ? GAME_CONFIG[gSlug] : null
                     const time = new Date(s.scheduled_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
@@ -337,7 +337,8 @@ export default function SchedulePage() {
                         key={s.id}
                         onClick={() => setSelectedSchedule(s)}
                         className={cn(
-                          'anim-list-item group w-full text-left rounded-xl border bg-white dark:bg-zinc-900 transition-all hover:shadow-md',
+                          'anim-list-item group w-full text-left rounded-xl border transition-all hover:shadow-md',
+                          idx % 2 === 1 ? 'bg-stone-50/50 dark:bg-zinc-800/30' : 'bg-white dark:bg-zinc-900',
                           isLive
                             ? 'border-esi-red/30 ring-1 ring-esi-red/20 hover:border-esi-red/50'
                             : isDone
@@ -363,7 +364,7 @@ export default function SchedulePage() {
                           {/* Right: content */}
                           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3">
                             {/* Time block */}
-                            <div className="w-12 sm:w-16 shrink-0 text-center">
+                            <div className="w-14 sm:w-20 shrink-0 text-center">
                               <p className={cn(
                                 'text-xs sm:text-sm font-bold tabular-nums',
                                 isLive ? 'text-esi-red' : 'text-stone-900 dark:text-zinc-100'

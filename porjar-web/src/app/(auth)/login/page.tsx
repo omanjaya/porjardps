@@ -216,9 +216,13 @@ function LoginForm() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
+    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 ring-1 ring-stone-200/50 dark:ring-zinc-700/50 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
       <div className="h-2 w-full bg-esi-red" />
       <div className="p-6 sm:p-8">
+        <div className="mb-5 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" className="h-12 w-12 object-contain" />
+        </div>
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-esi-text">Masuk</h2>
         <p className="mb-6 text-sm text-esi-muted">
           Masuk ke akun ESI kamu
@@ -245,7 +249,7 @@ function LoginForm() {
               Email atau Username
             </label>
             <div className="relative">
-              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="email"
                 type="text"
@@ -265,7 +269,7 @@ function LoginForm() {
               Password
             </label>
             <div className="relative">
-              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -291,7 +295,7 @@ function LoginForm() {
 
           <Button
             type="submit"
-            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 transition-all duration-200"
+            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 active:scale-[0.98] transition-all duration-200"
             disabled={isLoading || cooldownRemaining > 0}
           >
             {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Masuk...</> : 'Masuk'}

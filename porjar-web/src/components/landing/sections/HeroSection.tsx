@@ -38,24 +38,25 @@ export const HeroSection = forwardRef<HTMLDivElement, HeroSectionProps>(function
       <HeroOrnamentLayer />
 
       <div className="relative z-10 mx-auto w-full max-w-4xl text-center">
-        <div className="hero-logos mb-6 flex items-center justify-center gap-4" style={{ willChange: 'transform, opacity' }}>
+        <div className="hero-logos mb-8 flex items-center justify-center gap-4" style={{ willChange: 'transform, opacity' }}>
           <Image src="/images/logo/kota-denpasar.webp" alt="Kota Denpasar" width={64} height={64} className="h-14 w-14 sm:h-16 sm:w-16 object-contain" style={{ aspectRatio: '1/1' }} priority />
           <Image src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" width={64} height={64} className="h-14 w-14 sm:h-16 sm:w-16 object-contain" style={{ aspectRatio: '1/1' }} priority />
         </div>
 
-        <h1 className="hero-title text-4xl sm:text-5xl md:text-6xl font-black tracking-tight" style={{ willChange: 'transform, opacity' }}>
+        <h1 className="hero-title text-4xl sm:text-5xl md:text-6xl font-black tracking-tight" style={{ willChange: 'transform, opacity', textShadow: '0 2px 20px rgba(0,0,0,0.08)' }}>
           <span className="sr-only">ESI Kota Denpasar</span>
           <span aria-hidden="true" className="bg-gradient-to-r from-stone-900 via-esi-red to-stone-800 dark:from-white dark:via-red-400 dark:to-zinc-200 bg-clip-text text-transparent">
             ESI KOTA
           </span>
-          <div className="mt-1 inline-block -skew-x-3 px-4 sm:px-6 py-1" style={{ background: RED }}>
+          <div className="relative mt-1 inline-block -skew-x-3 px-4 sm:px-6 py-1" style={{ background: RED }}>
             <span className="inline-block skew-x-3 text-3xl sm:text-4xl md:text-5xl font-black tracking-wide text-white">
               DENPASAR
             </span>
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] w-3/4 rounded-full bg-white/40 animate-pulse" />
           </div>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-xl text-sm text-stone-500 dark:text-zinc-400 sm:text-base lg:text-lg">
+        <p className="mx-auto mt-6 max-w-xl text-sm leading-relaxed text-stone-500 dark:text-zinc-400 sm:text-base lg:text-lg">
           Esports Indonesia Kota Denpasar — Wadah resmi pembinaan dan kompetisi esport pelajar se-Kota Denpasar. Dari kompetisi sekolah hingga prestasi nasional.
         </p>
 

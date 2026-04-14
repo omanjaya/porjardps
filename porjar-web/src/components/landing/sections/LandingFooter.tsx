@@ -17,7 +17,7 @@ export function LandingFooter({ events, contacts }: Props) {
   return (
     <footer className="footer-section border-t-2 border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-900">
       <div className="mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 py-12 sm:py-16">
-        <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-8 grid-cols-1 divide-y divide-stone-200 dark:divide-zinc-800 sm:divide-y-0 sm:grid-cols-2 lg:grid-cols-5">
           <div className="footer-col anim-fade lg:col-span-1">
             <div className="mb-3 flex items-center gap-2">
               <Image src="/images/logo/kota-denpasar.webp" alt="Kota Denpasar" width={32} height={32} className="h-8 w-8 object-contain" />
@@ -26,7 +26,7 @@ export function LandingFooter({ events, contacts }: Props) {
             </div>
             <p className="text-sm text-stone-600 dark:text-zinc-400">Platform resmi turnamen esport pelajar Kota Denpasar. Dikelola oleh ESI Kota Denpasar.</p>
           </div>
-          <div className="footer-col anim-fade">
+          <div className="footer-col anim-fade pt-4 sm:pt-0">
             <h4 className="mb-3 text-[11px] font-bold uppercase tracking-[0.15em] text-stone-400 dark:text-zinc-500"><span className="border-b-2 border-esi-red pb-1">Kompetisi</span></h4>
             <div className="flex flex-col gap-2 text-sm text-stone-500 dark:text-zinc-400">
               <Link href="/tournaments" className="transition hover:text-esi-red">Turnamen</Link>
@@ -90,19 +90,19 @@ export function LandingFooter({ events, contacts }: Props) {
             </div>
             <h4 className="sr-only">Ikuti Kami</h4>
             <div className="flex gap-2">
-              <a href="https://instagram.com/esi.denpasar" target="_blank" rel="noopener noreferrer" aria-label="Instagram ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-red-200 hover:text-esi-red">
+              <a href="https://instagram.com/esi.denpasar" target="_blank" rel="noopener noreferrer" aria-label="Instagram ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-pink-300 hover:bg-gradient-to-br hover:from-pink-500/10 hover:to-purple-500/10 hover:text-pink-500">
                 <InstagramLogo size={16} />
               </a>
-              <a href="mailto:info@esidenpasar.com" aria-label="Email ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-red-200 hover:text-esi-red">
+              <a href="mailto:info@esidenpasar.com" aria-label="Email ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-500">
                 <EnvelopeSimple size={16} />
               </a>
-              <a href="https://esidenpasar.com" aria-label="Website ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-red-200 hover:text-esi-red">
+              <a href="https://esidenpasar.com" aria-label="Website ESI Denpasar" className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 transition hover:border-green-300 hover:bg-green-50 dark:hover:bg-green-950/30 hover:text-green-500">
                 <Globe size={16} />
               </a>
             </div>
           </div>
         </div>
-        <div className="mt-10 border-t border-stone-200 dark:border-zinc-700 pt-6 text-center text-[11px] text-stone-500 dark:text-zinc-500">
+        <div className="mt-10 pt-6 text-center text-[11px] text-stone-500 dark:text-zinc-500" style={{ borderTop: '1px solid transparent', borderImage: 'linear-gradient(to right, transparent, #d6d3d1, transparent) 1' }}>
           <p>&copy; 2026 ESI Kota Denpasar &middot; Platform Turnamen Esport Pelajar</p>
           <FooterCredit />
         </div>

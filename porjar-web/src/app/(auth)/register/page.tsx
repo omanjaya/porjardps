@@ -101,9 +101,13 @@ export default function RegisterPage() {
   const inputClasses = "h-11 sm:h-12 pl-9 border-esi-border bg-white dark:bg-zinc-800 dark:text-zinc-100 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-2 focus:ring-esi-red/20 transition-all duration-200"
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
+    <div className="overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 ring-1 ring-stone-200/50 dark:ring-zinc-700/50 bg-white dark:bg-zinc-900 shadow-xl shadow-stone-200/50 dark:shadow-black/20">
       <div className="h-2 w-full bg-esi-red" />
       <div className="p-6 sm:p-8">
+        <div className="mb-5 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" className="h-12 w-12 object-contain" />
+        </div>
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-esi-text">Buat Akun</h2>
         <p className="mb-4 text-sm text-esi-muted">
           Langkah 1 dari 3: Buat akun, lalu buat tim, lalu registrasi ke event
@@ -150,7 +154,7 @@ export default function RegisterPage() {
               Nama Lengkap
             </label>
             <div className="relative">
-              <User weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <User weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="full_name"
                 type="text"
@@ -170,7 +174,7 @@ export default function RegisterPage() {
               Email
             </label>
             <div className="relative">
-              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <EnvelopeSimple weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="email"
                 type="email"
@@ -190,7 +194,7 @@ export default function RegisterPage() {
               No. Telepon <span className="text-esi-muted">(opsional)</span>
             </label>
             <div className="relative">
-              <Phone weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Phone weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="phone"
                 type="tel"
@@ -210,7 +214,7 @@ export default function RegisterPage() {
               Password
             </label>
             <div className="relative">
-              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -259,7 +263,7 @@ export default function RegisterPage() {
               Konfirmasi Password
             </label>
             <div className="relative">
-              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/60" />
+              <Lock weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-esi-muted/40" />
               <Input
                 id="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -306,7 +310,7 @@ export default function RegisterPage() {
 
           <Button
             type="submit"
-            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 transition-all duration-200"
+            className="h-12 w-full bg-esi-red text-base font-bold text-white shadow-lg shadow-red-500/20 hover:shadow-xl hover:brightness-110 active:scale-[0.98] transition-all duration-200"
             disabled={isLoading}
           >
             {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Membuat akun...</> : 'Buat Akun & Lanjut'}
