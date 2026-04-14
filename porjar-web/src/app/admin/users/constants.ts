@@ -36,6 +36,7 @@ export interface EditUserForm {
   email: string
   phone: string
   tingkat: string
+  nisn: string
 }
 
 export const emptyCreateForm: CreateUserForm = {
@@ -52,6 +53,7 @@ export const emptyEditForm: EditUserForm = {
   email: '',
   phone: '',
   tingkat: '',
+  nisn: '',
 }
 
 export interface CredentialData {

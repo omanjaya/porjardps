@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
@@ -24,6 +25,7 @@ type CreateAnnouncementInput struct {
 	Title     string
 	Message   string
 	Priority  string
+	ExpiresAt *time.Time
 	CreatedBy *uuid.UUID
 }
 
@@ -54,6 +56,7 @@ func (s *EventAnnouncementService) Create(ctx context.Context, in CreateAnnounce
 		Title:     title,
 		Message:   msg,
 		Priority:  priority,
+		ExpiresAt: in.ExpiresAt,
 		CreatedBy: in.CreatedBy,
 	}
 	if err := s.repo.Create(ctx, a); err != nil {

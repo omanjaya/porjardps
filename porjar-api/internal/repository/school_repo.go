@@ -78,9 +78,9 @@ func (r *schoolRepo) FindByNameAndLevel(ctx context.Context, name, level string)
 
 func (r *schoolRepo) Create(ctx context.Context, s *model.School) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO schools (id, name, level, address, city, coach_phone, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		s.ID, s.Name, s.Level, s.Address, s.City, s.CoachPhone, s.CreatedAt)
+		`INSERT INTO schools (id, name, level, address, city, logo_url, coach_phone, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		s.ID, s.Name, s.Level, s.Address, s.City, s.LogoURL, s.CoachPhone, s.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
 	}

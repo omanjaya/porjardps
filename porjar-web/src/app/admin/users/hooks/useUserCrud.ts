@@ -50,6 +50,7 @@ export function useUserCrud(refetch: () => Promise<void> | void) {
       }
       if (form.phone) payload.phone = form.phone
       if (form.tingkat) payload.tingkat = form.tingkat
+      if (form.nisn) payload.nisn = form.nisn
       await api.put(`/admin/users/${user.id}`, payload)
       toast.success(`Data ${form.full_name} berhasil diperbarui`)
       await refetch()

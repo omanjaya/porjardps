@@ -43,10 +43,12 @@ func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, public
 }
 
 type createSchoolRequest struct {
-	Name    string  `json:"name"`
-	Level   string  `json:"level"`
-	City    string  `json:"city"`
-	Address *string `json:"address"`
+	Name       string  `json:"name"`
+	Level      string  `json:"level"`
+	City       string  `json:"city"`
+	Address    *string `json:"address"`
+	LogoURL    *string `json:"logo_url"`
+	CoachPhone *string `json:"coach_phone"`
 }
 
 func (h *SchoolHandler) Create(c *fiber.Ctx) error {
@@ -75,6 +77,8 @@ func (h *SchoolHandler) Create(c *fiber.Ctx) error {
 		req.Level,
 		validator.TrimString(req.City),
 		req.Address,
+		req.LogoURL,
+		req.CoachPhone,
 	)
 	if err != nil {
 		return response.HandleError(c, err)
@@ -98,11 +102,12 @@ func (h *SchoolHandler) GetByID(c *fiber.Ctx) error {
 }
 
 type updateSchoolRequest struct {
-	Name    *string `json:"name"`
-	Level   *string `json:"level"`
-	City    *string `json:"city"`
-	Address *string `json:"address"`
-	LogoURL *string `json:"logo_url"`
+	Name       *string `json:"name"`
+	Level      *string `json:"level"`
+	City       *string `json:"city"`
+	Address    *string `json:"address"`
+	LogoURL    *string `json:"logo_url"`
+	CoachPhone *string `json:"coach_phone"`
 }
 
 func (h *SchoolHandler) Update(c *fiber.Ctx) error {
@@ -128,7 +133,7 @@ func (h *SchoolHandler) Update(c *fiber.Ctx) error {
 		req.Name = &trimmed
 	}
 
-	school, svcErr := h.schoolService.Update(c.Context(), id, req.Name, req.Level, req.City, req.Address, req.LogoURL)
+	school, svcErr := h.schoolService.Update(c.Context(), id, req.Name, req.Level, req.City, req.Address, req.LogoURL, req.CoachPhone)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}

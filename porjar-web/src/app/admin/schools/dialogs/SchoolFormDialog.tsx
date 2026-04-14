@@ -33,6 +33,7 @@ export function SchoolFormDialog({ open, onOpenChange, mode, school, submitting,
         address: school.address ?? '',
         city: school.city,
         logo_url: school.logo_url ?? '',
+        coach_phone: school.coach_phone ?? '',
       })
     } else {
       setForm(emptyForm)
@@ -100,6 +101,17 @@ export function SchoolFormDialog({ open, onOpenChange, mode, school, submitting,
           value={form.city}
           onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
           placeholder="Denpasar"
+          className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:ring-esi-red/20"
+        />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Telepon Pembina (opsional)</label>
+        <Input
+          type="tel"
+          inputMode="tel"
+          value={form.coach_phone}
+          onChange={(e) => setForm((f) => ({ ...f, coach_phone: e.target.value }))}
+          placeholder="08xxxxxxxxxx"
           className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:ring-esi-red/20"
         />
       </div>

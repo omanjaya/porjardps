@@ -2,6 +2,7 @@ package handler
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -57,9 +58,10 @@ func (h *EventAnnouncementHandler) ListActive(c *fiber.Ctx) error {
 }
 
 type createAnnouncementRequest struct {
-	Title    string `json:"title"`
-	Message  string `json:"message"`
-	Priority string `json:"priority"`
+	Title     string     `json:"title"`
+	Message   string     `json:"message"`
+	Priority  string     `json:"priority"`
+	ExpiresAt *time.Time `json:"expires_at"`
 }
 
 func (h *EventAnnouncementHandler) Create(c *fiber.Ctx) error {
@@ -77,6 +79,9 @@ func (h *EventAnnouncementHandler) Create(c *fiber.Ctx) error {
 	if len(req.Message) > 2000 {
 		return response.BadRequest(c, "Pesan terlalu panjang (maks 2000 karakter)")
 	}
+	if req.ExpiresAt != nil && !req.ExpiresAt.After(time.Now()) {
+		return response.BadRequest(c, "Tanggal kadaluarsa harus di masa depan")
+	}
 	var createdBy *uuid.UUID
 	if uidStr, ok := c.Locals("userID").(string); ok && uidStr != "" {
 		if uid, err := uuid.Parse(uidStr); err == nil {
@@ -88,6 +93,7 @@ func (h *EventAnnouncementHandler) Create(c *fiber.Ctx) error {
 		Title:     req.Title,
 		Message:   req.Message,
 		Priority:  req.Priority,
+		ExpiresAt: req.ExpiresAt,
 		CreatedBy: createdBy,
 	})
 	if err != nil {

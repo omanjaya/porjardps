@@ -12,6 +12,7 @@ export interface SchoolFormData {
   address: string
   city: string
   logo_url: string
+  coach_phone: string
 }
 
 export const emptyForm: SchoolFormData = {
@@ -20,6 +21,7 @@ export const emptyForm: SchoolFormData = {
   address: '',
   city: 'Denpasar',
   logo_url: '',
+  coach_phone: '',
 }
 
 export function useSchoolCrud() {
@@ -100,6 +102,7 @@ export function useSchoolCrud() {
         address: form.address,
         city: form.city,
         logo_url: form.logo_url || null,
+        coach_phone: form.coach_phone.trim() || null,
       }
       if (editingId) {
         await api.put(`/admin/schools/${editingId}`, payload)

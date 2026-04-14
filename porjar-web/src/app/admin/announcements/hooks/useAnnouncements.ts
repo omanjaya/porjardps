@@ -63,7 +63,15 @@ export function useAnnouncements() {
       }
       if (form.expires_at) {
         const d = new Date(form.expires_at)
-        if (!isNaN(d.getTime())) payload.expires_at = d.toISOString()
+        if (isNaN(d.getTime())) {
+          toast.error('Tanggal kadaluarsa tidak valid')
+          return false
+        }
+        if (d.getTime() <= Date.now()) {
+          toast.error('Tanggal kadaluarsa harus di masa depan')
+          return false
+        }
+        payload.expires_at = d.toISOString()
       }
       await api.post(`/admin/events/${eventId}/announcements`, payload)
       toast.success('Pengumuman berhasil dikirim')

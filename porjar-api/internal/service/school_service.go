@@ -17,14 +17,16 @@ func NewSchoolService(schoolRepo model.SchoolRepository) *SchoolService {
 	return &SchoolService{schoolRepo: schoolRepo}
 }
 
-func (s *SchoolService) Create(ctx context.Context, name, level, city string, address *string) (*model.School, error) {
+func (s *SchoolService) Create(ctx context.Context, name, level, city string, address *string, logoURL *string, coachPhone *string) (*model.School, error) {
 	school := &model.School{
-		ID:        uuid.New(),
-		Name:      name,
-		Level:     level,
-		City:      city,
-		Address:   address,
-		CreatedAt: time.Now(),
+		ID:         uuid.New(),
+		Name:       name,
+		Level:      level,
+		City:       city,
+		Address:    address,
+		LogoURL:    logoURL,
+		CoachPhone: coachPhone,
+		CreatedAt:  time.Now(),
 	}
 
 	if err := s.schoolRepo.Create(ctx, school); err != nil {
@@ -42,7 +44,7 @@ func (s *SchoolService) GetByID(ctx context.Context, id uuid.UUID) (*model.Schoo
 	return school, nil
 }
 
-func (s *SchoolService) Update(ctx context.Context, id uuid.UUID, name, level, city *string, address *string, logoURL *string) (*model.School, error) {
+func (s *SchoolService) Update(ctx context.Context, id uuid.UUID, name, level, city *string, address *string, logoURL *string, coachPhone *string) (*model.School, error) {
 	school, err := s.schoolRepo.FindByID(ctx, id)
 	if err != nil || school == nil {
 		return nil, apperror.NotFound("SCHOOL")
@@ -62,6 +64,9 @@ func (s *SchoolService) Update(ctx context.Context, id uuid.UUID, name, level, c
 	}
 	if logoURL != nil {
 		school.LogoURL = logoURL
+	}
+	if coachPhone != nil {
+		school.CoachPhone = coachPhone
 	}
 
 	if err := s.schoolRepo.Update(ctx, school); err != nil {

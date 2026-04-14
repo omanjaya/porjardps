@@ -24,6 +24,7 @@ export function EditUserDialog({ open, onOpenChange, user, processing, onSubmit 
         email: user.email,
         phone: user.phone ?? '',
         tingkat: user.tingkat ?? '',
+        nisn: user.nisn ?? '',
       })
     } else if (!open) {
       setForm(emptyEditForm)
@@ -88,6 +89,16 @@ export function EditUserDialog({ open, onOpenChange, user, processing, onSubmit 
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+      </div>
+      <div>
+        <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">NISN</label>
+        <Input
+          inputMode="numeric"
+          placeholder="10 digit NISN"
+          value={form.nisn}
+          onChange={(e) => setForm((f) => ({ ...f, nisn: e.target.value.replace(/\D/g, '').slice(0, 16) }))}
+          className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red font-mono"
+        />
       </div>
     </FormDialog>
   )
