@@ -141,7 +141,7 @@ export default function SubmitResultPage() {
               Submit Match Lain
             </Button>
             <Link
-              href="/dashboard/my-matches"
+              href="/dashboard/submissions"
               className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 text-sm font-semibold text-esi-text hover:bg-stone-50 dark:hover:bg-zinc-800"
             >
               <ListChecks size={18} weight="duotone" />

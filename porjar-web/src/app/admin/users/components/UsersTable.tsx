@@ -12,8 +12,24 @@ import {
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Users, ShieldCheck, UserCircle, PencilSimple, Trash, Key, IdentificationCard } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { ColumnToggle } from '@/components/shared/ColumnToggle'
+import { useColumnVisibility } from '@/hooks/useColumnVisibility'
 import type { User, UserRole } from '@/types'
 import { availableRoles, roleColors, roleLabels } from '../constants'
+
+const USERS_COLUMNS = [
+  { key: 'name', label: 'Nama' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Telepon' },
+  { key: 'role', label: 'Role' },
+] as const
+
+const USERS_COLUMNS_DEFAULT: Record<string, boolean> = {
+  name: true,
+  email: true,
+  phone: true,
+  role: true,
+}
 
 interface UsersTableProps {
   users: User[]
@@ -43,13 +59,19 @@ export function UsersTable({
   onChangeRole,
 }: UsersTableProps) {
   const totalFiltered = totalUsers
+  const { visible, toggle } = useColumnVisibility('admin-users-columns', USERS_COLUMNS_DEFAULT)
 
   return (
     <>
       {/* Total counter */}
-      <div className="mb-4 text-sm text-stone-500 dark:text-zinc-400">
-        Menampilkan <span className="font-semibold text-stone-900 dark:text-zinc-100">{totalFiltered}</span> dari <span className="font-semibold text-stone-900 dark:text-zinc-100">{users.length}</span> pengguna
-        {totalPages > 1 && <span className="text-stone-400 dark:text-zinc-500"> · Halaman {currentPage} dari {totalPages}</span>}
+      <div className="mb-4 flex items-center justify-between gap-2 text-sm text-stone-500 dark:text-zinc-400">
+        <div>
+          Menampilkan <span className="font-semibold text-stone-900 dark:text-zinc-100">{totalFiltered}</span> dari <span className="font-semibold text-stone-900 dark:text-zinc-100">{users.length}</span> pengguna
+          {totalPages > 1 && <span className="text-stone-400 dark:text-zinc-500"> · Halaman {currentPage} dari {totalPages}</span>}
+        </div>
+        {totalFiltered > 0 && (
+          <ColumnToggle columns={[...USERS_COLUMNS]} visible={visible} onToggle={toggle} />
+        )}
       </div>
 
       {totalFiltered === 0 ? (
@@ -60,16 +82,17 @@ export function UsersTable({
             <Table>
               <TableHeader>
                 <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent bg-stone-50 dark:bg-zinc-800/50">
-                  <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>
-                  <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Email</TableHead>
-                  <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Telepon</TableHead>
-                  <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Role</TableHead>
+                  {visible.name && <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>}
+                  {visible.email && <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Email</TableHead>}
+                  {visible.phone && <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Telepon</TableHead>}
+                  {visible.role && <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Role</TableHead>}
                   <TableHead className="text-right text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
                   <TableRow key={user.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50 dark:bg-red-950/30">
+                    {visible.name && (
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800">
@@ -96,10 +119,14 @@ export function UsersTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm text-stone-500 dark:text-zinc-400">{user.email}</TableCell>
+                    )}
+                    {visible.email && <TableCell className="text-sm text-stone-500 dark:text-zinc-400">{user.email}</TableCell>}
+                    {visible.phone && (
                     <TableCell className="hidden sm:table-cell text-sm text-stone-500 dark:text-zinc-400">
                       {user.phone ?? '-'}
                     </TableCell>
+                    )}
+                    {visible.role && (
                     <TableCell>
                       <span
                         className={cn(
@@ -111,6 +138,7 @@ export function UsersTable({
                         {roleLabels[user.role]}
                       </span>
                     </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex flex-wrap items-center justify-end gap-1">
                         <Button

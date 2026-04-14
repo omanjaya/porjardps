@@ -16,7 +16,9 @@ interface CheckInButtonProps {
   teamSide: 'a' | 'b'
   matchStatus: string
   scheduledAt: string | null
-  onSuccess?: () => void
+  onSuccess?: (checkedInAt: string) => void
+  offline?: boolean
+  onOfflineQueue?: () => void
 }
 
 type UiState =
@@ -34,6 +36,8 @@ export function CheckInButton({
   matchStatus,
   scheduledAt,
   onSuccess,
+  offline = false,
+  onOfflineQueue,
 }: CheckInButtonProps) {
   const [loading, setLoading] = useState(false)
   const [checkedIn, setCheckedIn] = useState(false)
@@ -66,12 +70,68 @@ export function CheckInButton({
 
   async function handleCheckIn() {
     if (loading || state.kind !== 'ready') return
+
+    // Offline: queue to localStorage (max 10 entries)
+    if (offline) {
+      try {
+        const raw = localStorage.getItem('offline_checkins')
+        const queue: Array<{ match_id: string | number; team_side: 'a' | 'b'; queued_at: string }> =
+          raw ? JSON.parse(raw) : []
+        if (queue.length >= 10) {
+          toast.error('Antrean offline penuh. Coba lagi saat online.')
+          return
+        }
+        // Dedupe: don't queue same match+side twice
+        if (!queue.some((q) => String(q.match_id) === String(matchId) && q.team_side === teamSide)) {
+          queue.push({ match_id: matchId, team_side: teamSide, queued_at: new Date().toISOString() })
+          localStorage.setItem('offline_checkins', JSON.stringify(queue))
+        }
+        toast.success('Check-in disimpan. Akan dikirim saat online.')
+        onOfflineQueue?.()
+      } catch {
+        toast.error('Gagal menyimpan check-in offline.')
+      }
+      return
+    }
+
     setLoading(true)
     try {
-      await api.post(`/matches/${matchId}/check-in`, { team_side: teamSide })
+      // Retry with exponential backoff (3 attempts: 0s, 1s, 2s waits)
+      const maxRetries = 3
+      let lastErr: unknown = null
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          await api.post(`/matches/${matchId}/check-in`, { team_side: teamSide })
+          lastErr = null
+          break
+        } catch (e) {
+          lastErr = e
+          // Don't retry on explicit API errors (4xx) — only on network/5xx
+          if (e instanceof ApiError) {
+            const code = (e.code || '').toUpperCase()
+            if (
+              code === 'ALREADY_CHECKED_IN' ||
+              code === 'CONFLICT' ||
+              code.includes('NOT_FOUND') ||
+              code === 'NOT_IMPLEMENTED' ||
+              code === 'ROUTE_NOT_FOUND' ||
+              code === 'FORBIDDEN' ||
+              code === 'UNAUTHORIZED' ||
+              code === 'VALIDATION_ERROR'
+            ) {
+              break
+            }
+          }
+          if (i < maxRetries - 1) {
+            await new Promise((r) => setTimeout(r, Math.pow(2, i) * 1000))
+          }
+        }
+      }
+      if (lastErr) throw lastErr
+      const checkedInAt = new Date().toISOString()
       setCheckedIn(true)
       toast.success('Check-in berhasil! Panitia sudah diberitahu.')
-      onSuccess?.()
+      onSuccess?.(checkedInAt)
     } catch (err) {
       if (err instanceof ApiError) {
         // Treat NOT_FOUND / 404-like codes as "feature not implemented"

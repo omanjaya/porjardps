@@ -17,8 +17,26 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
 import { CheckCircle, XCircle, PencilSimple, Trash, Eye, CaretDown, SpinnerGap } from '@phosphor-icons/react'
+import { ColumnToggle } from '@/components/shared/ColumnToggle'
+import { useColumnVisibility } from '@/hooks/useColumnVisibility'
 import type { Team } from '@/types'
 import type { ConfirmAction } from '../hooks/useTeamCrud'
+
+const TEAMS_COLUMNS = [
+  { key: 'name', label: 'Nama Tim' },
+  { key: 'game', label: 'Game' },
+  { key: 'school', label: 'Sekolah' },
+  { key: 'members', label: 'Anggota' },
+  { key: 'status', label: 'Status' },
+] as const
+
+const TEAMS_COLUMNS_DEFAULT: Record<string, boolean> = {
+  name: true,
+  game: true,
+  school: true,
+  members: true,
+  status: true,
+}
 
 interface Props {
   teams: Team[]
@@ -57,8 +75,12 @@ export function TeamsTable({
   totalFiltered,
   onPageChange,
 }: Props) {
+  const { visible, toggle } = useColumnVisibility('admin-teams-columns', TEAMS_COLUMNS_DEFAULT)
   return (
     <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-end gap-2 border-b border-stone-200 dark:border-zinc-700 bg-stone-50/50 dark:bg-zinc-800/30 px-3 py-2">
+        <ColumnToggle columns={[...TEAMS_COLUMNS]} visible={visible} onToggle={toggle} />
+      </div>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
@@ -74,11 +96,11 @@ export function TeamsTable({
                   />
                 )}
               </TableHead>
-              <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Nama Tim</TableHead>
-              <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Game</TableHead>
-              <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Sekolah</TableHead>
-              <TableHead className="hidden sm:table-cell text-center text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Anggota</TableHead>
-              <TableHead className="hidden md:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Status</TableHead>
+              {visible.name && <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Nama Tim</TableHead>}
+              {visible.game && <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Game</TableHead>}
+              {visible.school && <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Sekolah</TableHead>}
+              {visible.members && <TableHead className="hidden sm:table-cell text-center text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Anggota</TableHead>}
+              {visible.status && <TableHead className="hidden md:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Status</TableHead>}
               <TableHead className="text-right text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -98,12 +120,15 @@ export function TeamsTable({
                     />
                   )}
                 </TableCell>
+                {visible.name && (
                 <TableCell>
                   <span className="font-medium text-stone-900 dark:text-zinc-100">{team.name}</span>
                 </TableCell>
-                <TableCell className="text-stone-500 dark:text-zinc-400 text-sm">{team.game.name}</TableCell>
-                <TableCell className="hidden sm:table-cell text-stone-500 dark:text-zinc-400 text-sm">{team.school?.name ?? '-'}</TableCell>
-                <TableCell className="hidden sm:table-cell text-center text-stone-500 dark:text-zinc-400 tabular-nums">{team.member_count}</TableCell>
+                )}
+                {visible.game && <TableCell className="text-stone-500 dark:text-zinc-400 text-sm">{team.game.name}</TableCell>}
+                {visible.school && <TableCell className="hidden sm:table-cell text-stone-500 dark:text-zinc-400 text-sm">{team.school?.name ?? '-'}</TableCell>}
+                {visible.members && <TableCell className="hidden sm:table-cell text-center text-stone-500 dark:text-zinc-400 tabular-nums">{team.member_count}</TableCell>}
+                {visible.status && (
                 <TableCell className="hidden md:table-cell">
                   {team.status === 'pending' ? (
                     <DropdownMenu>
@@ -144,6 +169,7 @@ export function TeamsTable({
                     <StatusBadge status={team.status} />
                   )}
                 </TableCell>
+                )}
                 <TableCell className="text-right">
                   <div className="flex flex-wrap items-center justify-end gap-1">
                     <Button size="xs" variant="ghost" onClick={() => onView(team)} className="text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100 hover:bg-stone-100 dark:hover:bg-zinc-700 dark:bg-zinc-800">

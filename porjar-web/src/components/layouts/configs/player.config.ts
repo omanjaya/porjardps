@@ -8,6 +8,7 @@ import {
   ChartBar,
   Star,
   CalendarBlank,
+  ListBullets,
 } from '@phosphor-icons/react'
 import type { LayoutConfig } from './types'
 
@@ -22,6 +23,7 @@ export const playerConfig: LayoutConfig = {
     { label: 'Turnamen', href: '/dashboard/tournament', icon: Trophy },
     { label: 'Pertandingan', href: '/dashboard/my-matches', icon: Sword },
     { label: 'Kirim Bukti', href: '/dashboard/submit-result', icon: Upload },
+    { label: 'Pengajuan', href: '/dashboard/submissions', icon: ListBullets },
     { label: 'Statistik', href: '/dashboard/stats', icon: ChartBar },
     { label: 'Event Saya', href: '/dashboard/events', icon: CalendarBlank },
     { label: 'Poin Saya', href: '/dashboard/points', icon: Star },

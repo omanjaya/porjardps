@@ -1,11 +1,14 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { ExportButton } from '@/components/shared/ExportButton'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus } from '@phosphor-icons/react'
+import { api } from '@/lib/api'
 import type { School, SchoolLevel } from '@/types'
 
 import { useSchoolCrud, type SchoolFormData } from './hooks/useSchoolCrud'
@@ -63,6 +66,20 @@ export default function AdminSchoolsPage() {
     return saveSchool(form, mode === 'edit' ? editingSchool?.id ?? null : null)
   }
 
+  async function handleExportCSV() {
+    try {
+      const blob = await api.getBlob('/admin/export/schools.csv')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `schools-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Gagal export')
+    }
+  }
+
   if (loading) {
     return (
       <AdminLayout>
@@ -78,10 +95,19 @@ export default function AdminSchoolsPage() {
         title="Manajemen Sekolah"
         description="Kelola data sekolah peserta"
         actions={
-          <Button onClick={openCreate} className="bg-esi-red hover:bg-esi-red-dark text-white">
-            <Plus size={16} className="mr-1" />
-            Tambah Sekolah
-          </Button>
+          <div className="flex items-center gap-2">
+            {schools.length > 0 && (
+              <ExportButton
+                options={[
+                  { label: 'Export CSV', type: 'csv', onExport: handleExportCSV },
+                ]}
+              />
+            )}
+            <Button onClick={openCreate} className="bg-esi-red hover:bg-esi-red-dark text-white">
+              <Plus size={16} className="mr-1" />
+              Tambah Sekolah
+            </Button>
+          </div>
         }
       />
 

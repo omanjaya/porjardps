@@ -281,6 +281,32 @@ export default function AdminTournamentDetailPage() {
         </div>
       </div>
 
+      {/* Quick Actions: pending teams alert */}
+      {(() => {
+        const pendingTeams = registeredTeams.filter((t) => t.status === 'pending')
+        if (pendingTeams.length === 0) return null
+        return (
+          <div className="mb-6 rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/20 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <p className="font-bold text-amber-800 dark:text-amber-300">
+                  {pendingTeams.length} tim menunggu persetujuan
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                  Review tim sebelum turnamen mulai
+                </p>
+              </div>
+              <Link
+                href={`/admin/approvals?tournament_id=${params.id}`}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-amber-600 hover:bg-amber-700 px-4 py-2 text-sm font-bold text-white transition-colors"
+              >
+                Review Sekarang
+              </Link>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Quick Navigation */}
       <div className="mb-6 flex flex-wrap gap-2">
         {(tournament.format === 'group_stage_playoff') && (
