@@ -28,6 +28,7 @@ type BRLobbyTeamRepository interface {
 	FindByLobby(ctx context.Context, lobbyID uuid.UUID) ([]*BRLobbyTeam, error)
 	FindByTeam(ctx context.Context, teamID uuid.UUID) ([]*BRLobbyTeam, error)
 	RemoveAll(ctx context.Context, lobbyID uuid.UUID) error
+	SwapTeams(ctx context.Context, teamAID, lobbyAID, teamBID, lobbyBID uuid.UUID) error
 }
 
 type BRDailyStandingsRepository interface {

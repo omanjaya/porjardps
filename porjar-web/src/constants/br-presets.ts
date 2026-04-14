@@ -55,7 +55,7 @@ export const BR_POINT_PRESETS: Record<string, BRPointPreset> = {
     },
   },
   porjar_default: {
-    name: 'PORJAR Default',
+    name: 'ESI Default',
     description: '12-16 tim, 1pt/kill',
     maxTeams: 16,
     killPointValue: 1,
@@ -85,7 +85,7 @@ export function calculatePoints(
   wwcdBonus: number
 ): { placementPts: number; killPts: number; wwcd: number; total: number } {
   const placementPts = placements[placement] ?? 0
-  const killPts = kills * killPointValue
+  const killPts = Math.round(kills * killPointValue)
   const wwcd = placement === 1 ? wwcdBonus : 0
   return {
     placementPts,

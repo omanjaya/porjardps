@@ -14,6 +14,30 @@ import { getLiveScoreClient } from '@/lib/ws'
 import { useAuthStore } from '@/store/auth-store'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
+
+function getActionLink(type: string): { label: string; href: string } | null {
+  switch (type) {
+    case 'submission_approved':
+    case 'submission_rejected':
+      return { label: 'Lihat Submission', href: '/dashboard/submit-result' }
+    case 'match_starting':
+    case 'match_result':
+    case 'match_completed':
+    case 'score_update':
+      return { label: 'Lihat Match', href: '/dashboard/my-matches' }
+    case 'new_submission':
+      return { label: 'Lihat Submission', href: '/admin/submissions' }
+    case 'team_approved':
+    case 'team_rejected':
+      return { label: 'Lihat Tim', href: '/dashboard/teams' }
+    case 'registration_confirmed':
+      return { label: 'Lihat Turnamen', href: '/dashboard/tournament' }
+    default:
+      return null
+  }
+}
 
 interface Notification {
   id: string
@@ -60,11 +84,24 @@ function timeAgo(dateStr: string): string {
 
 export function NotificationBell() {
   const { user, isAuthenticated } = useAuthStore()
+  const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const bellRef = useRef<HTMLButtonElement>(null)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; right: number } | null>(null)
+
+  // Calculate dropdown position from bell button
+  useEffect(() => {
+    if (!isOpen || !bellRef.current) return
+    const rect = bellRef.current.getBoundingClientRect()
+    setDropdownPos({
+      top: rect.bottom + 8,
+      right: window.innerWidth - rect.right,
+    })
+  }, [isOpen])
 
   // Fetch unread count
   const fetchUnreadCount = useCallback(async () => {
@@ -77,13 +114,30 @@ export function NotificationBell() {
     }
   }, [isAuthenticated])
 
-  // Fetch recent notifications
+  // Fetch recent notifications (merges personal + active announcements)
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return
     setIsLoading(true)
     try {
-      const data = await api.get<Notification[]>('/notifications?limit=10')
-      setNotifications(data ?? [])
+      const data = await api.get<Notification[]>('/notifications?limit=5')
+      let merged: Notification[] = data ?? []
+
+      // Try to fetch active announcements (endpoint may not exist yet — fail silently)
+      try {
+        const announcements = await api.get<Notification[]>('/announcements/active')
+        if (Array.isArray(announcements) && announcements.length > 0) {
+          const mapped = announcements.map((a) => ({
+            ...a,
+            type: a.type || 'announcement',
+            is_read: true, // announcements are global, not per-user read state
+          }))
+          merged = [...mapped, ...merged]
+        }
+      } catch {
+        // endpoint not available yet — ignore
+      }
+
+      setNotifications(merged.slice(0, 5))
     } catch (err) {
       console.error('Gagal memuat notifikasi:', err)
     } finally {
@@ -91,10 +145,13 @@ export function NotificationBell() {
     }
   }, [isAuthenticated])
 
-  // Initial fetch
+  // Initial fetch + 60s polling fallback (in case WS drops)
   useEffect(() => {
     fetchUnreadCount()
-  }, [fetchUnreadCount])
+    if (!isAuthenticated) return
+    const id = setInterval(fetchUnreadCount, 60000)
+    return () => clearInterval(id)
+  }, [fetchUnreadCount, isAuthenticated])
 
   // Fetch notifications when dropdown opens
   useEffect(() => {
@@ -109,7 +166,7 @@ export function NotificationBell() {
 
     const wsClient = getLiveScoreClient()
     wsClient.connect()
-    wsClient.subscribe(`user:${user.id}`)
+    wsClient.subscribe(`user#${user.id}`)
 
     const unsubscribe = wsClient.on('notification', (msg) => {
       const notif = msg.data as Notification
@@ -117,11 +174,26 @@ export function NotificationBell() {
       setUnreadCount((prev) => prev + 1)
     })
 
+    const unsubscribeNewSubmission = wsClient.on('new_submission', (msg) => {
+      if (user?.role !== 'admin' && user?.role !== 'superadmin') return
+      const data = msg.data as { submission_id?: string; match_type?: string; game_name?: string }
+      setUnreadCount((prev) => prev + 1)
+      toast('Submission baru masuk', {
+        description: `${data.game_name || 'Pertandingan'} - menunggu verifikasi`,
+        action: {
+          label: 'Lihat',
+          onClick: () => router.push('/admin/submissions'),
+        },
+        duration: 8000,
+      })
+    })
+
     return () => {
       unsubscribe()
-      wsClient.unsubscribe(`user:${user.id}`)
+      unsubscribeNewSubmission()
+      wsClient.unsubscribe(`user#${user.id}`)
     }
-  }, [isAuthenticated, user?.id])
+  }, [isAuthenticated, user?.id, user?.role, router])
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -164,8 +236,9 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        ref={bellRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative rounded-lg p-2 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800"
+        className="relative rounded-lg p-2 text-stone-500 dark:text-zinc-400 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-100"
         aria-label="Notifikasi"
       >
         <BellSimple size={20} weight={isOpen ? 'fill' : 'regular'} />
@@ -177,14 +250,17 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-xl sm:w-96">
+        <div
+          className="fixed inset-x-3 z-[100] overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl sm:inset-x-auto sm:w-96"
+          style={dropdownPos ? { top: dropdownPos.top, right: Math.max(dropdownPos.right, 12) } : { top: '4rem' }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3">
-            <h3 className="text-sm font-semibold text-stone-900">Notifikasi</h3>
+          <div className="flex items-center justify-between border-b border-stone-200 dark:border-zinc-700 px-4 py-3">
+            <h3 className="text-sm font-semibold text-stone-900 dark:text-zinc-100">Notifikasi</h3>
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="text-xs text-porjar-red transition-colors hover:text-red-700"
+                className="text-xs text-esi-red transition-colors hover:text-red-700"
               >
                 Tandai semua dibaca
               </button>
@@ -195,22 +271,30 @@ export function NotificationBell() {
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-stone-200 border-t-porjar-red" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-stone-200 dark:border-zinc-700 border-t-esi-red" />
               </div>
             ) : notifications.length === 0 ? (
-              <div className="py-8 text-center text-sm text-stone-400">
+              <div className="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">
                 Tidak ada notifikasi
               </div>
             ) : (
               notifications.map((notif) => {
                 const IconComp = typeIcons[notif.type] || BellSimple
+                const action = getActionLink(notif.type)
                 return (
                   <button
                     key={notif.id}
-                    onClick={() => !notif.is_read && handleMarkRead(notif.id)}
+                    onClick={() => {
+                      if (!notif.is_read) handleMarkRead(notif.id)
+                      if (action) {
+                        setIsOpen(false)
+                        router.push(action.href)
+                      }
+                    }}
                     className={cn(
-                      'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-stone-50',
-                      !notif.is_read && 'bg-stone-50/50'
+                      'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800',
+                      !notif.is_read && 'bg-stone-50/50 dark:bg-zinc-800/50',
+                      action && 'cursor-pointer'
                     )}
                   >
                     <div
@@ -234,21 +318,28 @@ export function NotificationBell() {
                         <p
                           className={cn(
                             'text-sm truncate',
-                            notif.is_read ? 'text-stone-400' : 'font-medium text-stone-900'
+                            notif.is_read ? 'text-stone-400 dark:text-zinc-500' : 'font-medium text-stone-900 dark:text-zinc-100'
                           )}
                         >
                           {notif.title}
                         </p>
                         {!notif.is_read && (
-                          <span className="h-2 w-2 flex-shrink-0 rounded-full bg-porjar-red" />
+                          <span className="h-2 w-2 flex-shrink-0 rounded-full bg-esi-red" />
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-stone-500 line-clamp-2">
+                      <p className="mt-0.5 text-xs text-stone-500 dark:text-zinc-400 line-clamp-2">
                         {notif.message}
                       </p>
-                      <p className="mt-1 text-[10px] text-stone-400">
-                        {timeAgo(notif.created_at)}
-                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <p className="text-[10px] text-stone-400 dark:text-zinc-500">
+                          {timeAgo(notif.created_at)}
+                        </p>
+                        {action && (
+                          <span className="text-[10px] font-medium text-esi-red">
+                            {action.label} →
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 )
@@ -257,11 +348,11 @@ export function NotificationBell() {
           </div>
 
           {/* Footer */}
-          <div className="border-t border-stone-200 px-4 py-2.5">
+          <div className="border-t border-stone-200 dark:border-zinc-700 px-4 py-2.5">
             <Link
               href="/dashboard/notifications"
               onClick={() => setIsOpen(false)}
-              className="block text-center text-xs font-medium text-porjar-red transition-colors hover:text-red-700"
+              className="block text-center text-xs font-medium text-esi-red transition-colors hover:text-red-700"
             >
               Lihat semua
             </Link>

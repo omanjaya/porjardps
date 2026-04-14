@@ -85,8 +85,8 @@ export function SpectatorCount({ matchId }: SpectatorCountProps) {
   }, [matchId])
 
   return (
-    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-stone-200 px-3 py-1 text-sm text-stone-700">
-      <Eye size={16} weight="fill" className="text-porjar-red" />
+    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/80 dark:bg-zinc-900/80 border border-stone-200 dark:border-zinc-700 px-3 py-1 text-sm text-stone-700 dark:text-zinc-300">
+      <Eye size={16} weight="fill" className="text-esi-red" />
       <span className="tabular-nums font-medium">{displayCount}</span>
       <span className="text-stone-400">menonton</span>
     </div>

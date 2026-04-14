@@ -18,7 +18,6 @@ import {
   List,
 } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -26,7 +25,9 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GAME_CONFIG } from '@/constants/games'
 import { mediaUrl } from '@/lib/utils'
+import { JsonLd } from '@/components/shared/JsonLd'
 import { usePageAnimation } from '@/hooks/usePageAnimation'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { Tournament, Team, GameSlug } from '@/types'
 
 function formatDate(dateStr: string | null): string {
@@ -38,8 +39,16 @@ function formatDate(dateStr: string | null): string {
   })
 }
 
+const FORMAT_NICE_LABELS: Record<string, string> = {
+  single_elimination: 'Single Elimination',
+  double_elimination: 'Double Elimination',
+  round_robin: 'Round Robin',
+  group_stage_playoff: 'Grup + Playoff',
+  battle_royale_points: 'Battle Royale Points',
+}
+
 function formatLabel(str: string): string {
-  return str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+  return FORMAT_NICE_LABELS[str] ?? str.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function isBattleRoyale(format: string): boolean {
@@ -65,7 +74,7 @@ function SlotBadge({ registered, max }: { registered: number; max: number }) {
     )
   }
   return (
-    <span className="rounded-full bg-porjar-red px-3 py-1 text-xs font-medium text-white">
+    <span className="rounded-full bg-esi-red px-3 py-1 text-xs font-medium text-white">
       {registered} / {max} tim
     </span>
   )
@@ -79,7 +88,7 @@ function SlotProgressBar({ registered, max }: { registered: number; max: number 
   return (
     <div className="mb-5">
       <div className="mb-1.5 flex items-center justify-between text-xs">
-        <span className="font-medium text-stone-700">
+        <span className="font-medium text-stone-700 dark:text-zinc-300">
           {registered} / {max} tim terdaftar
         </span>
         {remaining > 0 ? (
@@ -88,7 +97,7 @@ function SlotProgressBar({ registered, max }: { registered: number; max: number 
           <span className="font-bold text-red-600 uppercase tracking-wide">Penuh</span>
         )}
       </div>
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-zinc-800">
         <div
           className={`h-full rounded-full bg-gradient-to-r ${bar} transition-all duration-500`}
           style={{ width: `${pct}%` }}
@@ -129,31 +138,40 @@ export default function TournamentDetailPage() {
     load()
   }, [params.id])
 
+  useWebSocket({
+    channels: [`tournament:${params.id}`],
+    messageTypes: ['tournament_update', 'bracket_update', 'team_update'],
+    onMessage: () => {
+      api.get<Tournament>(`/tournaments/${params.id}`).then(t => { if (t) setTournament(t) })
+      api.get<Team[]>(`/tournaments/${params.id}/teams`).then(tl => setTeams(tl ?? [])).catch(() => {})
+    },
+  })
+
   if (loading) {
     return (
-      <PublicLayout>
+      <>
         <div className="space-y-6">
-          <Skeleton className="h-48 rounded-xl bg-stone-100" />
+          <Skeleton className="h-48 rounded-xl bg-stone-100 dark:bg-zinc-800" />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-xl bg-stone-100" />
+              <Skeleton key={i} className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
             ))}
           </div>
-          <Skeleton className="h-40 rounded-xl bg-stone-100" />
+          <Skeleton className="h-40 rounded-xl bg-stone-100 dark:bg-zinc-800" />
         </div>
-      </PublicLayout>
+      </>
     )
   }
 
   if (error || !tournament) {
     return (
-      <PublicLayout>
+      <>
         <EmptyState
           icon={WarningCircle}
           title={error ? 'Terjadi Kesalahan' : 'Turnamen Tidak Ditemukan'}
           description={error ?? 'Turnamen yang kamu cari tidak ada atau sudah dihapus.'}
         />
-      </PublicLayout>
+      </>
     )
   }
 
@@ -186,8 +204,35 @@ export default function TournamentDetailPage() {
     },
   ]
 
+  const tournamentJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    name: tournament.name,
+    sport: tournament.game?.name || 'Esports',
+    startDate: tournament.start_date ?? undefined,
+    endDate: tournament.end_date ?? undefined,
+    eventStatus: 'https://schema.org/EventScheduled',
+    url: `https://esidenpasar.com/tournaments/${tournament.id}`,
+    organizer: {
+      '@type': 'Organization',
+      name: 'ESI Kota Denpasar',
+      url: 'https://esidenpasar.com',
+    },
+    location: {
+      '@type': 'Place',
+      name: 'Denpasar',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Denpasar',
+        addressRegion: 'Bali',
+        addressCountry: 'ID',
+      },
+    },
+  }
+
   return (
-    <PublicLayout>
+    <>
+      <JsonLd data={tournamentJsonLd} />
       <PageHeader
         title=""
         breadcrumbs={[
@@ -198,37 +243,37 @@ export default function TournamentDetailPage() {
 
       <div ref={containerRef}>
       {/* Hero Section */}
-      <div className="anim-hero relative mb-8 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+      <div className="anim-hero relative mb-8 overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
         {/* Red top bar */}
-        <div className="absolute inset-x-0 top-0 h-1 bg-porjar-red" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-esi-red" />
 
         <div className="relative px-4 py-6 md:px-10 md:py-12">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
             {/* Game logo */}
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-red-50 border border-porjar-red/20">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-950 border border-esi-red/20">
               {gameLogo ? (
                 <Image src={gameLogo} alt={tournament.game?.name ?? ''} width={40} height={40} className="h-10 w-10 object-contain" />
               ) : (
                 <GameIcon
                   size={36}
                   weight="duotone"
-                  className="text-porjar-red"
+                  className="text-esi-red"
                 />
               )}
             </div>
 
             <div className="flex-1">
-              <h1 className="mb-2 text-2xl font-bold text-stone-900 md:text-3xl">
+              <h1 className="mb-2 text-2xl font-bold text-stone-900 dark:text-zinc-100 md:text-3xl">
                 {tournament.name}
               </h1>
               <div className="flex flex-wrap items-center gap-2">
                 {/* Game badge */}
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-porjar-red text-white">
+                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold bg-esi-red text-white">
                   <GameIcon size={12} weight="fill" />
                   {tournament.game?.name ?? 'Game'}
                 </span>
                 {/* Format badge */}
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-700 border border-stone-200">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 dark:bg-zinc-800 px-3 py-1 text-xs font-semibold text-stone-700 dark:text-zinc-300 border border-stone-200 dark:border-zinc-700">
                   <TreeStructure size={12} weight="fill" />
                   {formatLabel(tournament.format)}
                 </span>
@@ -241,14 +286,29 @@ export default function TournamentDetailPage() {
             <div className="flex flex-wrap gap-2">
               {brMode ? (
                 <Link href={`/tournaments/${tournament.id}/standings`}>
-                  <Button className="gap-1.5 bg-porjar-red hover:bg-porjar-red-dark text-white">
+                  <Button className="gap-1.5 bg-esi-red hover:bg-esi-red-dark text-white">
                     <ChartBar size={16} weight="fill" />
                     Lihat Klasemen
                   </Button>
                 </Link>
+              ) : tournament.format === 'group_stage_playoff' ? (
+                <>
+                  <Link href={`/tournaments/${tournament.id}/groups`}>
+                    <Button className="gap-1.5 bg-esi-red hover:bg-esi-red-dark text-white">
+                      <Users size={16} weight="fill" />
+                      Lihat Grup
+                    </Button>
+                  </Link>
+                  <Link href={`/tournaments/${tournament.id}/bracket`}>
+                    <Button variant="outline" className="gap-1.5 border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:bg-zinc-800/50 hover:text-stone-900 dark:text-zinc-100">
+                      <TreeStructure size={16} weight="fill" />
+                      Bracket Playoff
+                    </Button>
+                  </Link>
+                </>
               ) : (
                 <Link href={`/tournaments/${tournament.id}/bracket`}>
-                  <Button className="gap-1.5 bg-porjar-red hover:bg-porjar-red-dark text-white">
+                  <Button className="gap-1.5 bg-esi-red hover:bg-esi-red-dark text-white">
                     <TreeStructure size={16} weight="fill" />
                     Lihat Bracket
                   </Button>
@@ -257,7 +317,7 @@ export default function TournamentDetailPage() {
               <Link href={`/tournaments/${tournament.id}/schedule`}>
                 <Button
                   variant="outline"
-                  className="gap-1.5 border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900"
+                  className="gap-1.5 border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:bg-zinc-800/50 hover:text-stone-900 dark:text-zinc-100"
                 >
                   <CalendarBlank size={16} />
                   Jadwal
@@ -265,14 +325,14 @@ export default function TournamentDetailPage() {
               </Link>
               {brMode && (
                 <Link href={`/tournaments/${tournament.id}/lobbies`}>
-                  <Button variant="outline" className="gap-1.5 border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900">
+                  <Button variant="outline" className="gap-1.5 border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:bg-zinc-800/50 hover:text-stone-900 dark:text-zinc-100">
                     <List size={16} />
                     Hasil Lobby
                   </Button>
                 </Link>
               )}
               <Link href={`/tournaments/${tournament.id}/report`}>
-                <Button variant="outline" className="gap-1.5 border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900">
+                <Button variant="outline" className="gap-1.5 border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:bg-zinc-800/50 hover:text-stone-900 dark:text-zinc-100">
                   <ChartBar size={16} />
                   Laporan
                 </Button>
@@ -289,15 +349,15 @@ export default function TournamentDetailPage() {
           return (
             <div
               key={card.label}
-              className="anim-card rounded-xl border border-stone-200 bg-white p-4 shadow-sm border-l-4 border-l-porjar-red"
+              className="anim-card rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm border-l-4 border-l-esi-red"
             >
-              <div className="mb-2 flex items-center gap-2 text-stone-500">
-                <CardIcon size={16} className="text-porjar-red" />
+              <div className="mb-2 flex items-center gap-2 text-stone-500 dark:text-zinc-400">
+                <CardIcon size={16} className="text-esi-red" />
                 <span className="text-xs font-medium uppercase tracking-wider">
                   {card.label}
                 </span>
               </div>
-              <p className="text-sm font-semibold text-stone-900">{card.value}</p>
+              <p className="text-sm font-semibold text-stone-900 dark:text-zinc-100">{card.value}</p>
             </div>
           )
         })}
@@ -305,26 +365,26 @@ export default function TournamentDetailPage() {
 
       {/* Rules Section */}
       {tournament.rules && (
-        <div className="anim-section mb-8 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-stone-900">
+        <div className="anim-section mb-8 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-stone-900 dark:text-zinc-100">
             <ListBullets size={20} weight="bold" />
             Peraturan Turnamen
           </h2>
-          <div className="prose prose-stone prose-sm max-w-none text-stone-600">
+          <div className="prose prose-stone prose-sm max-w-none text-stone-600 dark:text-zinc-400">
             <p className="whitespace-pre-wrap">{tournament.rules}</p>
           </div>
         </div>
       )}
 
       {/* Registered Teams */}
-      <div className="anim-section rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <div className="anim-section rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900 dark:text-zinc-100">
             <Shield size={20} weight="bold" />
             Tim Terdaftar
           </h2>
           {tournament.max_teams == null ? (
-            <span className="rounded-full bg-porjar-red px-3 py-1 text-xs font-medium text-white">
+            <span className="rounded-full bg-esi-red px-3 py-1 text-xs font-medium text-white">
               {teams.length} tim
             </span>
           ) : (
@@ -339,8 +399,8 @@ export default function TournamentDetailPage() {
 
         {teams.length === 0 ? (
           <div className="flex flex-col items-center py-10 text-center">
-            <Users size={40} weight="thin" className="mb-3 text-stone-300" />
-            <p className="text-sm text-stone-500">Belum ada tim yang terdaftar</p>
+            <Users size={40} weight="thin" className="mb-3 text-stone-300 dark:text-zinc-600" />
+            <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada tim yang terdaftar</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -348,10 +408,10 @@ export default function TournamentDetailPage() {
               <Link
                 key={team.id}
                 href={`/teams/${team.id}`}
-                className="anim-list-item flex items-center gap-4 rounded-lg border border-stone-200 bg-stone-50 p-3 transition-colors hover:bg-stone-100"
+                className="anim-list-item flex items-center gap-4 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-3 transition-colors hover:bg-stone-100 dark:bg-zinc-800"
               >
                 {/* Logo */}
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white border border-stone-200">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700">
                   {team.logo_url ? (
                     <Image
                       src={mediaUrl(team.logo_url)!}
@@ -362,19 +422,19 @@ export default function TournamentDetailPage() {
                       unoptimized
                     />
                   ) : (
-                    <Shield size={20} className="text-stone-400" />
+                    <Shield size={20} className="text-stone-400 dark:text-zinc-500" />
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-stone-900">
+                    <span className="truncate text-sm font-medium text-stone-900 dark:text-zinc-100">
                       {team.name}
                     </span>
                     <StatusBadge status={team.status} />
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-500">
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-500 dark:text-zinc-400">
                     {team.school && <span>{team.school.name}</span>}
                     <span className="flex items-center gap-1">
                       <Users size={10} />
@@ -385,7 +445,7 @@ export default function TournamentDetailPage() {
 
                 {/* Seed */}
                 {team.seed != null && (
-                  <span className="rounded-full bg-porjar-red px-2.5 py-0.5 text-xs font-bold text-white">
+                  <span className="rounded-full bg-esi-red px-2.5 py-0.5 text-xs font-bold text-white">
                     Seed #{team.seed}
                   </span>
                 )}
@@ -395,6 +455,6 @@ export default function TournamentDetailPage() {
         )}
       </div>
       </div>
-    </PublicLayout>
+    </>
   )
 }

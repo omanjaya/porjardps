@@ -68,9 +68,11 @@ type BracketRepository interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	UpdateResult(ctx context.Context, id uuid.UUID, winnerID, loserID uuid.UUID, scoreA, scoreB int) error
 	UpdateBestOf(ctx context.Context, id uuid.UUID, bestOf int) error
+	UpdateBestOfByTournamentAndRound(ctx context.Context, tournamentID uuid.UUID, round int, bestOf int) (int64, error)
 	ListScheduledBefore(ctx context.Context, before time.Time) ([]*BracketMatch, error)
 	FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*BracketMatch, error)
 	FindRecentCompleted(ctx context.Context, limit int) ([]*BracketMatch, error)
+	ResetResultsByTournament(ctx context.Context, tournamentID uuid.UUID) error
 }
 
 type MatchGameRepository interface {

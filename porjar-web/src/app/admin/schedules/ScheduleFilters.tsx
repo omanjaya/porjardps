@@ -50,7 +50,7 @@ export function ScheduleFilters({
             className={cn(
               'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
               !filterTournament
-                ? 'border-porjar-red bg-porjar-red text-white'
+                ? 'border-esi-red bg-esi-red text-white'
                 : 'border-stone-200 text-stone-600 hover:bg-stone-50'
             )}
           >
@@ -63,7 +63,7 @@ export function ScheduleFilters({
               className={cn(
                 'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
                 filterTournament === t.id
-                  ? 'border-porjar-red bg-porjar-red text-white'
+                  ? 'border-esi-red bg-esi-red text-white'
                   : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               )}
             >
@@ -83,7 +83,7 @@ export function ScheduleFilters({
               className={cn(
                 'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
                 filterDay === 'all'
-                  ? 'border-porjar-red bg-porjar-red text-white'
+                  ? 'border-esi-red bg-esi-red text-white'
                   : 'border-stone-200 text-stone-600 hover:bg-stone-50'
               )}
             >
@@ -96,7 +96,7 @@ export function ScheduleFilters({
                 className={cn(
                   'rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors',
                   filterDay === String(g.dayNum)
-                    ? 'border-porjar-red bg-porjar-red text-white'
+                    ? 'border-esi-red bg-esi-red text-white'
                     : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                 )}
               >
@@ -114,7 +114,7 @@ export function ScheduleFilters({
           onClick={() => setViewMode('timeline')}
           className={cn(
             'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            viewMode === 'timeline' ? 'bg-porjar-red text-white' : 'text-stone-500 hover:text-stone-900'
+            viewMode === 'timeline' ? 'bg-esi-red text-white' : 'text-stone-500 hover:text-stone-900'
           )}
         >
           <Timer size={16} />
@@ -124,7 +124,7 @@ export function ScheduleFilters({
           onClick={() => setViewMode('list')}
           className={cn(
             'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            viewMode === 'list' ? 'bg-porjar-red text-white' : 'text-stone-500 hover:text-stone-900'
+            viewMode === 'list' ? 'bg-esi-red text-white' : 'text-stone-500 hover:text-stone-900'
           )}
         >
           <ListIcon size={16} />
@@ -134,7 +134,7 @@ export function ScheduleFilters({
           onClick={() => setViewMode('calendar')}
           className={cn(
             'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
-            viewMode === 'calendar' ? 'bg-porjar-red text-white' : 'text-stone-500 hover:text-stone-900'
+            viewMode === 'calendar' ? 'bg-esi-red text-white' : 'text-stone-500 hover:text-stone-900'
           )}
         >
           <CalendarDots size={16} />

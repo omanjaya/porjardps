@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { TournamentTabNav } from '@/components/modules/tournament/TournamentTabNav'
 
 type Props = {
@@ -19,16 +20,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
     return {
       title: tournament.name,
-      description: `Turnamen ${tournament.name} - ${tournament.game?.name ?? 'Esport'} PORJAR Denpasar 2026`,
+      description: `Turnamen ${tournament.name} - ${tournament.game?.name ?? 'Esport'} ESI Denpasar 2026`,
       openGraph: {
-        images: [{ url: `/api/og?title=${encodeURIComponent(tournament.name)}&subtitle=${encodeURIComponent(tournament.game?.name ?? 'PORJAR Denpasar')}&type=bracket`, width: 1200, height: 630 }],
+        images: [{ url: `/api/og?title=${encodeURIComponent(tournament.name)}&subtitle=${encodeURIComponent(tournament.game?.name ?? 'ESI Denpasar')}&type=bracket`, width: 1200, height: 630 }],
       },
     }
   } catch (err) {
     console.error('Gagal memuat metadata turnamen:', err)
     return {
       title: 'Turnamen',
-      description: 'Detail turnamen PORJAR Denpasar Denpasar Esport 2026',
+      description: 'Detail turnamen ESI Denpasar Esport 2026',
     }
   }
 }
@@ -42,9 +43,9 @@ export default async function TournamentLayout({
 }) {
   const { id } = await params
   return (
-    <>
+    <PublicLayout>
       <TournamentTabNav tournamentId={id} />
       {children}
-    </>
+    </PublicLayout>
   )
 }

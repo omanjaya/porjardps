@@ -5,17 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
-
-// autoVerifyLocks prevents concurrent AutoVerify calls for the same matchID from both
-// passing the "both teams submitted" check and double-applying the result.
-var autoVerifyLocks sync.Map
 
 // VerifySubmission allows an admin to approve or reject a submission.
 func (s *MatchSubmissionService) VerifySubmission(
@@ -24,6 +20,7 @@ func (s *MatchSubmissionService) VerifySubmission(
 	adminID uuid.UUID,
 	approved bool,
 	rejectionReason string,
+	adminNotes string,
 ) error {
 	submission, err := s.submissionRepo.FindByID(ctx, submissionID)
 	if err != nil || submission == nil {
@@ -45,14 +42,24 @@ func (s *MatchSubmissionService) VerifySubmission(
 		}
 	}
 
-	if err := s.submissionRepo.UpdateStatus(ctx, submissionID, status, &adminID, rejReason, nil); err != nil {
+	var adminNotesPtr *string
+	if adminNotes != "" {
+		adminNotesPtr = &adminNotes
+	}
+
+	if err := s.submissionRepo.UpdateStatus(ctx, submissionID, status, &adminID, rejReason, adminNotesPtr); err != nil {
 		return apperror.Wrap(err, "update submission status")
 	}
 
-	// If approved, auto-update the actual match/lobby results
+	// If approved, auto-update the actual match/lobby results.
+	// If apply fails, roll back to pending so the admin can retry.
 	if approved {
-		if err := s.applyApprovedSubmission(ctx, submission); err != nil {
-			slog.Error("failed to apply approved submission", "submission_id", submissionID, "error", err)
+		if applyErr := s.applyApprovedSubmission(ctx, submission); applyErr != nil {
+			slog.Error("failed to apply approved submission, rolling back to pending", "submission_id", submissionID, "error", applyErr)
+			if rollbackErr := s.submissionRepo.UpdateStatus(ctx, submissionID, "pending", nil, nil, strPtr("Gagal menerapkan hasil otomatis, silakan coba approve ulang")); rollbackErr != nil {
+				slog.Error("failed to rollback submission status", "submission_id", submissionID, "error", rollbackErr)
+			}
+			return fmt.Errorf("apply approved submission: %w", applyErr)
 		}
 	}
 
@@ -83,17 +90,23 @@ func (s *MatchSubmissionService) VerifySubmission(
 		}
 	}
 
-	// Broadcast verification event
+	// Broadcast verification event to specific match/lobby room
+	verifyData := map[string]interface{}{
+		"submission_id": submissionID,
+		"status":        status,
+	}
 	if submission.BracketMatchID != nil {
-		s.broadcastSubmission(*submission.BracketMatchID, "submission_verified", map[string]interface{}{
-			"submission_id": submissionID,
-			"status":        status,
-		})
+		s.broadcastSubmission(*submission.BracketMatchID, "submission_verified", verifyData)
 	} else if submission.BRLobbyID != nil {
-		s.broadcastSubmission(*submission.BRLobbyID, "br_submission_verified", map[string]interface{}{
-			"submission_id": submissionID,
-			"status":        status,
-		})
+		s.broadcastSubmission(*submission.BRLobbyID, "br_submission_verified", verifyData)
+	} else if submission.GroupMatchID != nil {
+		s.broadcastSubmission(*submission.GroupMatchID, "group_submission_verified", verifyData)
+	}
+
+	// Also broadcast to all clients so admin submission lists update in real-time
+	if s.hub != nil {
+		payload, _ := ws.NewBroadcastData("new_submission", verifyData)
+		s.hub.BroadcastToAll(payload)
 	}
 
 	return nil
@@ -109,18 +122,31 @@ func (s *MatchSubmissionService) applyApprovedSubmission(ctx context.Context, su
 		return s.applyApprovedBRSubmission(ctx, sub)
 	}
 
+	if sub.GroupMatchID != nil {
+		return s.applyApprovedGroupSubmission(ctx, sub)
+	}
+
+	slog.Warn("applyApprovedSubmission: submission has no bracket, BR, or group data",
+		"submission_id", sub.ID)
 	return nil
 }
 
 // AutoVerify checks if both teams in a bracket match submitted matching results and auto-approves.
 func (s *MatchSubmissionService) AutoVerify(ctx context.Context, matchID uuid.UUID) (bool, error) {
-	// Acquire an in-process lock so only one goroutine runs the verify logic for this matchID at a time.
-	// LoadOrStore returns (existingValue, true) if the key was already present,
-	// meaning another goroutine is already handling it.
-	if _, loaded := autoVerifyLocks.LoadOrStore(matchID.String(), struct{}{}); loaded {
-		return false, nil
+	// Acquire a distributed lock via Redis SETNX so only one instance/goroutine
+	// runs the verify logic for this matchID at a time.
+	lockKey := fmt.Sprintf("autoverify:lock:%s", matchID.String())
+	if s.rdb != nil {
+		ok, err := s.rdb.SetNX(ctx, lockKey, "1", 30*time.Second).Result()
+		if err != nil {
+			slog.Error("AutoVerify: failed to acquire Redis lock", "match_id", matchID, "error", err)
+			return false, nil
+		}
+		if !ok {
+			return false, nil
+		}
+		defer s.rdb.Del(ctx, lockKey)
 	}
-	defer autoVerifyLocks.Delete(matchID.String())
 
 	match, err := s.bracketRepo.FindByID(ctx, matchID)
 	if err != nil || match == nil {
@@ -142,73 +168,122 @@ func (s *MatchSubmissionService) AutoVerify(ctx context.Context, matchID uuid.UU
 		return false, nil
 	}
 
-	// Find submissions from each team
-	var teamASub, teamBSub *model.MatchSubmission
+	// Group pending submissions by game_number
+	type subPair struct{ a, b *model.MatchSubmission }
+	gameMap := make(map[int]*subPair)
 	for _, sub := range subs {
-		if sub.TeamID == *match.TeamAID && teamASub == nil {
-			teamASub = sub
+		gn := sub.GameNumber
+		if gn == 0 {
+			gn = 1
 		}
-		if sub.TeamID == *match.TeamBID && teamBSub == nil {
-			teamBSub = sub
+		if _, ok := gameMap[gn]; !ok {
+			gameMap[gn] = &subPair{}
 		}
-	}
-
-	if teamASub == nil || teamBSub == nil {
-		return false, nil
-	}
-
-	// Check if both claim the same winner and same scores
-	if teamASub.ClaimedWinnerID == nil || teamBSub.ClaimedWinnerID == nil {
-		return false, nil
-	}
-	if *teamASub.ClaimedWinnerID != *teamBSub.ClaimedWinnerID {
-		// Results conflict — mark both as disputed
-		if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: kedua tim mengklaim pemenang berbeda")); err != nil {
-			slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+		if sub.TeamID == *match.TeamAID && gameMap[gn].a == nil {
+			gameMap[gn].a = sub
 		}
-		if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: kedua tim mengklaim pemenang berbeda")); err != nil {
-			slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
-		}
-		return false, nil
-	}
-
-	sameScore := true
-	if teamASub.ClaimedScoreA != nil && teamBSub.ClaimedScoreA != nil {
-		if *teamASub.ClaimedScoreA != *teamBSub.ClaimedScoreA {
-			sameScore = false
-		}
-	}
-	if teamASub.ClaimedScoreB != nil && teamBSub.ClaimedScoreB != nil {
-		if *teamASub.ClaimedScoreB != *teamBSub.ClaimedScoreB {
-			sameScore = false
+		if sub.TeamID == *match.TeamBID && gameMap[gn].b == nil {
+			gameMap[gn].b = sub
 		}
 	}
 
-	if !sameScore {
-		// Scores differ — dispute
-		if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: skor berbeda")); err != nil {
-			slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+	anyApproved := false
+	for _, pair := range gameMap {
+		teamASub := pair.a
+		teamBSub := pair.b
+
+		// Need both teams' submissions for this game
+		if teamASub == nil || teamBSub == nil {
+			continue
 		}
-		if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: skor berbeda")); err != nil {
-			slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
+
+		// Check if both claim the same winner and same scores
+		if teamASub.ClaimedWinnerID == nil || teamBSub.ClaimedWinnerID == nil {
+			continue
 		}
-		return false, nil
+		if *teamASub.ClaimedWinnerID != *teamBSub.ClaimedWinnerID {
+			// Results conflict — mark both as disputed
+			if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: kedua tim mengklaim pemenang berbeda")); err != nil {
+				slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+			}
+			if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: kedua tim mengklaim pemenang berbeda")); err != nil {
+				slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
+			}
+			continue
+		}
+
+		sameScore := true
+		if teamASub.ClaimedScoreA != nil && teamBSub.ClaimedScoreA != nil {
+			if *teamASub.ClaimedScoreA != *teamBSub.ClaimedScoreA {
+				sameScore = false
+			}
+		}
+		if teamASub.ClaimedScoreB != nil && teamBSub.ClaimedScoreB != nil {
+			if *teamASub.ClaimedScoreB != *teamBSub.ClaimedScoreB {
+				sameScore = false
+			}
+		}
+
+		if !sameScore {
+			// Scores differ — dispute
+			if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: skor berbeda")); err != nil {
+				slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+			}
+			if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected conflict: skor berbeda")); err != nil {
+				slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
+			}
+			continue
+		}
+
+		// Validate scores are legal for the game type before auto-approving
+		if teamASub.ClaimedWinnerID != nil && teamASub.ClaimedScoreA != nil && teamASub.ClaimedScoreB != nil {
+			gameSlug, _ := s.getGameSlugForTeam(ctx, teamASub.TeamID)
+			if gameSlug == "efootball" {
+				scoreA := *teamASub.ClaimedScoreA
+				scoreB := *teamASub.ClaimedScoreB
+				if scoreA == scoreB {
+					// Draw - invalid for eFootball, mark as disputed
+					if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected: skor seri tidak valid untuk eFootball")); err != nil {
+						slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+					}
+					if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected: skor seri tidak valid untuk eFootball")); err != nil {
+						slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
+					}
+					continue
+				}
+				winnerIsA := *teamASub.ClaimedWinnerID == *match.TeamAID
+				if (winnerIsA && scoreA <= scoreB) || (!winnerIsA && scoreB <= scoreA) {
+					if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "disputed", nil, nil, strPtr("Auto-detected: skor pemenang harus lebih tinggi")); err != nil {
+						slog.Error("failed to update submission status to disputed", "submission_id", teamASub.ID, "error", err)
+					}
+					if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "disputed", nil, nil, strPtr("Auto-detected: skor pemenang harus lebih tinggi")); err != nil {
+						slog.Error("failed to update submission status to disputed", "submission_id", teamBSub.ID, "error", err)
+					}
+					continue
+				}
+			}
+		}
+
+		// Both match! Auto-approve both
+		if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "approved", nil, nil, strPtr("Auto-approved: kedua tim mengklaim hasil yang sama")); err != nil {
+			slog.Error("failed to update submission status to approved", "submission_id", teamASub.ID, "error", err)
+		}
+		if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "approved", nil, nil, strPtr("Auto-approved: kedua tim mengklaim hasil yang sama")); err != nil {
+			slog.Error("failed to update submission status to approved", "submission_id", teamBSub.ID, "error", err)
+		}
+
+		// Apply the result — if this fails, roll both back to pending
+		if err := s.applyApprovedSubmission(ctx, teamASub); err != nil {
+			slog.Error("failed to apply auto-approved result, rolling back", "match_id", matchID, "error", err)
+			_ = s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "pending", nil, nil, strPtr("Auto-approve dibatalkan: gagal menerapkan hasil"))
+			_ = s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "pending", nil, nil, strPtr("Auto-approve dibatalkan: gagal menerapkan hasil"))
+			return false, fmt.Errorf("apply auto-approved result: %w", err)
+		}
+
+		anyApproved = true
 	}
 
-	// Both match! Auto-approve both
-	if err := s.submissionRepo.UpdateStatus(ctx, teamASub.ID, "approved", nil, nil, strPtr("Auto-approved: kedua tim mengklaim hasil yang sama")); err != nil {
-		slog.Error("failed to update submission status to approved", "submission_id", teamASub.ID, "error", err)
-	}
-	if err := s.submissionRepo.UpdateStatus(ctx, teamBSub.ID, "approved", nil, nil, strPtr("Auto-approved: kedua tim mengklaim hasil yang sama")); err != nil {
-		slog.Error("failed to update submission status to approved", "submission_id", teamBSub.ID, "error", err)
-	}
-
-	// Apply the result
-	if err := s.applyApprovedSubmission(ctx, teamASub); err != nil {
-		slog.Error("failed to apply auto-approved result", "match_id", matchID, "error", err)
-	}
-
-	return true, nil
+	return anyApproved, nil
 }
 
 // broadcastSubmission sends a WebSocket broadcast for submission events.
@@ -222,4 +297,16 @@ func (s *MatchSubmissionService) broadcastSubmission(roomID uuid.UUID, msgType s
 		return
 	}
 	s.hub.BroadcastToRoom(fmt.Sprintf("match:%s", roomID.String()), payload)
+}
+
+// broadcastSubmissionToTournament broadcasts submission events to tournament room.
+func (s *MatchSubmissionService) broadcastSubmissionToTournament(tournamentID uuid.UUID, msgType string, data interface{}) {
+	if s.hub == nil {
+		return
+	}
+	payload, err := ws.NewBroadcastData(msgType, data)
+	if err != nil {
+		return
+	}
+	s.hub.BroadcastToRoom(fmt.Sprintf("tournament:%s", tournamentID.String()), payload)
 }

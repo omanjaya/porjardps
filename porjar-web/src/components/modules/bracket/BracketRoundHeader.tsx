@@ -18,6 +18,11 @@ function getRoundLabel(
 ): string {
   const roundNum = roundIndex + 1
 
+  // Round robin: always use plain "Round N" labels
+  if (format === 'round_robin') {
+    return `Round ${roundNum}`
+  }
+
   if (format === 'double_elimination') {
     if (roundNum === totalRounds) return 'Grand Final'
     // In double elim, winners and losers round naming is handled by the layout
@@ -64,7 +69,7 @@ export function BracketRoundHeader({
               'inline-block rounded-md px-3 py-1 text-[11px] font-semibold uppercase tracking-wider',
               label.startsWith('UB') && 'bg-sky-50 text-sky-700 border border-sky-200',
               label.startsWith('LB') && 'bg-amber-50 text-amber-700 border border-amber-200',
-              label === 'Grand Final' && 'bg-red-50 text-porjar-red border border-red-200',
+              label === 'Grand Final' && 'bg-red-50 text-esi-red border border-red-200',
               !label.startsWith('UB') && !label.startsWith('LB') && label !== 'Grand Final' && 'bg-stone-50 text-stone-600 border border-stone-200'
             )}
           >

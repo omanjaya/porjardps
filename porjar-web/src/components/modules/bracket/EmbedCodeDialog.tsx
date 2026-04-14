@@ -37,7 +37,7 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
 
   const iframeCode = useMemo(() => {
     const w = width.includes('%') ? width : `${width}px`
-    return `<iframe src="${embedUrl}" width="${w}" height="${height}" frameborder="0" style="border:0;border-radius:12px;overflow:hidden;" allowfullscreen title="${tournamentName ? `Bracket - ${tournamentName}` : 'PORJAR Bracket'}"></iframe>`
+    return `<iframe src="${embedUrl}" width="${w}" height="${height}" frameborder="0" style="border:0;border-radius:12px;overflow:hidden;" allowfullscreen title="${tournamentName ? `Bracket - ${tournamentName}` : 'ESI Bracket'}"></iframe>`
   }, [embedUrl, width, height, tournamentName])
 
   async function handleCopy() {
@@ -62,16 +62,16 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="outline" size="sm" className="border-stone-200 text-stone-700 hover:bg-stone-50" />
+          <Button variant="outline" size="sm" className="border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50" />
         }
       >
         <Code size={16} className="mr-1.5" />
         Embed
       </DialogTrigger>
-      <DialogContent className="bg-white border-stone-200 sm:max-w-lg">
+      <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-stone-900">Embed Bracket</DialogTitle>
-          <DialogDescription className="text-stone-500">
+          <DialogTitle className="text-stone-900 dark:text-zinc-100">Embed Bracket</DialogTitle>
+          <DialogDescription className="text-stone-500 dark:text-zinc-400">
             Salin kode iframe untuk menampilkan bracket di website lain.
           </DialogDescription>
         </DialogHeader>
@@ -80,29 +80,29 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
           {/* Customization */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 block mb-1">
                 Lebar
               </label>
               <Input
                 value={width}
                 onChange={(e) => setWidth(e.target.value)}
                 placeholder="100% atau 800"
-                className="bg-white border-stone-200 text-stone-800 text-xs"
+                className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-800 dark:text-zinc-200 text-xs"
               />
             </div>
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 block mb-1">
                 Tinggi (px)
               </label>
               <Input
                 type="number"
                 value={height}
                 onChange={(e) => setHeight(e.target.value)}
-                className="bg-white border-stone-200 text-stone-800 text-xs"
+                className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-800 dark:text-zinc-200 text-xs"
               />
             </div>
             <div>
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 block mb-1">
                 Tema
               </label>
               <div className="flex gap-1">
@@ -112,7 +112,7 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
                     'flex-1 rounded-md border px-2 py-1.5 text-[10px] font-semibold transition-colors',
                     theme === 'dark'
                       ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                      : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
+                      : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-500 dark:text-zinc-400 hover:border-stone-300 dark:border-zinc-600'
                   )}
                 >
                   Dark
@@ -123,7 +123,7 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
                     'flex-1 rounded-md border px-2 py-1.5 text-[10px] font-semibold transition-colors',
                     theme === 'light'
                       ? 'border-blue-500 bg-blue-500/10 text-blue-400'
-                      : 'border-stone-200 bg-white text-stone-500 hover:border-stone-300'
+                      : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-500 dark:text-zinc-400 hover:border-stone-300 dark:border-zinc-600'
                   )}
                 >
                   Light
@@ -134,10 +134,10 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
 
           {/* Preview */}
           <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 block mb-1.5">
               Preview
             </label>
-            <div className="rounded-lg border border-stone-200 bg-stone-50 p-2 overflow-hidden">
+            <div className="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-2 overflow-hidden">
               <iframe
                 src={embedUrl}
                 width="100%"
@@ -150,11 +150,11 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
 
           {/* Code */}
           <div>
-            <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 block mb-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 block mb-1.5">
               Kode Embed
             </label>
             <div className="relative">
-              <pre className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-[11px] text-stone-700 overflow-x-auto whitespace-pre-wrap break-all font-mono">
+              <pre className="rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-3 text-[11px] text-stone-700 dark:text-zinc-300 overflow-x-auto whitespace-pre-wrap break-all font-mono">
                 {iframeCode}
               </pre>
               <Button
@@ -162,8 +162,8 @@ export function EmbedCodeDialog({ tournamentId, tournamentName }: EmbedCodeDialo
                 variant="outline"
                 onClick={handleCopy}
                 className={cn(
-                  'absolute top-2 right-2 border-stone-200 text-xs',
-                  copied ? 'text-green-600 border-green-400' : 'text-stone-500'
+                  'absolute top-2 right-2 border-stone-200 dark:border-zinc-700 text-xs',
+                  copied ? 'text-green-600 border-green-400' : 'text-stone-500 dark:text-zinc-400'
                 )}
               >
                 {copied ? (

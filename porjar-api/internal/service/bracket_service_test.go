@@ -206,6 +206,11 @@ func (m *MockTournamentRepo) CountTeamsBatch(ctx context.Context, tournamentIDs 
 	return args.Get(0).(map[uuid.UUID]int), args.Error(1)
 }
 
+func (m *MockTournamentRepo) CountActive(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 // ---- Mock: TournamentTeamRepository ----
 
 type MockTournamentTeamRepo struct {
@@ -385,7 +390,7 @@ func (m *MockStandingsRepo) BulkUpsert(ctx context.Context, standings []*model.S
 	return args.Error(0)
 }
 
-func (m *MockStandingsRepo) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID) error {
+func (m *MockStandingsRepo) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID, tiebreakerOrder []string) error {
 	args := m.Called(ctx, tournamentID)
 	return args.Error(0)
 }

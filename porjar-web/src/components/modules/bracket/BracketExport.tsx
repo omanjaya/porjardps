@@ -71,6 +71,24 @@ export function BracketExport({
 
       document.body.removeChild(offscreen)
 
+      // Draw watermark
+      const ctx = canvas.getContext('2d')
+      if (ctx) {
+        const text = 'esidenpasar.com'
+        const fontSize = Math.max(24, Math.min(40, canvas.width / 50))
+        ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
+        ctx.textAlign = 'right'
+        ctx.textBaseline = 'bottom'
+        // Shadow for readability
+        ctx.shadowColor = 'rgba(0,0,0,0.15)'
+        ctx.shadowBlur = 4
+        ctx.shadowOffsetX = 1
+        ctx.shadowOffsetY = 1
+        ctx.fillStyle = 'rgba(120, 113, 108, 0.5)'
+        ctx.fillText(text, canvas.width - fontSize * 0.8, canvas.height - fontSize * 0.6)
+        ctx.shadowColor = 'transparent'
+      }
+
       // Trigger download
       const link = document.createElement('a')
       link.download = `${filename}.png`
@@ -101,7 +119,7 @@ export function BracketExport({
         variant="outline"
         onClick={handleDownload}
         disabled={exporting}
-        className="border-stone-300 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+        className="border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100"
       >
         {exporting ? (
           <SpinnerGap size={14} className="mr-1 animate-spin" />
@@ -115,7 +133,7 @@ export function BracketExport({
         size="sm"
         variant="outline"
         onClick={handleCopyLink}
-        className="border-stone-300 bg-white text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+        className="border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100"
       >
         <LinkIcon size={14} className="mr-1" />
         Copy Link

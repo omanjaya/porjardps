@@ -3,7 +3,9 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"math/big"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -56,6 +58,17 @@ func (s *TeamService) GenerateInviteLink(ctx context.Context, teamID, captainUse
 func (s *TeamService) JoinViaInvite(ctx context.Context, inviteCode string, userID uuid.UUID, inGameName string, inGameID *string) error {
 	if s.inviteRepo == nil {
 		return apperror.New("FEATURE_UNAVAILABLE", "Fitur invite belum tersedia", 501)
+	}
+
+	// Acquire a per-invite Redis lock to prevent concurrent requests from bypassing the MaxUses check.
+	// Without this, two goroutines can both read UsedCount < MaxUses and both proceed to join.
+	if s.rdb != nil {
+		lockKey := fmt.Sprintf("invite-use:%s", inviteCode)
+		ok, err := s.rdb.SetNX(ctx, lockKey, "1", 15*time.Second).Result()
+		if err != nil || !ok {
+			return apperror.New("INVITE_LOCK_CONFLICT", "Kode undangan sedang diproses, coba lagi", http.StatusConflict)
+		}
+		defer s.rdb.Del(ctx, lockKey)
 	}
 
 	invite, err := s.inviteRepo.FindByCode(ctx, inviteCode)
@@ -171,6 +184,17 @@ func (s *TeamService) DeactivateInvite(ctx context.Context, teamID, inviteID, us
 
 	if team.CaptainUserID == nil || *team.CaptainUserID != userID {
 		return apperror.BusinessRule("NOT_CAPTAIN", "Hanya kapten yang dapat menonaktifkan invite")
+	}
+
+	invite, err := s.inviteRepo.FindByID(ctx, inviteID)
+	if err != nil {
+		return apperror.Wrap(err, "find invite")
+	}
+	if invite == nil {
+		return apperror.NotFound("INVITE")
+	}
+	if invite.TeamID != teamID {
+		return apperror.BusinessRule("INVITE_NOT_OWNED", "Invite tidak dimiliki oleh tim ini")
 	}
 
 	if err := s.inviteRepo.Deactivate(ctx, inviteID); err != nil {

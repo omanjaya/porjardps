@@ -75,39 +75,39 @@ export function BRLeaderboardTable({
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="border-stone-200 hover:bg-transparent">
+          <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
             <TableHead
-              className="w-16 cursor-pointer text-stone-500 hover:text-stone-700"
+              className="w-16 cursor-pointer text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
               onClick={() => onSort('rank_position')}
             >
               # <SortIndicator column="rank_position" sortKey={sortKey} sortDir={sortDir} />
             </TableHead>
-            <TableHead className="text-stone-500">Tim</TableHead>
+            <TableHead className="text-stone-500 dark:text-zinc-400">Tim</TableHead>
             <TableHead
-              className="text-right cursor-pointer text-stone-500 hover:text-stone-700"
+              className="text-right cursor-pointer text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
               onClick={() => onSort('total_points')}
             >
               Total Poin <SortIndicator column="total_points" sortKey={sortKey} sortDir={sortDir} />
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer text-stone-500 hover:text-stone-700"
+              className="text-right cursor-pointer text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
               onClick={() => onSort('total_kills')}
             >
               Kills <SortIndicator column="total_kills" sortKey={sortKey} sortDir={sortDir} />
             </TableHead>
             <TableHead
-              className="text-right cursor-pointer text-stone-500 hover:text-stone-700"
+              className="text-right cursor-pointer text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
               onClick={() => onSort('total_placement_points')}
             >
               Placement <SortIndicator column="total_placement_points" sortKey={sortKey} sortDir={sortDir} />
             </TableHead>
-            <TableHead className="text-center text-stone-500 w-14">WWCD</TableHead>
-            <TableHead className="text-right text-stone-500">Best</TableHead>
-            <TableHead className="text-center text-stone-500 w-14">Move</TableHead>
+            <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-14">WWCD</TableHead>
+            <TableHead className="text-right text-stone-500 dark:text-zinc-400">Best</TableHead>
+            <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-14">Move</TableHead>
             <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
@@ -140,15 +140,15 @@ export function BRLeaderboardTable({
 
                 <TableRow
                   className={cn(
-                    'cursor-pointer border-stone-100 hover:bg-stone-50',
-                    standing.rank_position <= 3 && 'bg-amber-50/30',
+                    'cursor-pointer border-stone-100 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50',
+                    standing.rank_position <= 3 && 'bg-amber-50 dark:bg-amber-950/30',
                     standing.is_eliminated && 'opacity-50',
                     isBelowLine && 'opacity-60'
                   )}
                   onClick={() => onToggleExpand(standing.team.id)}
                 >
                   {/* Rank */}
-                  <TableCell className="font-bold text-stone-700">
+                  <TableCell className="font-bold text-stone-700 dark:text-zinc-300">
                     <div className="flex items-center gap-1.5">
                       {standing.rank_position <= 3 && (
                         <Trophy
@@ -156,7 +156,7 @@ export function BRLeaderboardTable({
                           weight="fill"
                           className={cn(
                             standing.rank_position === 1 && 'text-amber-500',
-                            standing.rank_position === 2 && 'text-stone-400',
+                            standing.rank_position === 2 && 'text-stone-400 dark:text-zinc-500',
                             standing.rank_position === 3 && 'text-amber-700'
                           )}
                         />
@@ -168,14 +168,14 @@ export function BRLeaderboardTable({
                   {/* Team name + badges */}
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-stone-900">{standing.team.name}</span>
+                      <span className="font-medium text-stone-900 dark:text-zinc-100">{standing.team.name}</span>
                       {extras?.hasDnf && (
-                        <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
+                        <span className="rounded bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 text-[10px] font-medium text-amber-600">
                           DNF
                         </span>
                       )}
                       {extras?.hasDns && (
-                        <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
+                        <span className="rounded bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 text-[10px] font-medium text-red-500">
                           DNS
                         </span>
                       )}
@@ -183,17 +183,17 @@ export function BRLeaderboardTable({
                   </TableCell>
 
                   {/* Total points */}
-                  <TableCell className="text-right font-bold text-porjar-red tabular-nums">
+                  <TableCell className="text-right font-bold text-esi-red tabular-nums">
                     {standing.total_points}
                   </TableCell>
 
                   {/* Kills */}
-                  <TableCell className="text-right text-stone-700 tabular-nums">
+                  <TableCell className="text-right text-stone-700 dark:text-zinc-300 tabular-nums">
                     {standing.total_kills}
                   </TableCell>
 
                   {/* Placement */}
-                  <TableCell className="text-right text-stone-700 tabular-nums">
+                  <TableCell className="text-right text-stone-700 dark:text-zinc-300 tabular-nums">
                     {standing.total_placement_points}
                   </TableCell>
 
@@ -205,12 +205,12 @@ export function BRLeaderboardTable({
                         {extras?.wwcdCount}
                       </span>
                     ) : (
-                      <span className="text-stone-300">-</span>
+                      <span className="text-stone-300 dark:text-zinc-600">-</span>
                     )}
                   </TableCell>
 
                   {/* Best */}
-                  <TableCell className="text-right text-stone-500 tabular-nums">
+                  <TableCell className="text-right text-stone-500 dark:text-zinc-400 tabular-nums">
                     {standing.best_placement ?? '-'}
                   </TableCell>
 
@@ -229,7 +229,7 @@ export function BRLeaderboardTable({
                         {Math.abs(rankChange)}
                       </span>
                     ) : (
-                      <Minus size={12} className="mx-auto text-stone-300" />
+                      <Minus size={12} className="mx-auto text-stone-300 dark:text-zinc-600" />
                     )}
                   </TableCell>
 
@@ -238,7 +238,7 @@ export function BRLeaderboardTable({
                     <CaretDown
                       size={16}
                       className={cn(
-                        'text-stone-400 transition-transform duration-200',
+                        'text-stone-400 dark:text-zinc-500 transition-transform duration-200',
                         isExpanded && 'rotate-180'
                       )}
                     />
@@ -246,7 +246,7 @@ export function BRLeaderboardTable({
                 </TableRow>
 
                 {/* Expanded row: per-lobby breakdown + per-player stats */}
-                <TableRow className="border-stone-100">
+                <TableRow className="border-stone-100 dark:border-zinc-700">
                   <TableCell colSpan={9} className="p-0">
                     <div
                       className={cn(

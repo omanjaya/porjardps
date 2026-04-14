@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -61,6 +62,21 @@ func (s *BRService) SetPenaltyRepo(repo model.BRPenaltyRepository) {
 	s.penaltyRepo = repo
 }
 
+func (s *BRService) broadcastLobbyUpdate(tournamentID, lobbyID uuid.UUID, action string) {
+	if s.hub == nil {
+		return
+	}
+	payload, err := ws.NewBroadcastData("lobby_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"lobby_id":      lobbyID.String(),
+		"action":        action,
+	})
+	if err != nil {
+		return
+	}
+	s.hub.BroadcastToRoom(fmt.Sprintf("tournament:%s", tournamentID.String()), payload)
+}
+
 // CreateLobby creates a new BR lobby for a tournament
 func (s *BRService) CreateLobby(
 	ctx context.Context,
@@ -68,16 +84,26 @@ func (s *BRService) CreateLobby(
 	lobbyName string,
 	lobbyNumber int,
 	dayNumber int,
+	numMaps int,
+	mapNames []string,
 	roomID *string,
 	roomPassword *string,
 	scheduledAt *time.Time,
 ) (*model.BRLobby, error) {
+	if numMaps < 1 {
+		numMaps = 1
+	}
+	if mapNames == nil {
+		mapNames = []string{}
+	}
 	lobby := &model.BRLobby{
 		ID:           uuid.New(),
 		TournamentID: tournamentID,
 		LobbyName:    lobbyName,
 		LobbyNumber:  lobbyNumber,
 		DayNumber:    dayNumber,
+		NumMaps:      numMaps,
+		MapNames:     mapNames,
 		RoomID:       roomID,
 		RoomPassword: roomPassword,
 		Status:       "scheduled",
@@ -87,6 +113,44 @@ func (s *BRService) CreateLobby(
 	if err := s.lobbyRepo.Create(ctx, lobby); err != nil {
 		return nil, apperror.Wrap(err, "create lobby")
 	}
+
+	s.broadcastLobbyUpdate(tournamentID, lobby.ID, "created")
+
+	return lobby, nil
+}
+
+// UpdateLobby updates lobby details (name, map count, map names, room info, schedule).
+func (s *BRService) UpdateLobby(
+	ctx context.Context,
+	lobbyID uuid.UUID,
+	lobbyName string,
+	numMaps int,
+	mapNames []string,
+	roomID *string,
+	roomPassword *string,
+	scheduledAt *time.Time,
+) (*model.BRLobby, error) {
+	lobby, err := s.lobbyRepo.FindByID(ctx, lobbyID)
+	if err != nil || lobby == nil {
+		return nil, apperror.NotFound("LOBBY")
+	}
+	if numMaps < 1 {
+		numMaps = 1
+	}
+	if mapNames == nil {
+		mapNames = []string{}
+	}
+	lobby.LobbyName = lobbyName
+	lobby.NumMaps = numMaps
+	lobby.MapNames = mapNames
+	lobby.RoomID = roomID
+	lobby.RoomPassword = roomPassword
+	lobby.ScheduledAt = scheduledAt
+	if err := s.lobbyRepo.Update(ctx, lobby); err != nil {
+		return nil, apperror.Wrap(err, "update lobby")
+	}
+
+	s.broadcastLobbyUpdate(lobby.TournamentID, lobbyID, "updated")
 
 	return lobby, nil
 }
@@ -101,6 +165,8 @@ func (s *BRService) DeleteLobby(ctx context.Context, lobbyID uuid.UUID) error {
 	if err := s.lobbyRepo.Delete(ctx, lobbyID); err != nil {
 		return apperror.Wrap(err, "delete lobby")
 	}
+
+	s.broadcastLobbyUpdate(lobby.TournamentID, lobbyID, "deleted")
 
 	return nil
 }
@@ -125,6 +191,8 @@ func (s *BRService) UpdateLobbyStatus(ctx context.Context, lobbyID uuid.UUID, st
 	if err := s.lobbyRepo.Update(ctx, lobby); err != nil {
 		return apperror.Wrap(err, "update lobby status")
 	}
+
+	s.broadcastLobbyUpdate(lobby.TournamentID, lobbyID, "status_changed")
 
 	return nil
 }

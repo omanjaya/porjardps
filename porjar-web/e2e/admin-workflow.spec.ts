@@ -325,9 +325,9 @@ test.describe('Admin Submissions List', () => {
     await page.goto('/admin/submissions')
     await page.waitForLoadState('networkidle')
 
-    // Pending tab may include a count badge (e.g. "Pending 2"), so use partial match
-    const pendingTab = page.locator('button').filter({ hasText: /Pending/i })
-    const approvedTab = page.locator('button').filter({ hasText: /Approved/i })
+    // Pending tab may include a count badge (e.g. "Menunggu 2"), so use partial match
+    const pendingTab = page.locator('button').filter({ hasText: /Menunggu/i })
+    const approvedTab = page.locator('button').filter({ hasText: /Disetujui/i })
     await expect(pendingTab.first()).toBeVisible()
     await expect(approvedTab.first()).toBeVisible()
   })
@@ -344,7 +344,7 @@ test.describe('Admin Submissions List', () => {
     await page.goto('/admin/submissions')
     await page.waitForLoadState('networkidle')
 
-    const approvedTab = page.locator('button').filter({ hasText: /^Approved$/i }).first()
+    const approvedTab = page.locator('button').filter({ hasText: /^Disetujui$/i }).first()
     await approvedTab.click()
     await page.waitForLoadState('domcontentloaded')
 
@@ -522,8 +522,8 @@ test.describe('Admin Teams List', () => {
     await page.goto('/admin/teams')
     await page.waitForLoadState('networkidle')
 
-    // Status filter buttons: Semua, Pending, Approved, Rejected
-    const pendingBtn = page.locator('button').filter({ hasText: /^Pending$/i })
+    // Status filter buttons: Semua, Menunggu, Disetujui, Ditolak
+    const pendingBtn = page.locator('button').filter({ hasText: /^Menunggu$/i })
     await expect(pendingBtn.first()).toBeVisible()
   })
 
@@ -542,7 +542,7 @@ test.describe('Admin Teams List', () => {
     await page.waitForLoadState('networkidle')
 
     // Click pending filter
-    const pendingBtn = page.locator('button').filter({ hasText: /^Pending$/i }).first()
+    const pendingBtn = page.locator('button').filter({ hasText: /^Menunggu$/i }).first()
     await pendingBtn.click()
     await page.waitForLoadState('domcontentloaded')
 

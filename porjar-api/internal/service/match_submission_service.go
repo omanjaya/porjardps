@@ -2,13 +2,20 @@ package service
 
 import (
 	"context"
-	"log/slog"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
+	"github.com/redis/go-redis/v9"
 )
+
+// PushSender is a minimal interface for sending push notifications to all subscribers.
+type PushSender interface {
+	SendPushToAll(ctx context.Context, title, body, url string)
+}
 
 type MatchSubmissionService struct {
 	submissionRepo  model.MatchSubmissionRepository
@@ -20,10 +27,15 @@ type MatchSubmissionService struct {
 	brLobbyTeamRepo model.BRLobbyTeamRepository
 	gameRepo        model.GameRepository
 	userRepo        model.UserRepository
+	tournamentRepo  model.TournamentRepository
+	groupRepo       model.GroupRepository
 	bracketService  *BracketService
 	brService       *BRService
+	groupService    *GroupService
 	notificationSvc *NotificationService
+	pushSender      PushSender
 	hub             *ws.Hub
+	rdb             *redis.Client
 }
 
 func NewMatchSubmissionService(
@@ -40,6 +52,7 @@ func NewMatchSubmissionService(
 	brService *BRService,
 	notificationSvc *NotificationService,
 	hub *ws.Hub,
+	rdb *redis.Client,
 ) *MatchSubmissionService {
 	return &MatchSubmissionService{
 		submissionRepo:  submissionRepo,
@@ -55,7 +68,24 @@ func NewMatchSubmissionService(
 		brService:       brService,
 		notificationSvc: notificationSvc,
 		hub:             hub,
+		rdb:             rdb,
 	}
+}
+
+func (s *MatchSubmissionService) SetTournamentRepo(repo model.TournamentRepository) {
+	s.tournamentRepo = repo
+}
+
+func (s *MatchSubmissionService) SetPushSender(p PushSender) {
+	s.pushSender = p
+}
+
+func (s *MatchSubmissionService) SetGroupRepo(r model.GroupRepository) {
+	s.groupRepo = r
+}
+
+func (s *MatchSubmissionService) SetGroupService(svc *GroupService) {
+	s.groupService = svc
 }
 
 // SubmitUnified is a unified submit endpoint that accepts 'team_a'/'team_b' winner notation
@@ -66,9 +96,24 @@ func (s *MatchSubmissionService) SubmitUnified(
 	matchID string,
 	matchType string,
 	claimedWinner string,
-	scoreA, scoreB, placement, kills int,
+	mapNumber int,
+	scoreA, scoreB, placement, killsP1, killsP2, killsP3, killsP4 int,
 	screenshots []string,
-) (*model.MatchSubmission, error) {
+) (sub *model.MatchSubmission, err error) {
+	defer func() {
+		if err == nil && sub != nil {
+			audit.Log(ctx, audit.Entry{
+				UserID:     &userID,
+				Action:     "match_submission_created",
+				EntityType: "match_submission",
+				EntityID:   &sub.ID,
+				Details: map[string]interface{}{
+					"match_type": matchType,
+					"match_id":   matchID,
+				},
+			})
+		}
+	}()
 	id, err := uuid.Parse(matchID)
 	if err != nil {
 		return nil, apperror.ValidationError(map[string]string{"match_id": "Match ID tidak valid"})
@@ -83,8 +128,13 @@ func (s *MatchSubmissionService) SubmitUnified(
 		if err != nil || match == nil {
 			return nil, apperror.NotFound("MATCH")
 		}
+		// Generic denial message to prevent enumeration of match/team relationships
+		const denied = "Anda tidak dapat submit hasil untuk match ini"
+		if match.Status != "live" && !s.isTournamentLiveNow(ctx, match.TournamentID) {
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", denied)
+		}
 		if match.TeamAID == nil || match.TeamBID == nil {
-			return nil, apperror.BusinessRule("MATCH_NOT_READY", "Match belum memiliki peserta")
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", denied)
 		}
 		memberA, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, *match.TeamAID, userID)
 		memberB, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, *match.TeamBID, userID)
@@ -94,22 +144,31 @@ func (s *MatchSubmissionService) SubmitUnified(
 		} else if memberB != nil {
 			userTeamID = *match.TeamBID
 		} else {
-			return nil, apperror.BusinessRule("NOT_PARTICIPANT", "Anda bukan peserta match ini")
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", denied)
 		}
-		var winnerID uuid.UUID
-		if claimedWinner == "team_a" {
-			winnerID = *match.TeamAID
-		} else if claimedWinner == "team_b" {
-			winnerID = *match.TeamBID
-		} else {
-			return nil, apperror.ValidationError(map[string]string{"claimed_winner": "Harus 'team_a' atau 'team_b'"})
+		// Per-game screenshot limit
+		gameSlug, _ := s.getGameSlugForTeam(ctx, userTeamID)
+		bestOf := match.BestOf
+		if bestOf <= 0 {
+			bestOf = 1
 		}
-		return s.SubmitBracketResult(ctx, id, userTeamID, userID, winnerID, scoreA, scoreB, screenshots)
+		maxSS := gameMaxScreenshots(gameSlug, "bracket", bestOf)
+		if len(screenshots) > maxSS {
+			return nil, apperror.ValidationError(map[string]string{
+				"screenshots": fmt.Sprintf("Maksimal %d screenshot untuk game ini", maxSS),
+			})
+		}
+		// Winner is auto-derived from score in SubmitBracketResult
+		return s.SubmitBracketResult(ctx, id, userTeamID, userID, scoreA, scoreB, screenshots)
 
 	case "battle_royale":
 		lobby, err := s.brLobbyRepo.FindByID(ctx, id)
 		if err != nil || lobby == nil {
 			return nil, apperror.NotFound("LOBBY")
+		}
+		const brDenied = "Anda tidak dapat submit hasil untuk lobby ini"
+		if lobby.Status != "live" && !s.isTournamentLiveNow(ctx, lobby.TournamentID) {
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", brDenied)
 		}
 		lobbyTeams, _ := s.brLobbyTeamRepo.FindByLobby(ctx, id)
 		var userTeamID uuid.UUID
@@ -123,12 +182,50 @@ func (s *MatchSubmissionService) SubmitUnified(
 			}
 		}
 		if !found {
-			return nil, apperror.BusinessRule("NOT_PARTICIPANT", "Tim Anda bukan peserta lobby ini")
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", brDenied)
 		}
-		return s.SubmitBRResult(ctx, id, userTeamID, userID, placement, kills, screenshots)
+		mn := mapNumber
+		if mn <= 0 {
+			mn = 1
+		}
+		return s.SubmitBRResult(ctx, id, userTeamID, userID, mn, placement, killsP1, killsP2, killsP3, killsP4, screenshots)
+
+	case "group":
+		if s.groupRepo == nil {
+			return nil, apperror.BusinessRule("GROUP_NOT_SUPPORTED", "Fitur grup belum diaktifkan")
+		}
+		gm, err := s.groupRepo.FindMatchByID(ctx, id)
+		if err != nil || gm == nil {
+			return nil, apperror.NotFound("MATCH")
+		}
+		const groupDenied = "Anda tidak dapat submit hasil untuk match ini"
+		if gm.Status != "live" {
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", groupDenied)
+		}
+		if gm.TeamAID == nil || gm.TeamBID == nil {
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", groupDenied)
+		}
+		memberA, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, *gm.TeamAID, userID)
+		memberB, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, *gm.TeamBID, userID)
+		var userTeamID uuid.UUID
+		if memberA != nil {
+			userTeamID = *gm.TeamAID
+		} else if memberB != nil {
+			userTeamID = *gm.TeamBID
+		} else {
+			return nil, apperror.BusinessRule("SUBMIT_DENIED", groupDenied)
+		}
+		// Per-game screenshot limit (use group default)
+		maxSS := 5
+		if len(screenshots) > maxSS {
+			return nil, apperror.ValidationError(map[string]string{
+				"screenshots": fmt.Sprintf("Maksimal %d screenshot untuk game ini", maxSS),
+			})
+		}
+		return s.SubmitGroupResult(ctx, id, userTeamID, userID, scoreA, scoreB, screenshots, 1)
 
 	default:
-		return nil, apperror.ValidationError(map[string]string{"match_type": "Harus 'bracket' atau 'battle_royale'"})
+		return nil, apperror.ValidationError(map[string]string{"match_type": "Harus 'bracket', 'battle_royale', atau 'group'"})
 	}
 }
 
@@ -139,137 +236,6 @@ func (s *MatchSubmissionService) GetPendingSubmissions(ctx context.Context, page
 		return nil, 0, apperror.Wrap(err, "get pending submissions")
 	}
 	return subs, total, nil
-}
-
-// EnrichSubmissions converts raw submissions into AdminSubmissionDTOs with display names.
-func (s *MatchSubmissionService) EnrichSubmissions(ctx context.Context, subs []*model.MatchSubmission) ([]*model.AdminSubmissionDTO, error) {
-	if len(subs) == 0 {
-		return []*model.AdminSubmissionDTO{}, nil
-	}
-
-	// Collect unique IDs
-	teamIDSet := make(map[uuid.UUID]bool)
-	userIDSet := make(map[uuid.UUID]bool)
-	bracketMatchIDSet := make(map[uuid.UUID]bool)
-
-	for _, sub := range subs {
-		teamIDSet[sub.TeamID] = true
-		userIDSet[sub.SubmittedBy] = true
-		if sub.BracketMatchID != nil {
-			bracketMatchIDSet[*sub.BracketMatchID] = true
-		}
-	}
-
-	// Batch-fetch teams
-	teamIDs := make([]uuid.UUID, 0, len(teamIDSet))
-	for id := range teamIDSet {
-		teamIDs = append(teamIDs, id)
-	}
-	teams, err := s.teamRepo.FindByIDs(ctx, teamIDs)
-	if err != nil {
-		slog.Error("EnrichSubmissions: failed to batch-fetch teams", "error", err)
-	}
-	teamMap := make(map[uuid.UUID]string, len(teams))
-	teamGameMap := make(map[uuid.UUID]uuid.UUID, len(teams))
-	for _, t := range teams {
-		teamMap[t.ID] = t.Name
-		teamGameMap[t.ID] = t.GameID
-	}
-
-	// Batch-fetch users
-	userIDs := make([]uuid.UUID, 0, len(userIDSet))
-	for id := range userIDSet {
-		userIDs = append(userIDs, id)
-	}
-	users, err := s.userRepo.FindByIDs(ctx, userIDs)
-	if err != nil {
-		slog.Error("EnrichSubmissions: failed to batch-fetch users", "error", err)
-	}
-	userMap := make(map[uuid.UUID]string, len(users))
-	for _, u := range users {
-		userMap[u.ID] = u.FullName
-	}
-
-	// Batch-fetch bracket matches for team_a/team_b names
-	bracketMatchIDs := make([]uuid.UUID, 0, len(bracketMatchIDSet))
-	for id := range bracketMatchIDSet {
-		bracketMatchIDs = append(bracketMatchIDs, id)
-	}
-	bracketMatches, err := s.bracketRepo.FindByIDs(ctx, bracketMatchIDs)
-	if err != nil {
-		slog.Error("EnrichSubmissions: failed to batch-fetch bracket matches", "error", err)
-	}
-	bracketMap := make(map[uuid.UUID]*model.BracketMatch, len(bracketMatches))
-	for _, bm := range bracketMatches {
-		bracketMap[bm.ID] = bm
-		if bm.TeamAID != nil {
-			teamIDSet[*bm.TeamAID] = true
-		}
-		if bm.TeamBID != nil {
-			teamIDSet[*bm.TeamBID] = true
-		}
-	}
-
-	// Re-fetch teams if bracket matches added new team IDs
-	if len(teamIDSet) > len(teamIDs) {
-		allTeamIDs := make([]uuid.UUID, 0, len(teamIDSet))
-		for id := range teamIDSet {
-			allTeamIDs = append(allTeamIDs, id)
-		}
-		allTeams, err := s.teamRepo.FindByIDs(ctx, allTeamIDs)
-		if err != nil {
-			slog.Error("EnrichSubmissions: failed to re-fetch teams", "error", err)
-		}
-		for _, t := range allTeams {
-			teamMap[t.ID] = t.Name
-			teamGameMap[t.ID] = t.GameID
-		}
-	}
-
-	// Collect game IDs from teams
-	gameIDSet := make(map[uuid.UUID]bool)
-	for _, gid := range teamGameMap {
-		gameIDSet[gid] = true
-	}
-	gameIDs := make([]uuid.UUID, 0, len(gameIDSet))
-	for id := range gameIDSet {
-		gameIDs = append(gameIDs, id)
-	}
-	games, err := s.gameRepo.FindByIDs(ctx, gameIDs)
-	if err != nil {
-		slog.Error("EnrichSubmissions: failed to batch-fetch games", "error", err)
-	}
-	gameMap := make(map[uuid.UUID]string, len(games))
-	for _, g := range games {
-		gameMap[g.ID] = g.Name
-	}
-
-	// Build DTOs
-	result := make([]*model.AdminSubmissionDTO, len(subs))
-	for i, sub := range subs {
-		dto := &model.AdminSubmissionDTO{
-			MatchSubmission: *sub,
-			TeamName:        teamMap[sub.TeamID],
-			SubmittedByName: userMap[sub.SubmittedBy],
-		}
-		// Game name from the submitting team
-		if gid, ok := teamGameMap[sub.TeamID]; ok {
-			dto.GameName = gameMap[gid]
-		}
-		// team_a / team_b from bracket match
-		if sub.BracketMatchID != nil {
-			if bm, ok := bracketMap[*sub.BracketMatchID]; ok {
-				if bm.TeamAID != nil {
-					dto.TeamAName = teamMap[*bm.TeamAID]
-				}
-				if bm.TeamBID != nil {
-					dto.TeamBName = teamMap[*bm.TeamBID]
-				}
-			}
-		}
-		result[i] = dto
-	}
-	return result, nil
 }
 
 // ListSubmissions lists submissions with filters.
@@ -290,25 +256,20 @@ func (s *MatchSubmissionService) GetSubmission(ctx context.Context, id uuid.UUID
 	return sub, nil
 }
 
-// CanAccessSubmission checks whether the given user (with the given role) is
-// authorised to view a submission. Access is granted when the user is the
-// original submitter, a member of the submitting team, or an admin.
-func (s *MatchSubmissionService) CanAccessSubmission(ctx context.Context, sub *model.MatchSubmission, userID uuid.UUID, role string) bool {
-	if role == "admin" || role == "superadmin" {
-		return true
-	}
-	if sub.SubmittedBy == userID {
-		return true
-	}
-	member, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, sub.TeamID, userID)
-	return member != nil
-}
-
 // GetSubmissionsByMatch returns all submissions for a given bracket match.
 func (s *MatchSubmissionService) GetSubmissionsByMatch(ctx context.Context, matchID uuid.UUID) ([]*model.MatchSubmission, error) {
 	subs, err := s.submissionRepo.FindByMatch(ctx, matchID)
 	if err != nil {
 		return nil, apperror.Wrap(err, "get submissions by match")
+	}
+	return subs, nil
+}
+
+// GetSubmissionsByLobby returns all submissions for a given BR lobby.
+func (s *MatchSubmissionService) GetSubmissionsByLobby(ctx context.Context, lobbyID uuid.UUID) ([]*model.MatchSubmission, error) {
+	subs, err := s.submissionRepo.FindByLobby(ctx, lobbyID)
+	if err != nil {
+		return nil, apperror.Wrap(err, "get submissions by lobby")
 	}
 	return subs, nil
 }
@@ -322,21 +283,7 @@ func (s *MatchSubmissionService) GetSubmissionsByTeam(ctx context.Context, teamI
 	return subs, nil
 }
 
-// DisputeSubmission marks a submission as disputed.
-func (s *MatchSubmissionService) DisputeSubmission(ctx context.Context, submissionID uuid.UUID, reason string) error {
-	submission, err := s.submissionRepo.FindByID(ctx, submissionID)
-	if err != nil || submission == nil {
-		return apperror.NotFound("SUBMISSION")
-	}
-
-	if submission.Status != "pending" {
-		return apperror.BusinessRule("CANNOT_DISPUTE", "Hanya submission pending yang dapat di-dispute")
-	}
-
-	notes := reason
-	if err := s.submissionRepo.UpdateStatus(ctx, submissionID, "disputed", nil, nil, &notes); err != nil {
-		return apperror.Wrap(err, "dispute submission")
-	}
-
-	return nil
+// GetSubmissionsByGroupMatch returns all submissions for a given group match.
+func (s *MatchSubmissionService) GetSubmissionsByGroupMatch(ctx context.Context, groupMatchID uuid.UUID) ([]*model.MatchSubmission, error) {
+	return s.submissionRepo.FindByGroupMatch(ctx, groupMatchID)
 }

@@ -27,14 +27,18 @@ import {
   ArrowsClockwise,
   Table as TableIcon,
   ListBullets,
+  ArrowsLeftRight,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { Tournament, BRLobby, BRLobbyResult, TeamSummary, Standing } from '@/types'
 
 import { LobbyCard } from './LobbyCard'
 import { CreateLobbyDialog } from './CreateLobbyDialog'
+import { EditLobbyDialog } from './EditLobbyDialog'
 import { GeneratePotsDialog } from './GeneratePotsDialog'
 import { PointRulesDialog } from './PointRulesDialog'
+import { SwapLobbyTeamsDialog } from './SwapLobbyTeamsDialog'
 
 type DayFilter = 'all' | number
 
@@ -57,6 +61,7 @@ export default function AdminLobbiesPage() {
 
   // Input mode: 'grid' (default) or 'form' (legacy BRResultInput)
   const [inputMode, setInputMode] = useState<'grid' | 'form'>('grid')
+  const [selectedMapNumber, setSelectedMapNumber] = useState(1)
 
   // Generate POT dialog
   const [generateOpen, setGenerateOpen] = useState(false)
@@ -64,8 +69,12 @@ export default function AdminLobbiesPage() {
   // Point rules editor
   const [rulesDialogOpen, setRulesDialogOpen] = useState(false)
 
-  // Room credential visibility
-  const [visibleRoomIds, setVisibleRoomIds] = useState<Set<string>>(new Set())
+  // Swap dialog
+  const [swapOpen, setSwapOpen] = useState(false)
+
+  // Edit lobby dialog
+  const [editLobby, setEditLobby] = useState<BRLobby | null>(null)
+
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
@@ -108,6 +117,12 @@ export default function AdminLobbiesPage() {
     loadData()
   }, [loadData])
 
+  useWebSocket({
+    channels: [`tournament:${params.id}`],
+    messageTypes: ['lobby_update', 'br_result_update', 'standings_update'],
+    onMessage: () => { loadData() },
+  })
+
   // Get unique days
   const days = Array.from(new Set(lobbies.map((l) => l.day_number))).sort((a, b) => a - b)
 
@@ -115,22 +130,12 @@ export default function AdminLobbiesPage() {
   const filteredLobbies =
     dayFilter === 'all' ? lobbies : lobbies.filter((l) => l.day_number === dayFilter)
 
-  function toggleRoomVisibility(lobbyId: string) {
-    setVisibleRoomIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(lobbyId)) {
-        next.delete(lobbyId)
-      } else {
-        next.add(lobbyId)
-      }
-      return next
-    })
-  }
-
   async function handleCreateLobby(data: {
     lobby_name: string
     day_number: number
     lobby_number: number
+    num_maps: number
+    map_names: string[]
     room_id: string
     room_password: string
     scheduled_at: string
@@ -142,6 +147,8 @@ export default function AdminLobbiesPage() {
         lobby_name: data.lobby_name,
         day_number: data.day_number,
         lobby_number: data.lobby_number,
+        num_maps: data.num_maps,
+        map_names: data.map_names,
         room_id: data.room_id || null,
         room_password: data.room_password || null,
         scheduled_at: data.scheduled_at || null,
@@ -151,6 +158,27 @@ export default function AdminLobbiesPage() {
       await loadData()
     } catch {
       toast.error('Gagal membuat POT')
+    }
+  }
+
+  async function handleEditLobby(lobbyId: string, data: {
+    lobby_name: string
+    num_maps: number
+    map_names: string[]
+    scheduled_at: string
+  }) {
+    try {
+      await api.put(`/admin/lobbies/${lobbyId}`, {
+        lobby_name: data.lobby_name,
+        num_maps: data.num_maps,
+        map_names: data.map_names,
+        scheduled_at: data.scheduled_at || null,
+      })
+      toast.success('POT berhasil diperbarui')
+      setEditLobby(null)
+      await loadData()
+    } catch {
+      toast.error('Gagal memperbarui POT')
     }
   }
 
@@ -189,7 +217,20 @@ export default function AdminLobbiesPage() {
   async function handleResultSubmit(results: TeamResult[]) {
     if (!selectedLobby) return
     try {
-      await api.post(`/admin/lobbies/${selectedLobby.id}/results`, { results })
+      const mappedResults = results.map(r => ({
+        team_id: r.team_id,
+        placement: r.placement,
+        kills: r.kills,
+        damage_dealt: r.damage || 0,
+        penalty_points: r.penalty || 0,
+        penalty_reason: r.penalty_reason || '',
+        survival_bonus: 0,
+        status: r.status || 'normal',
+      }))
+      await api.post(`/admin/lobbies/${selectedLobby.id}/results`, {
+        results: mappedResults,
+        map_number: selectedMapNumber,
+      })
       toast.success('Hasil POT berhasil disimpan')
       setSelectedLobby(null)
       await loadData()
@@ -199,7 +240,8 @@ export default function AdminLobbiesPage() {
   }
 
   async function handleGridSave(
-    results: { team_id: string; placement: number; kills: number; is_wwcd: boolean }[]
+    results: { team_id: string; placement: number; kills: number; is_wwcd: boolean }[],
+    mapNumber?: number
   ) {
     if (!selectedLobby) return
     const payload = results.map((r) => ({
@@ -212,9 +254,20 @@ export default function AdminLobbiesPage() {
       damage_dealt: 0,
       survival_bonus: 0,
     }))
-    await api.post(`/admin/lobbies/${selectedLobby.id}/results`, { results: payload })
-    toast.success('Hasil POT berhasil disimpan')
-    setSelectedLobby(null)
+    await api.post(`/admin/lobbies/${selectedLobby.id}/results`, {
+      map_number: mapNumber ?? selectedMapNumber,
+      results: payload,
+    })
+    const numMaps = selectedLobby.num_maps ?? 1
+    if ((mapNumber ?? selectedMapNumber) < numMaps) {
+      // More maps to input — advance to next map
+      toast.success(`Map ${mapNumber ?? selectedMapNumber} berhasil disimpan`)
+      setSelectedMapNumber((mapNumber ?? selectedMapNumber) + 1)
+    } else {
+      toast.success('Semua map berhasil disimpan')
+      setSelectedLobby(null)
+      setSelectedMapNumber(1)
+    }
     await loadData()
   }
 
@@ -294,24 +347,33 @@ export default function AdminLobbiesPage() {
             <Button
               variant="outline"
               onClick={() => setRulesDialogOpen(true)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
             >
               <PencilSimple size={16} className="mr-1" />
               Point Rules
             </Button>
             <Button
               variant="outline"
+              onClick={() => setSwapOpen(true)}
+              disabled={lobbies.filter((l) => l.status === 'pending' || l.status === 'scheduled').length < 2}
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
+            >
+              <ArrowsLeftRight size={16} className="mr-1" />
+              Tukar Tim
+            </Button>
+            <Button
+              variant="outline"
               onClick={() => setShowStandings(!showStandings)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
             >
               <ChartBar size={16} className="mr-1" />
               {showStandings ? 'Daftar POT' : 'Standings'}
             </Button>
-            <Button onClick={() => setGenerateOpen(true)} className="bg-porjar-red hover:bg-porjar-red-dark text-white">
+            <Button onClick={() => setGenerateOpen(true)} className="bg-esi-red hover:bg-esi-red-dark text-white">
               <ArrowsClockwise size={16} className="mr-1" />
               Acak POT
             </Button>
-            <Button variant="outline" onClick={() => setCreateOpen(true)} className="border-stone-300 text-stone-600">
+            <Button variant="outline" onClick={() => setCreateOpen(true)} className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400">
               <Plus size={16} className="mr-1" />
               Buat Manual
             </Button>
@@ -320,14 +382,14 @@ export default function AdminLobbiesPage() {
       />
 
       {/* Day filter tabs */}
-      <div className="mb-4 flex items-center gap-1 rounded-lg bg-stone-100 p-1 w-fit">
+      <div className="mb-4 flex items-center gap-1 rounded-lg bg-stone-100 dark:bg-zinc-800 p-1 w-fit">
         <button
           onClick={() => setDayFilter('all')}
           className={cn(
             'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
             dayFilter === 'all'
-              ? 'bg-porjar-red text-white'
-              : 'text-stone-500 hover:text-stone-900'
+              ? 'bg-esi-red text-white'
+              : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100'
           )}
         >
           Semua
@@ -339,8 +401,8 @@ export default function AdminLobbiesPage() {
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               dayFilter === day
-                ? 'bg-porjar-red text-white'
-                : 'text-stone-500 hover:text-stone-900'
+                ? 'bg-esi-red text-white'
+                : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100'
             )}
           >
             Day {day}
@@ -349,11 +411,11 @@ export default function AdminLobbiesPage() {
       </div>
 
       {showStandings ? (
-        <BRLeaderboard standings={standings} lobbies={lobbies} />
+        <BRLeaderboard standings={standings} lobbies={lobbies} tournamentId={params.id} />
       ) : (
         <div className="space-y-3">
           {filteredLobbies.length === 0 ? (
-            <div className="py-16 text-center text-stone-400">
+            <div className="py-16 text-center text-stone-400 dark:text-zinc-500">
               Belum ada POT. Klik &quot;Buat POT&quot; untuk memulai.
             </div>
           ) : (
@@ -364,11 +426,10 @@ export default function AdminLobbiesPage() {
                   key={lobby.id}
                   lobby={lobby}
                   lobbyTeams={lobbyTeams[lobby.id] ?? []}
-                  isRoomVisible={visibleRoomIds.has(lobby.id)}
-                  toggleRoomVisibility={toggleRoomVisibility}
                   onSetLive={handleSetLive}
                   onComplete={handleComplete}
                   onInputResults={setSelectedLobby}
+                  onEdit={setEditLobby}
                   onDelete={setDeleteConfirm}
                   expandedLobby={expandedLobby}
                   setExpandedLobby={setExpandedLobby}
@@ -384,24 +445,34 @@ export default function AdminLobbiesPage() {
         onOpenChange={setCreateOpen}
         teams={teams}
         defaultLobbyNumber={lobbies.length + 1}
+        defaultNumMaps={tournament?.default_num_maps ?? 1}
+        defaultMapNames={tournament?.default_map_names ?? []}
         onCreate={handleCreateLobby}
+      />
+
+      {/* Edit lobby dialog */}
+      <EditLobbyDialog
+        open={!!editLobby}
+        onOpenChange={(open) => !open && setEditLobby(null)}
+        lobby={editLobby}
+        onSave={handleEditLobby}
       />
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
-        <DialogContent className="bg-white border-stone-200 text-stone-900">
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100">
           <DialogHeader>
-            <DialogTitle className="text-stone-900">Hapus POT</DialogTitle>
+            <DialogTitle className="text-stone-900 dark:text-zinc-100">Hapus POT</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-stone-500">
-            Yakin ingin menghapus <strong className="text-stone-900">{deleteConfirm?.lobby_name}</strong>?
+          <p className="text-sm text-stone-500 dark:text-zinc-400">
+            Yakin ingin menghapus <strong className="text-stone-900 dark:text-zinc-100">{deleteConfirm?.lobby_name}</strong>?
             Semua hasil POT akan ikut terhapus.
           </p>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setDeleteConfirm(null)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
             >
               Batal
             </Button>
@@ -417,28 +488,49 @@ export default function AdminLobbiesPage() {
       </Dialog>
 
       {/* Result input modal */}
-      <Dialog open={!!selectedLobby} onOpenChange={(open) => !open && setSelectedLobby(null)}>
-        <DialogContent className="bg-white border-stone-200 flex flex-col p-0 gap-0 max-h-[100dvh] w-full rounded-none sm:rounded-xl sm:max-w-2xl sm:max-h-[88vh]">
+      <Dialog open={!!selectedLobby} onOpenChange={(open) => { if (!open) { setSelectedLobby(null); setSelectedMapNumber(1) } }}>
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 flex flex-col p-0 gap-0 max-h-[100dvh] w-full rounded-none sm:rounded-xl sm:max-w-2xl sm:max-h-[88vh]">
           {/* Sticky header */}
-          <DialogHeader className="px-6 pt-5 pb-4 border-b border-stone-100">
-            <DialogTitle className="text-stone-900">{selectedLobby?.lobby_name}</DialogTitle>
-            <DialogDescription className="text-stone-500">
+          <DialogHeader className="px-6 pt-5 pb-4 border-b border-stone-100 dark:border-zinc-700">
+            <DialogTitle className="text-stone-900 dark:text-zinc-100">{selectedLobby?.lobby_name}</DialogTitle>
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
               Input hasil pertandingan POT
             </DialogDescription>
           </DialogHeader>
 
           {selectedLobby && (
             <div className="flex flex-col flex-1 min-h-0">
-              {/* Mode toggle */}
-              <div className="px-6 pt-4 pb-3 flex items-center gap-1 rounded-lg w-fit">
-                <div className="flex items-center gap-1 rounded-lg bg-stone-100 p-1">
+              {/* Map tabs (only shown when num_maps > 1) + Mode toggle */}
+              <div className="px-6 pt-4 pb-3 flex items-center gap-3 flex-wrap">
+                {/* Map selector tabs */}
+                {(selectedLobby.num_maps ?? 1) > 1 && (
+                  <div className="flex items-center gap-1 rounded-lg bg-stone-100 dark:bg-zinc-800 p-1">
+                    {Array.from({ length: selectedLobby.num_maps ?? 1 }, (_, i) => i + 1).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setSelectedMapNumber(m)}
+                        className={cn(
+                          'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                          selectedMapNumber === m
+                            ? 'bg-esi-red text-white'
+                            : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100'
+                        )}
+                      >
+                        {selectedLobby.map_names?.[m - 1] ? `Map ${m}: ${selectedLobby.map_names[m - 1]}` : `Map ${m}`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Mode toggle */}
+                <div className="flex items-center gap-1 rounded-lg bg-stone-100 dark:bg-zinc-800 p-1">
                   <button
                     onClick={() => setInputMode('grid')}
                     className={cn(
                       'flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                       inputMode === 'grid'
-                        ? 'bg-porjar-red text-white'
-                        : 'text-stone-500 hover:text-stone-900'
+                        ? 'bg-esi-red text-white'
+                        : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100'
                     )}
                   >
                     <TableIcon size={12} />
@@ -449,8 +541,8 @@ export default function AdminLobbiesPage() {
                     className={cn(
                       'flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                       inputMode === 'form'
-                        ? 'bg-porjar-red text-white'
-                        : 'text-stone-500 hover:text-stone-900'
+                        ? 'bg-esi-red text-white'
+                        : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100'
                     )}
                   >
                     <ListBullets size={12} />
@@ -463,18 +555,22 @@ export default function AdminLobbiesPage() {
               <div className="flex-1 overflow-y-auto px-6 pb-6">
                 {inputMode === 'grid' ? (
                   <BRGridInput
+                    key={`${selectedLobby.id}-map${selectedMapNumber}`}
                     lobbyId={selectedLobby.id}
+                    mapNumber={selectedMapNumber}
                     teams={teams.map((t) => ({ id: t.id, name: t.name }))}
                     pointRules={pointRules}
                     killPointValue={tournament?.kill_point_value ?? 1}
                     wwcdBonus={tournament?.wwcd_bonus ?? 0}
-                    existingResults={(selectedLobby.results ?? []).map((r: BRLobbyResult) => ({
-                      team_id: r.team.id,
-                      placement: r.placement,
-                      kills: r.kills,
-                      is_wwcd: r.placement === 1,
-                    }))}
-                    onSave={handleGridSave}
+                    existingResults={(selectedLobby.results ?? [])
+                      .filter((r: BRLobbyResult) => (r.map_number ?? 1) === selectedMapNumber)
+                      .map((r: BRLobbyResult) => ({
+                        team_id: r.team.id,
+                        placement: r.placement,
+                        kills: r.kills,
+                        is_wwcd: r.placement === 1,
+                      }))}
+                    onSave={(results) => handleGridSave(results, selectedMapNumber)}
                   />
                 ) : (
                   <BRResultInput
@@ -505,6 +601,16 @@ export default function AdminLobbiesPage() {
         pointRules={pointRules}
         tournament={tournament}
         onSave={handleSaveRules}
+      />
+
+      {/* Swap Lobby Teams Dialog */}
+      <SwapLobbyTeamsDialog
+        open={swapOpen}
+        onOpenChange={setSwapOpen}
+        tournamentId={params.id}
+        lobbies={lobbies}
+        lobbyTeams={lobbyTeams}
+        onSuccess={loadData}
       />
     </AdminLayout>
   )

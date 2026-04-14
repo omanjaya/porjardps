@@ -173,7 +173,7 @@ export default function AdminWebhooksPage() {
         actions={
           <Button
             onClick={() => setShowCreate(true)}
-            className="bg-porjar-red hover:bg-porjar-red-dark text-white"
+            className="bg-esi-red hover:bg-esi-red-dark text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
             Tambah Webhook
@@ -182,33 +182,33 @@ export default function AdminWebhooksPage() {
       />
 
       {webhooks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 bg-white py-16">
-          <Plugs className="mb-4 h-12 w-12 text-stone-300" />
-          <p className="text-stone-500">Belum ada webhook</p>
-          <p className="mt-1 text-sm text-stone-400">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 py-16">
+          <Plugs className="mb-4 h-12 w-12 text-stone-300 dark:text-zinc-600" />
+          <p className="text-stone-500 dark:text-zinc-400">Belum ada webhook</p>
+          <p className="mt-1 text-sm text-stone-400 dark:text-zinc-500">
             Buat webhook untuk menerima notifikasi event secara real-time
           </p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
           <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>
-                <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">URL</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Events</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Terakhir Trigger</TableHead>
-                <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Gagal</TableHead>
-                <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
+              <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent bg-stone-50 dark:bg-zinc-800/50">
+                <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Nama</TableHead>
+                <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">URL</TableHead>
+                <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Events</TableHead>
+                <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Status</TableHead>
+                <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Terakhir Trigger</TableHead>
+                <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Gagal</TableHead>
+                <TableHead className="text-right text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {webhooks.map((wh) => (
-                <TableRow key={wh.id} className="border-stone-100 hover:bg-red-50/50">
-                  <TableCell className="font-medium text-stone-900">{wh.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell max-w-[200px] truncate text-sm text-stone-500">
+                <TableRow key={wh.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50 dark:bg-red-950/30">
+                  <TableCell className="font-medium text-stone-900 dark:text-zinc-100">{wh.name}</TableCell>
+                  <TableCell className="hidden sm:table-cell max-w-[200px] truncate text-sm text-stone-500 dark:text-zinc-400">
                     {wh.url}
                   </TableCell>
                   <TableCell>
@@ -217,7 +217,7 @@ export default function AdminWebhooksPage() {
                         <Badge
                           key={e}
                           variant="outline"
-                          className="border-stone-300 text-xs text-stone-500"
+                          className="border-stone-300 dark:border-zinc-600 text-xs text-stone-500 dark:text-zinc-400"
                         >
                           {EVENT_LABELS[e] || e}
                         </Badge>
@@ -225,7 +225,7 @@ export default function AdminWebhooksPage() {
                       {wh.events.length > 2 && (
                         <Badge
                           variant="outline"
-                          className="border-stone-300 text-xs text-stone-400"
+                          className="border-stone-300 dark:border-zinc-600 text-xs text-stone-400 dark:text-zinc-500"
                         >
                           +{wh.events.length - 2}
                         </Badge>
@@ -234,19 +234,19 @@ export default function AdminWebhooksPage() {
                   </TableCell>
                   <TableCell>
                     {wh.is_active ? (
-                      <Badge className="bg-green-50 text-green-700 border border-green-200">Aktif</Badge>
+                      <Badge className="bg-green-50 dark:bg-green-950/30 text-green-700 border border-green-200">Aktif</Badge>
                     ) : (
-                      <Badge className="bg-stone-100 text-stone-500 border border-stone-200">Nonaktif</Badge>
+                      <Badge className="bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border border-stone-200 dark:border-zinc-700">Nonaktif</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-sm text-stone-500">
+                  <TableCell className="text-sm text-stone-500 dark:text-zinc-400">
                     {formatDate(wh.last_triggered_at)}
                   </TableCell>
                   <TableCell>
                     {wh.failure_count > 0 ? (
                       <span className="text-red-500">{wh.failure_count}</span>
                     ) : (
-                      <span className="text-stone-400">0</span>
+                      <span className="text-stone-400 dark:text-zinc-500">0</span>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -256,7 +256,7 @@ export default function AdminWebhooksPage() {
                         size="sm"
                         onClick={() => openLogs(wh)}
                         title="Lihat Logs"
-                        className="text-stone-500 hover:text-stone-900"
+                        className="text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -265,7 +265,7 @@ export default function AdminWebhooksPage() {
                         size="sm"
                         onClick={() => handleTest(wh.id)}
                         title="Kirim Test"
-                        className="text-stone-500 hover:text-blue-600"
+                        className="text-stone-500 dark:text-zinc-400 hover:text-blue-600"
                       >
                         <Lightning className="h-4 w-4" />
                       </Button>
@@ -277,7 +277,7 @@ export default function AdminWebhooksPage() {
                           setShowEdit(true)
                         }}
                         title="Edit"
-                        className="text-stone-500 hover:text-amber-600"
+                        className="text-stone-500 dark:text-zinc-400 hover:text-amber-600"
                       >
                         <PencilSimple className="h-4 w-4" />
                       </Button>
@@ -289,7 +289,7 @@ export default function AdminWebhooksPage() {
                           setShowDeleteConfirm(true)
                         }}
                         title="Hapus"
-                        className="text-stone-500 hover:text-red-600"
+                        className="text-stone-500 dark:text-zinc-400 hover:text-red-600"
                       >
                         <Trash className="h-4 w-4" />
                       </Button>
@@ -324,10 +324,10 @@ export default function AdminWebhooksPage() {
 
       {/* Delete Confirm Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="border-stone-200 bg-white text-stone-900 sm:max-w-md">
+        <DialogContent className="border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Hapus Webhook</DialogTitle>
-            <DialogDescription className="text-stone-500">
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
               Apakah Anda yakin ingin menghapus webhook ini? Semua log delivery juga akan dihapus.
             </DialogDescription>
           </DialogHeader>
@@ -335,7 +335,7 @@ export default function AdminWebhooksPage() {
             <Button
               variant="outline"
               onClick={() => setShowDeleteConfirm(false)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
             >
               Batal
             </Button>

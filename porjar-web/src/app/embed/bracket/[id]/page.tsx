@@ -35,7 +35,7 @@ function EmbedBracketContent() {
   // WebSocket real-time updates
   useWebSocket({
     channels: [`tournament:${params.id}`],
-    messageTypes: ['score_update', 'match_status', 'bracket_advance'],
+    messageTypes: ['score_update', 'match_status', 'bracket_advance', 'bracket_update'],
     onMessage: useCallback(
       (_msg: WSMessage) => {
         loadData()
@@ -56,7 +56,7 @@ function EmbedBracketContent() {
 
   if (loading) {
     return (
-      <div className={cn('p-4', theme === 'dark' ? 'bg-slate-900' : 'bg-porjar-bg')}>
+      <div className={cn('p-4', theme === 'dark' ? 'bg-slate-900' : 'bg-esi-bg')}>
         <Skeleton className={cn('h-96 w-full', theme === 'dark' ? 'bg-slate-800' : 'bg-stone-200')} />
       </div>
     )
@@ -66,7 +66,7 @@ function EmbedBracketContent() {
     <div
       className={cn(
         'min-h-screen p-2',
-        theme === 'dark' ? 'bg-slate-900 text-slate-50' : 'bg-porjar-bg text-stone-900'
+        theme === 'dark' ? 'bg-slate-900 text-slate-50' : 'bg-esi-bg text-stone-900'
       )}
     >
       {matches.length > 0 ? (

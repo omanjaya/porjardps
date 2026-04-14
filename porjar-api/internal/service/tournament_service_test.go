@@ -248,6 +248,11 @@ func (m *MockTournamentRepoTS) CountTeamsBatch(ctx context.Context, tournamentID
 	return args.Get(0).(map[uuid.UUID]int), args.Error(1)
 }
 
+func (m *MockTournamentRepoTS) CountActive(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 // ---- Mock: TournamentTeamRepository (for tournament service) ----
 
 type MockTournamentTeamRepoTS struct {

@@ -9,7 +9,7 @@ export const revalidate = 60
 async function fetchTournaments(): Promise<Tournament[]> {
   const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090/api/v1'
   try {
-    const res = await fetch(`${apiUrl}/tournaments`, {
+    const res = await fetch(`${apiUrl}/tournaments?per_page=100`, {
       next: { revalidate: 60 },
     })
     if (!res.ok) return []
@@ -44,7 +44,7 @@ export default async function TournamentsPage() {
     <PublicLayout>
       <PageHeader
         title="Turnamen"
-        description="Semua turnamen PORJAR Esport Kota Denpasar 2026"
+        description="Semua turnamen ESI Esport Kota Denpasar 2026"
       />
       <TournamentsClient initialTournaments={tournaments} initialGames={games} />
     </PublicLayout>

@@ -6,6 +6,7 @@ import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { MediaLightbox } from './MediaLightbox'
 import { cn } from '@/lib/utils'
 import type { Media } from '@/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface HighlightCarouselProps {
   autoPlay?: boolean
@@ -58,7 +59,7 @@ export function HighlightCarousel({
 
   if (loading) {
     return (
-      <div className="h-64 animate-pulse rounded-2xl bg-stone-100" />
+      <Skeleton className="h-64 rounded-2xl bg-stone-100 dark:bg-zinc-800" />
     )
   }
 
@@ -66,7 +67,7 @@ export function HighlightCarousel({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white"
+      className="relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -88,8 +89,8 @@ export function HighlightCarousel({
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center bg-stone-100">
-                <span className="text-stone-400">Video Highlight</span>
+              <div className="flex h-full w-full items-center justify-center bg-stone-100 dark:bg-zinc-800">
+                <span className="text-stone-400 dark:text-zinc-500">Video Highlight</span>
               </div>
             )}
 
@@ -138,7 +139,7 @@ export function HighlightCarousel({
               onClick={() => setCurrent(index)}
               className={cn(
                 'h-1.5 rounded-full transition-all duration-300',
-                index === current ? 'w-6 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/60'
+                index === current ? 'w-6 bg-white dark:bg-zinc-900' : 'w-1.5 bg-white dark:bg-zinc-900/40 hover:bg-white dark:bg-zinc-900/60'
               )}
             />
           ))}

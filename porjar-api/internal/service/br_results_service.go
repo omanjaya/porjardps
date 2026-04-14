@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,11 +31,25 @@ type PlayerResultInput struct {
 	SurvivalTimeSeconds *int      `json:"survival_time_seconds"`
 }
 
-// InputResults records results for a lobby, calculates points, recalculates standings, and broadcasts updates
-func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results []ResultInput) error {
+// InputResults records results for a specific map within a lobby, calculates points,
+// recalculates standings, and broadcasts updates.
+// mapNumber is 1-based.
+func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, mapNumber int, results []ResultInput) error {
+	if mapNumber <= 0 {
+		return apperror.New("INVALID_MAP_NUMBER", "Nomor map tidak valid", 400)
+	}
+
 	lobby, err := s.lobbyRepo.FindByID(ctx, lobbyID)
 	if err != nil || lobby == nil {
 		return apperror.NotFound("LOBBY")
+	}
+
+	numMaps := lobby.NumMaps
+	if numMaps < 1 {
+		numMaps = 1
+	}
+	if mapNumber > numMaps {
+		return apperror.BusinessRule("INVALID_MAP", "Map number melebihi jumlah map pada POT ini")
 	}
 
 	// Load tournament for point config
@@ -74,17 +89,27 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results
 		wwcdBonus = tournament.WWCDBonus
 	}
 
+	// Validate placement values
+	for _, r := range results {
+		if r.Placement < 1 {
+			return apperror.BusinessRule("INVALID_PLACEMENT", "Placement harus minimal 1")
+		}
+	}
+
 	// Calculate points for each result
 	var lobbyResults []*model.BRLobbyResult
 	for _, r := range results {
 		pp, ok := placementPoints[r.Placement]
 		if !ok {
-			// For placements beyond defined rules, use the last defined points value
-			pp = minPointsForMax
+			if r.Placement > maxDefinedPlacement {
+				pp = 0 // beyond defined rules = 0 placement points
+			} else {
+				pp = minPointsForMax // gap within defined range
+			}
 		}
 
-		// Kill points: kills * kill_point_value
-		kp := int(float64(r.Kills) * killPointValue)
+		// Kill points: kills * kill_point_value (rounded, not truncated)
+		kp := int(math.Round(float64(r.Kills) * killPointValue))
 
 		// WWCD bonus: if placement == 1, add wwcd_bonus
 		wwcd := 0
@@ -105,6 +130,7 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results
 			ID:              uuid.New(),
 			LobbyID:         lobbyID,
 			TeamID:          r.TeamID,
+			MapNumber:       mapNumber,
 			Placement:       r.Placement,
 			Kills:           r.Kills,
 			PlacementPoints: pp,
@@ -118,15 +144,9 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results
 		})
 	}
 
-	// Delete existing results for this lobby (in case of re-input)
-	existingResults, err := s.resultRepo.ListByLobby(ctx, lobbyID)
-	if err != nil {
-		return apperror.Wrap(err, "check existing results")
-	}
-	for _, existing := range existingResults {
-		if err := s.resultRepo.Delete(ctx, existing.ID); err != nil {
-			return apperror.Wrap(err, "delete existing result")
-		}
+	// Delete existing results for this lobby+map (allows re-input)
+	if err := s.resultRepo.DeleteByLobbyAndMap(ctx, lobbyID, mapNumber); err != nil {
+		return apperror.Wrap(err, "delete existing results for map")
 	}
 
 	// Bulk create new results
@@ -134,12 +154,18 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results
 		return apperror.Wrap(err, "bulk create results")
 	}
 
-	// Mark lobby as completed
-	now := time.Now()
-	lobby.Status = "completed"
-	lobby.CompletedAt = &now
-	if err := s.lobbyRepo.Update(ctx, lobby); err != nil {
-		return apperror.Wrap(err, "update lobby completed")
+	// Mark lobby as completed only when all maps have results
+	allMapsSubmitted, err := s.allMapsSubmitted(ctx, lobbyID, numMaps)
+	if err != nil {
+		return apperror.Wrap(err, "check map submission status")
+	}
+	if allMapsSubmitted && lobby.Status != "completed" {
+		now := time.Now()
+		lobby.Status = "completed"
+		lobby.CompletedAt = &now
+		if err := s.lobbyRepo.Update(ctx, lobby); err != nil {
+			return apperror.Wrap(err, "update lobby completed")
+		}
 	}
 
 	// Recalculate cumulative standings across ALL lobbies for this tournament
@@ -151,6 +177,20 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, results
 	s.broadcastResults(lobby.TournamentID, lobbyID)
 
 	return nil
+}
+
+// allMapsSubmitted checks whether every map (1..numMaps) has at least one result row.
+func (s *BRService) allMapsSubmitted(ctx context.Context, lobbyID uuid.UUID, numMaps int) (bool, error) {
+	counts, err := s.resultRepo.CountMapResultsByLobby(ctx, lobbyID)
+	if err != nil {
+		return false, err
+	}
+	for m := 1; m <= numMaps; m++ {
+		if counts[m] == 0 {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // InputPlayerResults saves per-player kills/damage for a lobby result

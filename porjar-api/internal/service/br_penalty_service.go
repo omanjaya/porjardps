@@ -36,6 +36,8 @@ func (s *BRService) ApplyPenalty(ctx context.Context, tournamentID, teamID uuid.
 		return apperror.Wrap(err, "recalculate standings after penalty")
 	}
 
+	s.broadcastLobbyUpdate(tournamentID, penalty.ID, "penalty_applied")
+
 	return nil
 }
 
@@ -71,6 +73,8 @@ func (s *BRService) RemovePenalty(ctx context.Context, penaltyID uuid.UUID) erro
 	if err := s.recalculateStandings(ctx, penalty.TournamentID); err != nil {
 		return apperror.Wrap(err, "recalculate standings after penalty removal")
 	}
+
+	s.broadcastLobbyUpdate(penalty.TournamentID, penaltyID, "penalty_removed")
 
 	return nil
 }

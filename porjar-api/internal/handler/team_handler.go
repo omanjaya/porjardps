@@ -37,8 +37,9 @@ type TeamServiceInterface interface {
 	GetByIDEnriched(ctx context.Context, id uuid.UUID) (*service.EnrichedTeam, error)
 	GetInviteInfo(ctx context.Context, code string) (map[string]interface{}, error)
 	Delete(ctx context.Context, teamID, captainUserID uuid.UUID) error
-	AdminUpdate(ctx context.Context, id uuid.UUID, name string) (*model.Team, error)
+	AdminUpdate(ctx context.Context, id uuid.UUID, name string, schoolID *uuid.UUID) (*model.Team, error)
 	AdminDelete(ctx context.Context, teamID uuid.UUID) error
+	AdminAddMember(ctx context.Context, teamID, userID uuid.UUID, inGameName string, inGameID *string, role string, jerseyNumber *int) (*model.TeamMember, error)
 }
 
 type TeamHandler struct {
@@ -54,13 +55,18 @@ func NewTeamHandlerWithInterface(teamService TeamServiceInterface) *TeamHandler 
 	return &TeamHandler{teamService: teamService}
 }
 
-func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL fiber.Handler) {
+func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL fiber.Handler, createRL ...fiber.Handler) {
 	// Public routes (specific paths before parameterized)
 	app.Get("/teams", publicRL, h.List)
 	app.Get("/teams/invite/:code", h.GetInviteInfo)
 
 	// Authenticated specific paths before /:id
-	app.Post("/teams", authMw, h.Create)
+	createMws := []fiber.Handler{authMw}
+	if len(createRL) > 0 {
+		createMws = append(createMws, createRL[0])
+	}
+	createMws = append(createMws, h.Create)
+	app.Post("/teams", createMws...)
 	app.Get("/teams/my", authMw, h.GetMyTeams)
 	app.Post("/teams/join/:code", authMw, h.JoinViaInvite)
 
@@ -80,6 +86,7 @@ func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadm
 	app.Put("/admin/teams/:id/reject", authMw, adminMw, h.Reject)
 	app.Put("/admin/teams/:id", authMw, adminMw, h.AdminUpdate)
 	app.Delete("/admin/teams/:id", authMw, adminMw, h.AdminDelete)
+	app.Post("/admin/teams/:id/members", authMw, adminMw, h.AdminAddMember)
 }
 
 type createTeamRequest struct {
@@ -251,6 +258,9 @@ func (h *TeamHandler) AddMember(c *fiber.Ctx) error {
 	}
 	if req.Role == "" {
 		details["role"] = "Role wajib diisi"
+	}
+	if req.Role != "member" && req.Role != "substitute" && req.Role != "captain" {
+		details["role"] = "Role harus 'member', 'substitute', atau 'captain'"
 	}
 	if len(details) > 0 {
 		return response.Err(c, apperror.ValidationError(details))
@@ -476,13 +486,18 @@ func (h *TeamHandler) GetInviteInfo(c *fiber.Ctx) error {
 	return response.OK(c, invite)
 }
 
+type adminUpdateTeamRequest struct {
+	Name     string  `json:"name"`
+	SchoolID *string `json:"school_id"`
+}
+
 func (h *TeamHandler) AdminUpdate(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
 	}
 
-	var req updateTeamRequest
+	var req adminUpdateTeamRequest
 	if err := c.BodyParser(&req); err != nil {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
@@ -493,12 +508,65 @@ func (h *TeamHandler) AdminUpdate(c *fiber.Ctx) error {
 		}))
 	}
 
-	team, svcErr := h.teamService.AdminUpdate(c.Context(), id, validator.TrimString(req.Name))
+	var schoolID *uuid.UUID
+	if req.SchoolID != nil && *req.SchoolID != "" {
+		sid, parseErr := uuid.Parse(*req.SchoolID)
+		if parseErr != nil {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"school_id": "School ID tidak valid",
+			}))
+		}
+		schoolID = &sid
+	}
+
+	team, svcErr := h.teamService.AdminUpdate(c.Context(), id, validator.TrimString(req.Name), schoolID)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
 
 	return response.OK(c, team)
+}
+
+func (h *TeamHandler) AdminAddMember(c *fiber.Ctx) error {
+	teamID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "Team ID tidak valid")
+	}
+
+	var req addMemberRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Format request tidak valid")
+	}
+
+	details := make(map[string]string)
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		details["user_id"] = "User ID tidak valid"
+	}
+	if !validator.ValidateStringLength(req.InGameName, 1, 50) {
+		details["in_game_name"] = "In-game name harus 1-50 karakter"
+	}
+	if req.Role == "" {
+		details["role"] = "Role wajib diisi"
+	}
+	if req.Role != "member" && req.Role != "substitute" && req.Role != "captain" {
+		details["role"] = "Role harus 'member', 'substitute', atau 'captain'"
+	}
+	if len(details) > 0 {
+		return response.Err(c, apperror.ValidationError(details))
+	}
+
+	var inGameID *string
+	if req.InGameID != "" {
+		inGameID = &req.InGameID
+	}
+
+	member, svcErr := h.teamService.AdminAddMember(c.Context(), teamID, userID, validator.TrimString(req.InGameName), inGameID, req.Role, req.JerseyNumber)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.Created(c, member)
 }
 
 func (h *TeamHandler) AdminDelete(c *fiber.Ctx) error {

@@ -12,6 +12,7 @@ import { useWebSocket } from '@/hooks/useWebSocket'
 import { BracketToolbar } from './BracketToolbar'
 import { BOConfigDialog } from './BOConfigDialog'
 import type { BracketMatch, Team, WSMessage } from '@/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface BracketManagerProps {
   tournamentId: string
@@ -44,6 +45,12 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
   const [scheduleRound, setScheduleRound] = useState<number | null>(null)
   const [scheduleRoundDatetime, setScheduleRoundDatetime] = useState('')
   const [schedulingRound, setSchedulingRound] = useState(false)
+
+  // Swap mode state
+  const [swapMode, setSwapMode] = useState(false)
+  const [swapSelection, setSwapSelection] = useState<{ teamId: string; teamName: string; matchId: string } | null>(null)
+  const [swapConfirm, setSwapConfirm] = useState<{ teamAId: string; teamAName: string; teamBId: string; teamBName: string } | null>(null)
+  const [swapping, setSwapping] = useState(false)
 
   // Stats
   const stats = useMemo(() => {
@@ -93,8 +100,8 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
   // WebSocket real-time updates — partial update for score/status, full refetch for bracket_advance
   const handleWSMessage = useCallback(
     (msg: WSMessage) => {
-      if (msg.type === 'bracket_advance') {
-        // Structure changed, need full refetch
+      if (msg.type === 'bracket_advance' || msg.type === 'match_complete') {
+        // Structure changed (winner advanced), need full refetch
         loadData()
         return
       }
@@ -138,7 +145,7 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
 
   useWebSocket({
     channels: [`tournament:${tournamentId}`],
-    messageTypes: ['score_update', 'match_status', 'bracket_advance'],
+    messageTypes: ['score_update', 'match_status', 'bracket_advance', 'match_complete', 'bracket_update'],
     onMessage: handleWSMessage,
   })
 
@@ -254,6 +261,7 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
   }
 
   function handleMatchClick(matchId: string) {
+    if (swapMode) return
     const match = (matches ?? []).find((m) => m.id === matchId)
     if (match) {
       setSelectedMatch(match)
@@ -261,11 +269,55 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
     }
   }
 
+  function handleSwapModeToggle() {
+    setSwapMode((v) => !v)
+    setSwapSelection(null)
+    setSwapConfirm(null)
+  }
+
+  function handleTeamClick(teamId: string, teamName: string, _matchId: string) {
+    if (!swapMode) return
+    if (!swapSelection) {
+      setSwapSelection({ teamId, teamName, matchId: _matchId })
+      return
+    }
+    if (swapSelection.teamId === teamId) {
+      setSwapSelection(null)
+      return
+    }
+    setSwapConfirm({
+      teamAId: swapSelection.teamId,
+      teamAName: swapSelection.teamName,
+      teamBId: teamId,
+      teamBName: teamName,
+    })
+  }
+
+  async function handleSwapConfirm() {
+    if (!swapConfirm) return
+    setSwapping(true)
+    try {
+      await api.post(`/admin/tournaments/${tournamentId}/bracket/swap-teams`, {
+        team_a_id: swapConfirm.teamAId,
+        team_b_id: swapConfirm.teamBId,
+      })
+      toast.success(`${swapConfirm.teamAName} ↔ ${swapConfirm.teamBName} berhasil ditukar`)
+      setSwapMode(false)
+      setSwapSelection(null)
+      setSwapConfirm(null)
+      await loadData()
+    } catch {
+      toast.error('Gagal menukar tim')
+    } finally {
+      setSwapping(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-12 animate-pulse rounded-xl bg-stone-100" />
-        <div className="h-96 animate-pulse rounded-xl bg-stone-100" />
+        <Skeleton className="h-12 rounded-xl bg-stone-100" />
+        <Skeleton className="h-96 rounded-xl bg-stone-100" />
       </div>
     )
   }
@@ -284,11 +336,31 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
         scheduleRoundDatetime={scheduleRoundDatetime}
         setScheduleRoundDatetime={setScheduleRoundDatetime}
         schedulingRound={schedulingRound}
-        onGenerateClick={() => setSeedDialogOpen(true)}
+        format={format}
+        onGenerateClick={() => {
+          if (format === 'round_robin') {
+            handleGenerateBracket([])
+          } else {
+            setSeedDialogOpen(true)
+          }
+        }}
         onResetClick={() => setResetDialogOpen(true)}
         onBoConfigClick={openBoConfig}
         onScheduleRound={handleBatchScheduleRound}
+        swapMode={swapMode}
+        onSwapModeToggle={handleSwapModeToggle}
       />
+
+      {/* === Swap Mode Banner === */}
+      {swapMode && (
+        <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-4 py-2.5 flex items-center gap-3 text-sm text-amber-800 dark:text-amber-300">
+          <span className="text-base">🔄</span>
+          {swapSelection
+            ? <>Pilih tim kedua untuk ditukar dengan <strong>{swapSelection.teamName}</strong>. Klik tim yang sama untuk batal.</>
+            : <>Mode Tukar aktif — klik tim pertama yang ingin ditukar (hanya match pending/scheduled).</>
+          }
+        </div>
+      )}
 
       {/* === Bracket View === */}
       {(matches ?? []).length > 0 ? (
@@ -299,14 +371,17 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
           onMatchClick={handleMatchClick}
           format={format as 'single_elimination' | 'double_elimination' | 'round_robin'}
           tournamentName={tournamentName}
+          swapMode={swapMode}
+          swapSelectedTeamId={swapSelection?.teamId ?? null}
+          onTeamClick={handleTeamClick}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 bg-white py-20">
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-20">
           <TreeStructure size={48} className="text-stone-300" />
           <div className="text-center">
             <p className="text-stone-600 font-medium">Belum ada bracket</p>
             <p className="text-sm text-stone-400 mt-1">
-              Klik &ldquo;Generate Bracket&rdquo; untuk memulai turnamen.
+              Klik &ldquo;{format === 'round_robin' ? 'Generate Round Robin' : 'Generate Bracket'}&rdquo; untuk memulai turnamen.
               {(teams ?? []).length < 2 && (
                 <span className="block text-amber-600 mt-1">
                   Minimal 2 tim dibutuhkan ({(teams ?? []).length} terdaftar).
@@ -330,6 +405,7 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
         onSetLive={handleSetLive}
         onComplete={handleComplete}
         onScheduleUpdate={loadData}
+        onSubmissionVerified={loadData}
       />
 
       {/* === Seed Config Dialog === */}
@@ -364,6 +440,21 @@ export function BracketManager({ tournamentId, format, bestOf, tournamentName }:
         setRoundBoConfig={setRoundBoConfig}
         savingBo={savingBo}
         onSave={handleSaveBoConfig}
+      />
+
+      {/* === Swap Confirm Dialog === */}
+      <ConfirmDialog
+        open={!!swapConfirm}
+        title="Tukar Tim di Bracket"
+        description={
+          swapConfirm
+            ? `Tukar posisi ${swapConfirm.teamAName} dengan ${swapConfirm.teamBName} di bracket?`
+            : ''
+        }
+        confirmLabel="Ya, Tukar"
+        onConfirm={handleSwapConfirm}
+        onCancel={() => { setSwapConfirm(null); setSwapSelection(null) }}
+        loading={swapping}
       />
     </div>
   )

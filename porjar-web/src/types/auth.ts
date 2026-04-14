@@ -12,7 +12,7 @@ export interface User {
   needs_password_change?: boolean
 }
 
-export type UserRole = 'player' | 'admin' | 'superadmin' | 'coach'
+export type UserRole = 'player' | 'admin' | 'superadmin' | 'coach' | 'referee'
 
 export interface AuthTokens {
   access_token: string

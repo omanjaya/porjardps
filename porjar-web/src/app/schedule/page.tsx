@@ -13,6 +13,8 @@ import {
 } from '@phosphor-icons/react'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { Schedule, Game, GameSlug } from '@/types'
 
 function isToday(dateStr: string): boolean {
@@ -59,6 +61,14 @@ export default function SchedulePage() {
     load()
   }, [])
 
+  useWebSocket({
+    channels: ['live-scores'],
+    messageTypes: ['match_status', 'bracket_update', 'match_complete'],
+    onMessage: () => {
+      api.get<Schedule[]>('/schedules?per_page=200').then(s => setSchedules(s ?? [])).catch(() => {})
+    },
+  })
+
   const liveCount = useMemo(() => schedules.filter(s => s.status === 'ongoing').length, [schedules])
   const todayCount = useMemo(() => schedules.filter(s => isToday(s.scheduled_at)).length, [schedules])
 
@@ -99,17 +109,17 @@ export default function SchedulePage() {
       <div className="mb-5 anim-header">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-stone-900">Jadwal Pertandingan</h1>
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-500">
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100">Jadwal Pertandingan</h1>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-zinc-400">
               <span>{schedules.length} jadwal</span>
               {liveCount > 0 && (
-                <span className="flex items-center gap-1 text-porjar-red font-semibold animate-pulse">
+                <span className="flex items-center gap-1 text-esi-red font-semibold animate-pulse">
                   <Lightning size={14} weight="fill" />
                   {liveCount} LIVE
                 </span>
               )}
               {todayCount > 0 && (
-                <span className="flex items-center gap-1 text-stone-500">
+                <span className="flex items-center gap-1 text-stone-500 dark:text-zinc-400">
                   <CalendarBlank size={14} />
                   {todayCount} hari ini
                 </span>
@@ -118,12 +128,12 @@ export default function SchedulePage() {
           </div>
 
           {/* View toggle — top right */}
-          <div className="flex shrink-0 items-center rounded-xl border border-stone-200 bg-white p-1 shadow-sm">
+          <div className="flex shrink-0 items-center rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1 shadow-sm">
             <button
               onClick={() => setViewMode('timeline')}
               className={cn(
                 'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                viewMode === 'timeline' ? 'bg-porjar-red text-white' : 'text-stone-500 hover:text-stone-700'
+                viewMode === 'timeline' ? 'bg-esi-red text-white' : 'text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300'
               )}
             >
               <ListIcon size={14} />
@@ -133,7 +143,7 @@ export default function SchedulePage() {
               onClick={() => setViewMode('calendar')}
               className={cn(
                 'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                viewMode === 'calendar' ? 'bg-porjar-red text-white' : 'text-stone-500 hover:text-stone-700'
+                viewMode === 'calendar' ? 'bg-esi-red text-white' : 'text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300'
               )}
             >
               <CalendarDots size={14} />
@@ -144,14 +154,14 @@ export default function SchedulePage() {
       </div>
 
       {/* Sticky filter section */}
-      <div className="sticky top-0 z-20 -mx-4 bg-white/95 px-4 pb-3 pt-2 backdrop-blur-sm sm:-mx-6 sm:px-6 border-b border-stone-100 mb-5 shadow-sm">
+      <div className="sticky top-0 z-20 -mx-4 bg-white/95 dark:bg-zinc-900/95 px-4 pb-3 pt-2 backdrop-blur-sm sm:-mx-6 sm:px-6 border-b border-stone-100 dark:border-zinc-800 mb-5 shadow-sm">
         {/* Game filter — horizontal scroll on mobile */}
         <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide pb-0.5 mb-2.5" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <button
             onClick={() => setActiveGame(null)}
             className={cn(
               'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
-              !activeGame ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+              !activeGame ? 'border-esi-red bg-esi-red text-white' : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600'
             )}
           >
             Semua Game
@@ -164,10 +174,10 @@ export default function SchedulePage() {
                 onClick={() => setActiveGame(activeGame === g.slug ? null : g.slug)}
                 className={cn(
                   'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
-                  activeGame === g.slug ? 'border-porjar-red bg-porjar-red text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                  activeGame === g.slug ? 'border-esi-red bg-esi-red text-white' : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600'
                 )}
               >
-                {cfg?.logo && <img src={cfg.logo} alt="" className="h-3.5 w-3.5 object-contain" />}
+                {cfg?.logo && <Image src={cfg.logo} alt="" width={14} height={14} className="h-3.5 w-3.5 object-contain" unoptimized />}
                 {g.name}
               </button>
             )
@@ -177,13 +187,13 @@ export default function SchedulePage() {
         {/* Clear filters button — shown when any filter is active */}
         {(activeGame || activeDay !== 'all') && (
           <div className="mb-2 flex items-center gap-2">
-            <span className="flex items-center gap-1 text-[11px] text-stone-500">
+            <span className="flex items-center gap-1 text-[11px] text-stone-500 dark:text-zinc-400">
               <FunnelSimple size={11} />
               Filter aktif
             </span>
             <button
               onClick={() => { setActiveGame(null); setActiveDay('all') }}
-              className="flex items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-stone-600 transition hover:border-stone-300 hover:bg-stone-50"
+              className="flex items-center gap-1 rounded-full border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2.5 py-1 text-[11px] font-semibold text-stone-600 dark:text-zinc-400 transition hover:border-stone-300 dark:hover:border-zinc-600 hover:bg-stone-50 dark:bg-zinc-800/50"
             >
               <X size={10} weight="bold" />
               Reset Filter
@@ -202,7 +212,7 @@ export default function SchedulePage() {
             onClick={() => setActiveDay('all')}
             className={cn(
               'shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
-              activeDay === 'all' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+              activeDay === 'all' ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600'
             )}
           >
             Semua Hari
@@ -215,8 +225,8 @@ export default function SchedulePage() {
               className={cn(
                 'shrink-0 flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all',
                 activeDay === g.key
-                  ? g.isToday ? 'border-porjar-red bg-porjar-red text-white shadow-sm shadow-porjar-red/20' : 'border-stone-900 bg-stone-900 text-white'
-                  : g.isToday ? 'border-porjar-red/50 bg-porjar-red/5 text-porjar-red font-bold' : 'border-stone-200 bg-white text-stone-600 hover:border-stone-300'
+                  ? g.isToday ? 'border-esi-red bg-esi-red text-white shadow-sm shadow-esi-red/20' : 'border-stone-900 bg-stone-900 text-white'
+                  : g.isToday ? 'border-esi-red/50 bg-esi-red/5 text-esi-red font-bold' : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600'
               )}
             >
               {g.shortLabel}
@@ -224,7 +234,7 @@ export default function SchedulePage() {
               {g.isToday && (
                 <span className={cn(
                   'rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none uppercase tracking-wide',
-                  activeDay === g.key ? 'bg-white/25 text-white' : 'bg-porjar-red text-white'
+                  activeDay === g.key ? 'bg-white/25 text-white' : 'bg-esi-red text-white'
                 )}>
                   Hari Ini
                 </span>
@@ -232,7 +242,7 @@ export default function SchedulePage() {
               {/* count badge */}
               <span className={cn(
                 'rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none',
-                activeDay === g.key ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-500'
+                activeDay === g.key ? 'bg-white/20 text-white' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400'
               )}>
                 {g.count}
               </span>
@@ -245,16 +255,16 @@ export default function SchedulePage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-xl bg-stone-100" />
+            <Skeleton key={i} className="h-20 rounded-xl bg-stone-100 dark:bg-zinc-800" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 bg-white py-20 text-center px-6">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-50 border border-stone-100">
-            <CalendarBlank size={32} weight="thin" className="text-stone-300" />
+        <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-20 text-center px-6">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-50 dark:bg-zinc-800/50 border border-stone-100 dark:border-zinc-800">
+            <CalendarBlank size={32} weight="thin" className="text-stone-300 dark:text-zinc-600" />
           </div>
-          <p className="text-sm font-semibold text-stone-700">Tidak ada pertandingan dijadwalkan</p>
-          <p className="mt-1.5 text-xs text-stone-400 max-w-xs leading-relaxed">
+          <p className="text-sm font-semibold text-stone-700 dark:text-zinc-300">Tidak ada pertandingan dijadwalkan</p>
+          <p className="mt-1.5 text-xs text-stone-400 dark:text-zinc-500 max-w-xs leading-relaxed">
             {activeGame && activeDay !== 'all'
               ? 'Tidak ada pertandingan untuk game dan hari yang dipilih. Coba ubah kombinasi filter.'
               : activeGame
@@ -266,7 +276,7 @@ export default function SchedulePage() {
           {(activeGame || activeDay !== 'all') && (
             <button
               onClick={() => { setActiveGame(null); setActiveDay('all') }}
-              className="mt-4 flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-600 transition hover:border-porjar-red/30 hover:bg-porjar-red/5 hover:text-porjar-red"
+              className="mt-4 flex items-center gap-1.5 rounded-full border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2 text-xs font-semibold text-stone-600 dark:text-zinc-400 transition hover:border-esi-red/30 hover:bg-esi-red/5 hover:text-esi-red"
             >
               <X size={11} weight="bold" />
               Reset Semua Filter
@@ -274,7 +284,7 @@ export default function SchedulePage() {
           )}
         </div>
       ) : viewMode === 'calendar' ? (
-        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
           <ScheduleCalendar schedules={filtered} onScheduleClick={setSelectedSchedule} />
         </div>
       ) : (
@@ -301,13 +311,13 @@ export default function SchedulePage() {
                 <div className="mb-3 flex items-center gap-3">
                   <div className={cn(
                     'rounded-xl px-3 py-1.5 text-xs font-bold',
-                    group.isToday ? 'bg-porjar-red text-white' : 'bg-stone-100 text-stone-700'
+                    group.isToday ? 'bg-esi-red text-white' : 'bg-stone-100 dark:bg-zinc-800 text-stone-700 dark:text-zinc-300'
                   )}>
                     {group.label}
                     {group.isToday && ' — Hari Ini'}
                   </div>
-                  <span className="text-xs text-stone-400">{group.items.length} jadwal</span>
-                  <div className="flex-1 border-t border-stone-100" />
+                  <span className="text-xs text-stone-400 dark:text-zinc-500">{group.items.length} jadwal</span>
+                  <div className="flex-1 border-t border-stone-100 dark:border-zinc-800" />
                 </div>
 
                 {/* Schedule cards */}
@@ -327,26 +337,26 @@ export default function SchedulePage() {
                         key={s.id}
                         onClick={() => setSelectedSchedule(s)}
                         className={cn(
-                          'anim-list-item group w-full text-left rounded-xl border bg-white transition-all hover:shadow-md',
+                          'anim-list-item group w-full text-left rounded-xl border bg-white dark:bg-zinc-900 transition-all hover:shadow-md',
                           isLive
-                            ? 'border-porjar-red/30 ring-1 ring-porjar-red/20 hover:border-porjar-red/50'
+                            ? 'border-esi-red/30 ring-1 ring-esi-red/20 hover:border-esi-red/50'
                             : isDone
-                            ? 'border-stone-100 opacity-70 hover:opacity-100'
+                            ? 'border-stone-100 dark:border-zinc-800 opacity-70 hover:opacity-100'
                             : isPostponed
-                            ? 'border-stone-200 opacity-60 hover:opacity-100'
-                            : 'border-stone-200 hover:border-stone-300'
+                            ? 'border-stone-200 dark:border-zinc-700 opacity-60 hover:opacity-100'
+                            : 'border-stone-200 dark:border-zinc-700 hover:border-stone-300 dark:hover:border-zinc-600'
                         )}
                       >
                         <div className="flex items-stretch">
                           {/* Left: game color stripe + logo */}
                           <div className={cn(
                             'flex w-10 sm:w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-l-xl py-3',
-                            gCfg ? gCfg.bgColor : 'bg-stone-50'
+                            gCfg ? gCfg.bgColor : 'bg-stone-50 dark:bg-zinc-800/50'
                           )}>
                             {gCfg ? (
-                              <img src={gCfg.logo} alt="" className="h-5 w-5 sm:h-7 sm:w-7 object-contain" />
+                              <Image src={gCfg.logo} alt="" width={28} height={28} className="h-5 w-5 sm:h-7 sm:w-7 object-contain" unoptimized />
                             ) : (
-                              <CalendarBlank size={18} className="text-stone-400" />
+                              <CalendarBlank size={18} className="text-stone-400 dark:text-zinc-500" />
                             )}
                           </div>
 
@@ -356,17 +366,17 @@ export default function SchedulePage() {
                             <div className="w-12 sm:w-16 shrink-0 text-center">
                               <p className={cn(
                                 'text-xs sm:text-sm font-bold tabular-nums',
-                                isLive ? 'text-porjar-red' : 'text-stone-900'
+                                isLive ? 'text-esi-red' : 'text-stone-900 dark:text-zinc-100'
                               )}>
                                 {time}
                               </p>
                               {endTime && (
-                                <p className="text-[10px] text-stone-400 tabular-nums mt-0.5 hidden sm:block">{endTime}</p>
+                                <p className="text-[10px] text-stone-400 dark:text-zinc-500 tabular-nums mt-0.5 hidden sm:block">{endTime}</p>
                               )}
                             </div>
 
                             {/* Vertical divider */}
-                            <div className={cn('h-8 w-px shrink-0', isLive ? 'bg-porjar-red/30' : 'bg-stone-100')} />
+                            <div className={cn('h-8 w-px shrink-0', isLive ? 'bg-esi-red/30' : 'bg-stone-100 dark:bg-zinc-800')} />
 
                             {/* Info */}
                             <div className="min-w-0 flex-1">
@@ -374,15 +384,15 @@ export default function SchedulePage() {
                                 /* Show team matchup */
                                 <>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900">
+                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900 dark:text-zinc-100">
                                       {s.team_a?.name ?? 'TBD'}
                                     </span>
-                                    <ArrowsLeftRight size={10} className="shrink-0 text-stone-400" weight="bold" />
-                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900">
+                                    <ArrowsLeftRight size={10} className="shrink-0 text-stone-400 dark:text-zinc-500" weight="bold" />
+                                    <span className="truncate text-xs sm:text-sm font-semibold text-stone-900 dark:text-zinc-100">
                                       {s.team_b?.name ?? 'TBD'}
                                     </span>
                                   </div>
-                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400">
+                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400 dark:text-zinc-500">
                                     <span className="truncate">{s.title}</span>
                                     {s.venue && (
                                       <>
@@ -395,8 +405,8 @@ export default function SchedulePage() {
                               ) : (
                                 /* No teams yet — show title + venue */
                                 <>
-                                  <p className="text-xs sm:text-sm font-semibold text-stone-900 truncate">{s.title}</p>
-                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400">
+                                  <p className="text-xs sm:text-sm font-semibold text-stone-900 dark:text-zinc-100 truncate">{s.title}</p>
+                                  <div className="mt-0.5 flex items-center gap-2 text-[10px] sm:text-xs text-stone-400 dark:text-zinc-500">
                                     {s.venue && <span className="hidden sm:inline truncate">{s.venue}</span>}
                                     {s.venue && s.tournament && <span className="hidden sm:inline text-stone-200">·</span>}
                                     {s.tournament && <span className="truncate">{s.tournament.name}</span>}
@@ -408,20 +418,20 @@ export default function SchedulePage() {
                             {/* Status badge */}
                             <div className="shrink-0">
                               {isLive ? (
-                                <span className="flex items-center gap-1 rounded-full bg-porjar-red px-2 py-1 text-[10px] font-bold text-white">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
+                                <span className="flex items-center gap-1 rounded-full bg-esi-red px-2 py-1 text-[10px] font-bold text-white">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-white dark:bg-zinc-900 animate-ping" />
                                   LIVE
                                 </span>
                               ) : isDone ? (
-                                <span className="hidden sm:inline rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold text-stone-400">
+                                <span className="hidden sm:inline rounded-full bg-stone-100 dark:bg-zinc-800 px-2.5 py-1 text-[10px] font-semibold text-stone-400 dark:text-zinc-500">
                                   Selesai
                                 </span>
                               ) : isPostponed ? (
-                                <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-1 text-[10px] font-semibold text-amber-600">
+                                <span className="rounded-full bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 px-2 py-1 text-[10px] font-semibold text-amber-600">
                                   {s.status === 'cancelled' ? 'Batal' : 'Tunda'}
                                 </span>
                               ) : (
-                                <Clock size={13} className="text-stone-300 group-hover:text-stone-400 transition-colors" />
+                                <Clock size={13} className="text-stone-300 dark:text-zinc-600 group-hover:text-stone-400 dark:text-zinc-500 transition-colors" />
                               )}
                             </div>
                           </div>

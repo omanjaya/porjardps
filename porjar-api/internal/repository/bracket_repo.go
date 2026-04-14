@@ -77,16 +77,20 @@ func (r *bracketRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.
 }
 
 func (r *bracketRepo) Create(ctx context.Context, m *model.BracketMatch) error {
+	bestOf := m.BestOf
+	if bestOf <= 0 {
+		bestOf = 1
+	}
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO bracket_matches (id, tournament_id, round, match_number, bracket_position,
 		        team_a_id, team_b_id, winner_id, loser_id, score_a, score_b,
 		        status, scheduled_at, started_at, completed_at,
-		        next_match_id, loser_next_match_id, stream_url, notes)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+		        next_match_id, loser_next_match_id, stream_url, notes, best_of)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
 		m.ID, m.TournamentID, m.Round, m.MatchNumber, m.BracketPosition,
 		m.TeamAID, m.TeamBID, m.WinnerID, m.LoserID, m.ScoreA, m.ScoreB,
 		m.Status, m.ScheduledAt, m.StartedAt, m.CompletedAt,
-		m.NextMatchID, m.LoserNextMatchID, m.StreamURL, m.Notes)
+		m.NextMatchID, m.LoserNextMatchID, m.StreamURL, m.Notes, bestOf)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
 	}
@@ -127,7 +131,8 @@ func (r *bracketRepo) ListByTournament(ctx context.Context, tournamentID uuid.UU
 		        next_match_id, loser_next_match_id, stream_url, notes,
 		                COALESCE(best_of, 1)
 		 FROM bracket_matches WHERE tournament_id = $1
-		 ORDER BY round ASC, match_number ASC`, tournamentID)
+		 ORDER BY round ASC, match_number ASC
+		 LIMIT 1000`, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournament: %w", err)
 	}
@@ -242,6 +247,16 @@ func (r *bracketRepo) UpdateBestOf(ctx context.Context, id uuid.UUID, bestOf int
 	return nil
 }
 
+func (r *bracketRepo) UpdateBestOfByTournamentAndRound(ctx context.Context, tournamentID uuid.UUID, round int, bestOf int) (int64, error) {
+	ct, err := r.db.Exec(ctx,
+		`UPDATE bracket_matches SET best_of = $3 WHERE tournament_id = $1 AND round = $2`,
+		tournamentID, round, bestOf)
+	if err != nil {
+		return 0, fmt.Errorf("UpdateBestOfByTournamentAndRound: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
 func (r *bracketRepo) FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BracketMatch, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, round, match_number, bracket_position,
@@ -306,6 +321,84 @@ func (r *bracketRepo) FindRecentCompleted(ctx context.Context, limit int) ([]*mo
 		return nil, fmt.Errorf("FindRecentCompleted rows: %w", err)
 	}
 	return matches, nil
+}
+
+// ResetResultsByTournament resets all bracket match results for a tournament while preserving
+// the bracket structure and round-1 WB seeding. Also clears related submissions and match games.
+func (r *bracketRepo) ResetResultsByTournament(ctx context.Context, tournamentID uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("ResetResultsByTournament begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// 1. Delete match_submissions for all matches in this tournament
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM match_submissions
+		 WHERE bracket_match_id IN (
+		   SELECT id FROM bracket_matches WHERE tournament_id = $1
+		 )`, tournamentID); err != nil {
+		return fmt.Errorf("ResetResultsByTournament delete submissions: %w", err)
+	}
+
+	// 2. Delete match_games for all matches in this tournament
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM match_games
+		 WHERE bracket_match_id IN (
+		   SELECT id FROM bracket_matches WHERE tournament_id = $1
+		 )`, tournamentID); err != nil {
+		return fmt.Errorf("ResetResultsByTournament delete match_games: %w", err)
+	}
+
+	// 3. For round > 1 and all LB/GF matches: clear team slots AND results.
+	//    Skip 'bye' matches (they are structural and re-advanced by service).
+	if _, err := tx.Exec(ctx,
+		`UPDATE bracket_matches SET
+		   team_a_id = NULL, team_b_id = NULL,
+		   winner_id = NULL, loser_id = NULL,
+		   score_a = NULL, score_b = NULL,
+		   status = 'pending',
+		   completed_at = NULL, started_at = NULL,
+		   updated_at = NOW()
+		 WHERE tournament_id = $1
+		   AND status != 'bye'
+		   AND (round > 1 OR bracket_position IN ('losers', 'grand_final'))`,
+		tournamentID); err != nil {
+		return fmt.Errorf("ResetResultsByTournament clear advanced matches: %w", err)
+	}
+
+	// 4. For round-1 WB matches: clear results only, preserve team seeding.
+	//    Restore status to 'scheduled' if both teams present, else 'pending'.
+	if _, err := tx.Exec(ctx,
+		`UPDATE bracket_matches SET
+		   winner_id = NULL, loser_id = NULL,
+		   score_a = NULL, score_b = NULL,
+		   status = CASE
+		     WHEN team_a_id IS NOT NULL AND team_b_id IS NOT NULL THEN 'scheduled'
+		     ELSE 'pending'
+		   END,
+		   completed_at = NULL, started_at = NULL,
+		   updated_at = NOW()
+		 WHERE tournament_id = $1
+		   AND status != 'bye'
+		   AND round = 1
+		   AND (bracket_position = 'winners' OR bracket_position IS NULL)`,
+		tournamentID); err != nil {
+		return fmt.Errorf("ResetResultsByTournament clear r1 results: %w", err)
+	}
+
+	// 5. Reset standings: zero out all match-derived stats.
+	if _, err := tx.Exec(ctx,
+		`UPDATE standings SET
+		   wins = 0, losses = 0, matches_played = 0,
+		   rounds_won = 0, rounds_lost = 0,
+		   is_eliminated = false
+		 WHERE tournament_id = $1`,
+		tournamentID); err != nil {
+		return fmt.Errorf("ResetResultsByTournament reset standings: %w", err)
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *bracketRepo) ListScheduledBefore(ctx context.Context, before time.Time) ([]*model.BracketMatch, error) {

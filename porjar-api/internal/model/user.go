@@ -24,10 +24,12 @@ type User struct {
 }
 
 type UserFilter struct {
-	Role   *string
-	Search *string
-	Page   int
-	Limit  int
+	Role        *string
+	Search      *string
+	IsCaptain   *bool
+	NotInGameID *uuid.UUID // exclude users already in a team for this game
+	Page        int
+	Limit       int
 }
 
 type UserRepository interface {
@@ -48,6 +50,7 @@ type UserRepository interface {
 type UserNISNFilter struct {
 	Tingkat  *string
 	GameSlug *string
+	SchoolID *uuid.UUID
 }
 
 // UserPublicResponse is safe to return to any unauthenticated viewer.
@@ -70,6 +73,7 @@ type UserProfileResponse struct {
 	Role                string    `json:"role"`
 	Tingkat             *string   `json:"tingkat,omitempty"`
 	NomorPertandingan   *string   `json:"nomor_pertandingan,omitempty"`
+	NisnSet             bool      `json:"nisn_set"`
 	NeedsPasswordChange bool      `json:"needs_password_change"`
 	CreatedAt           time.Time `json:"created_at"`
 }
@@ -95,6 +99,7 @@ func (u *User) ToProfile() UserProfileResponse {
 		Role:                u.Role,
 		Tingkat:             u.Tingkat,
 		NomorPertandingan:   u.NomorPertandingan,
+		NisnSet:             u.NISN != nil && *u.NISN != "",
 		NeedsPasswordChange: u.NeedsPasswordChange,
 		CreatedAt:           u.CreatedAt,
 	}

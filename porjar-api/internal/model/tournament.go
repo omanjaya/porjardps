@@ -9,6 +9,7 @@ import (
 
 type Tournament struct {
 	ID                uuid.UUID  `json:"id"`
+	EventID           uuid.UUID  `json:"event_id"`
 	GameID            uuid.UUID  `json:"game_id"`
 	Name              string     `json:"name"`
 	Format            string     `json:"format"`
@@ -25,6 +26,14 @@ type Tournament struct {
 	WWCDBonus              int        `json:"wwcd_bonus"`
 	QualificationThreshold *int       `json:"qualification_threshold"`
 	MaxLobbyTeams          *int       `json:"max_lobby_teams"`
+	SchoolLevel            *string   `json:"school_level"`
+	DailyStartTime         *string    `json:"daily_start_time"`
+	DefaultNumMaps         int        `json:"default_num_maps"`
+	DefaultMapNames        []string   `json:"default_map_names"`
+	TiebreakerOrder        []string   `json:"tiebreaker_order"`
+	ChampionTeamID         *uuid.UUID `json:"champion_team_id,omitempty" db:"champion_team_id"`
+	ChampionTeamName       *string    `json:"champion_team_name,omitempty" db:"champion_team_name"`
+	ChampionTeamLogo       *string    `json:"champion_team_logo,omitempty" db:"champion_team_logo"`
 	CreatedAt              time.Time  `json:"created_at"`
 	UpdatedAt              time.Time  `json:"updated_at"`
 
@@ -55,10 +64,11 @@ type TournamentTeam struct {
 }
 
 type TournamentFilter struct {
-	GameID *uuid.UUID
-	Status *string
-	Page   int
-	Limit  int
+	EventID *uuid.UUID
+	GameID  *uuid.UUID
+	Status  *string
+	Page    int
+	Limit   int
 }
 
 type TournamentRepository interface {
@@ -68,6 +78,7 @@ type TournamentRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	List(ctx context.Context, filter TournamentFilter) ([]*Tournament, int, error)
+	CountActive(ctx context.Context) (int, error)
 	CountTeams(ctx context.Context, tournamentID uuid.UUID) (int, error)
 	CountTeamsBatch(ctx context.Context, tournamentIDs []uuid.UUID) (map[uuid.UUID]int, error)
 }
@@ -78,4 +89,5 @@ type TournamentTeamRepository interface {
 	Delete(ctx context.Context, tournamentID, teamID uuid.UUID) error
 	ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*TournamentTeam, error)
 	ListApprovedTeams(ctx context.Context, tournamentID uuid.UUID) ([]*Team, error)
+	UpdateSeed(ctx context.Context, tournamentID, teamID uuid.UUID, seed *int) error
 }

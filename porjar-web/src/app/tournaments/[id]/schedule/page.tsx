@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { WarningCircle } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ScheduleTimeline } from '@/components/modules/schedule/ScheduleTimeline'
@@ -38,31 +37,31 @@ export default function TournamentSchedulePage() {
 
   if (loading) {
     return (
-      <PublicLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-10 w-64 rounded-lg bg-slate-800" />
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-14 rounded-lg bg-slate-800" />
           ))}
         </div>
-      </PublicLayout>
+      </>
     )
   }
 
   if (error) {
     return (
-      <PublicLayout>
+      <>
         <EmptyState
           icon={WarningCircle}
           title="Terjadi Kesalahan"
           description={error}
         />
-      </PublicLayout>
+      </>
     )
   }
 
   return (
-    <PublicLayout>
+    <>
       <PageHeader
         title={tournament ? `Jadwal - ${tournament.name}` : 'Jadwal Turnamen'}
         description="Jadwal pertandingan untuk turnamen ini"
@@ -76,6 +75,6 @@ export default function TournamentSchedulePage() {
       />
 
       <ScheduleTimeline schedules={schedules} />
-    </PublicLayout>
+    </>
   )
 }

@@ -3,12 +3,14 @@ import type { GameSummary, TeamSummary } from './common'
 // === Tournaments ===
 export interface Tournament {
   id: string
+  event_id: string
   game: GameSummary
   name: string
   format: TournamentFormat
   stage: TournamentStage
   best_of: number
   max_teams: number | null
+  school_level: string | null
   status: TournamentStatus
   registration_start: string | null
   registration_end: string | null
@@ -16,10 +18,14 @@ export interface Tournament {
   end_date: string | null
   team_count: number
   rules: string | null
+  daily_start_time: string | null
   kill_point_value: number
   wwcd_bonus: number
   qualification_threshold: number | null
   max_lobby_teams: number | null
+  default_num_maps: number
+  default_map_names: string[]
+  tiebreaker_order: string[]
 }
 
 export type TournamentFormat =
@@ -28,9 +34,24 @@ export type TournamentFormat =
   | 'round_robin'
   | 'swiss'
   | 'battle_royale_points'
+  | 'battle_royale_placement'
   | 'group_stage_playoff'
+  | 'multi_stage'
 
 export type TournamentStage = 'qualifier' | 'group_stage' | 'playoff' | 'main' | 'grand_final'
+
+// === Multi-stage tournaments ===
+export interface TournamentStageConfig {
+  id: string
+  tournament_id: string
+  stage_order: number
+  stage_type: string
+  name: string
+  config: Record<string, unknown>
+  status: 'pending' | 'active' | 'completed'
+  created_at: string
+}
+
 export type TournamentStatus = 'upcoming' | 'registration' | 'ongoing' | 'completed' | 'cancelled'
 
 export type GameSlug = 'hok' | 'ml' | 'ml-pria' | 'ml-wanita' | 'ff' | 'pubgm' | 'efootball' | 'efootball-solo' | 'efootball-duo'
@@ -42,6 +63,8 @@ export interface BRLobby {
   lobby_name: string
   lobby_number: number
   day_number: number
+  num_maps: number
+  map_names: string[]
   room_id: string | null
   room_password: string | null
   status: LobbyStatus
@@ -51,6 +74,7 @@ export interface BRLobby {
 
 export interface BRLobbyResult {
   team: TeamSummary
+  map_number: number
   placement: number
   kills: number
   placement_points: number
@@ -111,4 +135,5 @@ export interface Standing {
   best_placement: number | null
   avg_placement: number | null
   is_eliminated: boolean
+  wwcd_count: number
 }

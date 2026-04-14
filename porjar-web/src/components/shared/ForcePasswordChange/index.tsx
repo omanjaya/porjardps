@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Lock, Eye, EyeSlash, ShieldCheck } from '@phosphor-icons/react'
 import { Button } from '@/components/ui/button'
@@ -24,9 +25,12 @@ function getPasswordStrength(password: string): { score: number; label: string; 
 }
 
 export function ForcePasswordChange() {
+  const router = useRouter()
   const { user, setUser } = useAuthStore()
+  const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showOld, setShowOld] = useState(false)
   const [showNew, setShowNew] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -39,6 +43,7 @@ export function ForcePasswordChange() {
     setErrors({})
 
     const newErrors: Record<string, string> = {}
+    if (!oldPassword) newErrors.oldPassword = 'Password saat ini wajib diisi'
     if (!newPassword) newErrors.newPassword = 'Password baru wajib diisi'
     else if (newPassword.length < 8) newErrors.newPassword = 'Minimal 8 karakter'
     if (!confirmPassword) newErrors.confirmPassword = 'Konfirmasi password wajib diisi'
@@ -51,17 +56,27 @@ export function ForcePasswordChange() {
 
     setIsLoading(true)
     try {
-      await api.post('/auth/change-password', {
-        old_password: user?.nisn || '',
+      await api.put('/auth/change-password', {
+        old_password: oldPassword,
         new_password: newPassword,
       })
       toast.success('Password berhasil diubah!')
       if (user) {
         setUser({ ...user, needs_password_change: false })
       }
+      router.push(user?.role === 'coach' ? '/coach' : '/dashboard')
     } catch (err) {
       if (err instanceof ApiError) {
-        setErrors({ general: err.message })
+        if (err.code === 'INVALID_OLD_PASSWORD') {
+          setErrors({ oldPassword: 'Password / NISN salah' })
+        } else if (err.code === 'VALIDATION_ERROR' && err.details) {
+          const fieldErrors: Record<string, string> = {}
+          if (err.details.old_password) fieldErrors.oldPassword = err.details.old_password
+          if (err.details.new_password) fieldErrors.newPassword = err.details.new_password
+          setErrors(Object.keys(fieldErrors).length > 0 ? fieldErrors : { general: err.message })
+        } else {
+          setErrors({ general: err.message })
+        }
       } else {
         setErrors({ general: 'Gagal mengubah password. Coba lagi.' })
       }
@@ -72,16 +87,16 @@ export function ForcePasswordChange() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-porjar-border bg-white shadow-2xl">
-        <div className="h-1.5 w-full bg-porjar-red" />
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-2xl border border-esi-border bg-white dark:bg-zinc-900 shadow-2xl">
+        <div className="h-1.5 w-full bg-esi-red" />
         <div className="p-6">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-porjar-red/10">
-              <ShieldCheck size={28} weight="duotone" className="text-porjar-red" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-esi-red/10">
+              <ShieldCheck size={28} weight="duotone" className="text-esi-red" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-porjar-text">Ubah Password</h2>
-              <p className="text-sm text-porjar-muted">
+              <h2 className="text-lg font-bold text-esi-text">Ubah Password</h2>
+              <p className="text-sm text-esi-muted">
                 Untuk keamanan, silakan ubah password default kamu
               </p>
             </div>
@@ -89,25 +104,49 @@ export function ForcePasswordChange() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {errors.general && (
-              <div className="rounded-lg border-l-4 border-porjar-red bg-red-50 px-4 py-2.5 text-sm text-porjar-red">
+              <div className="rounded-lg border-l-4 border-esi-red bg-red-50 dark:bg-red-950/30 px-4 py-2.5 text-sm text-esi-red">
                 {errors.general}
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-porjar-text">Password Baru</label>
+              <label className="text-sm font-medium text-esi-text">Password Saat Ini</label>
+              <div className="relative">
+                <Input
+                  type={showOld ? 'text' : 'password'}
+                  placeholder="Masukkan NISN kamu"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowOld(!showOld)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
+                >
+                  {showOld ? <EyeSlash size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <p className="text-xs text-amber-600">Gunakan NISN sebagai password default</p>
+              {errors.oldPassword && (
+                <p className="text-xs text-esi-red">{errors.oldPassword}</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-esi-text">Password Baru</label>
               <div className="relative">
                 <Input
                   type={showNew ? 'text' : 'password'}
                   placeholder="Minimal 8 karakter"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="border-porjar-border bg-white pr-10 text-porjar-text placeholder:text-porjar-muted/50 focus:border-porjar-red focus:ring-porjar-red/20"
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-porjar-muted hover:text-porjar-text"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
                 >
                   {showNew ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
@@ -119,45 +158,45 @@ export function ForcePasswordChange() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= strength.score ? strength.color : 'bg-stone-200'
+                          i <= strength.score ? strength.color : 'bg-stone-200 dark:bg-zinc-700'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-porjar-muted">Kekuatan: {strength.label}</p>
+                  <p className="text-xs text-esi-muted">Kekuatan: {strength.label}</p>
                 </div>
               )}
               {errors.newPassword && (
-                <p className="text-xs text-porjar-red">{errors.newPassword}</p>
+                <p className="text-xs text-esi-red">{errors.newPassword}</p>
               )}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-porjar-text">Konfirmasi Password</label>
+              <label className="text-sm font-medium text-esi-text">Konfirmasi Password</label>
               <div className="relative">
                 <Input
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="Ulangi password baru"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="border-porjar-border bg-white pr-10 text-porjar-text placeholder:text-porjar-muted/50 focus:border-porjar-red focus:ring-porjar-red/20"
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-porjar-muted hover:text-porjar-text"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
                 >
                   {showConfirm ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {errors.confirmPassword && (
-                <p className="text-xs text-porjar-red">{errors.confirmPassword}</p>
+                <p className="text-xs text-esi-red">{errors.confirmPassword}</p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-porjar-red text-white hover:brightness-110"
+              className="w-full bg-esi-red text-white hover:brightness-110"
               disabled={isLoading}
             >
               {isLoading ? (

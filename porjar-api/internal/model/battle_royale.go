@@ -13,6 +13,8 @@ type BRLobby struct {
 	LobbyName    string     `json:"lobby_name"`
 	LobbyNumber  int        `json:"lobby_number"`
 	DayNumber    int        `json:"day_number"`
+	NumMaps      int        `json:"num_maps"`
+	MapNames     []string   `json:"map_names"`
 	RoomID       *string    `json:"room_id"`
 	RoomPassword *string    `json:"room_password"`
 	Status       string     `json:"status"`
@@ -25,6 +27,7 @@ type BRLobbyResult struct {
 	ID              uuid.UUID `json:"id"`
 	LobbyID         uuid.UUID `json:"lobby_id"`
 	TeamID          uuid.UUID `json:"team_id"`
+	MapNumber       int       `json:"map_number"`
 	Placement       int       `json:"placement"`
 	Kills           int       `json:"kills"`
 	PlacementPoints int       `json:"placement_points"`
@@ -75,6 +78,7 @@ type BRLobbyRepository interface {
 	ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*BRLobby, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	ListScheduledBefore(ctx context.Context, before time.Time) ([]*BRLobby, error)
+	FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*BRLobby, error)
 }
 
 type BRLobbyResultRepository interface {
@@ -82,11 +86,15 @@ type BRLobbyResultRepository interface {
 	Create(ctx context.Context, r *BRLobbyResult) error
 	Update(ctx context.Context, r *BRLobbyResult) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByLobbyAndMap(ctx context.Context, lobbyID uuid.UUID, mapNumber int) error
 	ListByLobby(ctx context.Context, lobbyID uuid.UUID) ([]*BRLobbyResult, error)
+	ListByLobbyAndMap(ctx context.Context, lobbyID uuid.UUID, mapNumber int) ([]*BRLobbyResult, error)
 	ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*BRLobbyResult, error)
 	ListByTeam(ctx context.Context, teamID uuid.UUID) ([]*BRLobbyResult, error)
 	BulkCreate(ctx context.Context, results []*BRLobbyResult) error
 	FindByTeamAndLobby(ctx context.Context, teamID, lobbyID uuid.UUID) (*BRLobbyResult, error)
+	FindByTeamLobbyAndMap(ctx context.Context, teamID, lobbyID uuid.UUID, mapNumber int) (*BRLobbyResult, error)
+	CountMapResultsByLobby(ctx context.Context, lobbyID uuid.UUID) (map[int]int, error)
 }
 
 type BRPointRuleRepository interface {

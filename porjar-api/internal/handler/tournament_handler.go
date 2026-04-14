@@ -1,3 +1,7 @@
+// Validation pattern:
+// - Body parsing errors: response.BadRequest(c, msg)
+// - Field validation: response.Err(c, apperror.ValidationError(details))
+// - Business rule violations: response.Err(c, apperror.BusinessRule(code, msg))
 package handler
 
 import (
@@ -23,7 +27,7 @@ func NewTournamentHandler(tournamentService *service.TournamentService) *Tournam
 	return &TournamentHandler{tournamentService: tournamentService}
 }
 
-func (h *TournamentHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw fiber.Handler) {
+func (h *TournamentHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw fiber.Handler, createRL ...fiber.Handler) {
 	// Public routes
 	app.Get("/tournaments", h.List)
 	app.Get("/tournaments/:id", h.GetByID)
@@ -33,22 +37,31 @@ func (h *TournamentHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, su
 	app.Post("/tournaments/:id/register", authMw, h.RegisterTeam)
 
 	// Admin routes
-	app.Post("/admin/tournaments", authMw, adminMw, h.Create)
+	createMws := []fiber.Handler{authMw, adminMw}
+	if len(createRL) > 0 {
+		createMws = append(createMws, createRL[0])
+	}
+	createMws = append(createMws, h.Create)
+	app.Post("/admin/tournaments", createMws...)
 	app.Put("/admin/tournaments/:id", authMw, adminMw, h.Update)
 	app.Post("/admin/tournaments/:id/teams", authMw, adminMw, h.AdminAddTeams)
 	app.Delete("/admin/tournaments/:id/teams/:teamId", authMw, adminMw, h.AdminRemoveTeam)
+	app.Post("/admin/tournaments/:id/champion", authMw, adminMw, h.SetChampion)
 
 	// Superadmin routes
 	app.Delete("/admin/tournaments/:id", authMw, superadminMw, h.Delete)
 }
 
 type createTournamentRequest struct {
+	EventID           string  `json:"event_id"`
 	GameID            string  `json:"game_id"`
 	Name              string  `json:"name"`
 	Format            string  `json:"format"`
 	Stage             string  `json:"stage"`
 	BestOf            int     `json:"best_of"`
 	MaxTeams          *int    `json:"max_teams"`
+	SchoolLevel       *string `json:"school_level"`
+	DailyStartTime    *string `json:"daily_start_time"`
 	RegistrationStart *string `json:"registration_start"`
 	RegistrationEnd   *string `json:"registration_end"`
 	StartDate         *string `json:"start_date"`
@@ -80,35 +93,55 @@ func (h *TournamentHandler) Create(c *fiber.Ctx) error {
 		return response.Err(c, apperror.ValidationError(details))
 	}
 
+	var eventID uuid.UUID
+	if req.EventID != "" {
+		eventID, err = uuid.Parse(req.EventID)
+		if err != nil {
+			details["event_id"] = "Event ID tidak valid"
+			return response.Err(c, apperror.ValidationError(details))
+		}
+	}
+
 	input := service.CreateTournamentInput{
-		GameID:   gameID,
-		Name:     validator.TrimString(req.Name),
-		Format:   req.Format,
-		Stage:    req.Stage,
-		BestOf:   req.BestOf,
-		MaxTeams: req.MaxTeams,
-		Rules:    req.Rules,
+		EventID:        eventID,
+		GameID:         gameID,
+		Name:           validator.TrimString(req.Name),
+		Format:         req.Format,
+		Stage:          req.Stage,
+		BestOf:         req.BestOf,
+		MaxTeams:       req.MaxTeams,
+		SchoolLevel:    req.SchoolLevel,
+		DailyStartTime: req.DailyStartTime,
+		Rules:          req.Rules,
 	}
 
 	if req.RegistrationStart != nil {
-		if t, err := parseTime(*req.RegistrationStart); err == nil {
-			input.RegistrationStart = &t
+		t, err := parseTime(*req.RegistrationStart)
+		if err != nil {
+			return response.BadRequest(c, "Format tanggal registration_start tidak valid")
 		}
+		input.RegistrationStart = &t
 	}
 	if req.RegistrationEnd != nil {
-		if t, err := parseTime(*req.RegistrationEnd); err == nil {
-			input.RegistrationEnd = &t
+		t, err := parseTime(*req.RegistrationEnd)
+		if err != nil {
+			return response.BadRequest(c, "Format tanggal registration_end tidak valid")
 		}
+		input.RegistrationEnd = &t
 	}
 	if req.StartDate != nil {
-		if t, err := parseTime(*req.StartDate); err == nil {
-			input.StartDate = &t
+		t, err := parseTime(*req.StartDate)
+		if err != nil {
+			return response.BadRequest(c, "Format tanggal start_date tidak valid")
 		}
+		input.StartDate = &t
 	}
 	if req.EndDate != nil {
-		if t, err := parseTime(*req.EndDate); err == nil {
-			input.EndDate = &t
+		t, err := parseTime(*req.EndDate)
+		if err != nil {
+			return response.BadRequest(c, "Format tanggal end_date tidak valid")
 		}
+		input.EndDate = &t
 	}
 
 	tournament, svcErr := h.tournamentService.Create(c.Context(), input)
@@ -134,17 +167,23 @@ func (h *TournamentHandler) GetByID(c *fiber.Ctx) error {
 }
 
 type updateTournamentRequest struct {
-	Name              *string `json:"name"`
-	Format            *string `json:"format"`
-	Stage             *string `json:"stage"`
-	BestOf            *int    `json:"best_of"`
-	MaxTeams          *int    `json:"max_teams"`
-	Status            *string `json:"status"`
-	RegistrationStart *string `json:"registration_start"`
-	RegistrationEnd   *string `json:"registration_end"`
-	StartDate         *string `json:"start_date"`
-	EndDate           *string `json:"end_date"`
-	Rules             *string `json:"rules"`
+	EventID           *string  `json:"event_id"`
+	Name              *string  `json:"name"`
+	Format            *string  `json:"format"`
+	Stage             *string  `json:"stage"`
+	BestOf            *int     `json:"best_of"`
+	MaxTeams          *int     `json:"max_teams"`
+	Status            *string  `json:"status"`
+	SchoolLevel       *string  `json:"school_level"`
+	DailyStartTime    *string  `json:"daily_start_time"`
+	DefaultNumMaps    *int     `json:"default_num_maps"`
+	DefaultMapNames   []string `json:"default_map_names"`
+	TiebreakerOrder   []string `json:"tiebreaker_order"`
+	RegistrationStart *string  `json:"registration_start"`
+	RegistrationEnd   *string  `json:"registration_end"`
+	StartDate         *string  `json:"start_date"`
+	EndDate           *string  `json:"end_date"`
+	Rules             *string  `json:"rules"`
 }
 
 func (h *TournamentHandler) Update(c *fiber.Ctx) error {
@@ -158,20 +197,40 @@ func (h *TournamentHandler) Update(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
 
-	if req.Name != nil && !validator.ValidateStringLength(*req.Name, 3, 100) {
-		return response.Err(c, apperror.ValidationError(map[string]string{
-			"name": "Nama turnamen harus 3-100 karakter",
-		}))
+	details := make(map[string]string)
+	if req.Name != nil && !validator.ValidateStringLength(*req.Name, 2, 100) {
+		details["name"] = "Nama turnamen harus 2-100 karakter"
+	}
+	if req.MaxTeams != nil && *req.MaxTeams < 2 {
+		details["max_teams"] = "Maksimal tim harus minimal 2"
+	}
+	if len(details) > 0 {
+		return response.Err(c, apperror.ValidationError(details))
+	}
+
+	var eventIDPtr *uuid.UUID
+	if req.EventID != nil {
+		eid, err := uuid.Parse(*req.EventID)
+		if err != nil {
+			return response.BadRequest(c, "Event ID tidak valid")
+		}
+		eventIDPtr = &eid
 	}
 
 	input := service.UpdateTournamentInput{
-		Name:     req.Name,
-		Format:   req.Format,
-		Stage:    req.Stage,
-		BestOf:   req.BestOf,
-		MaxTeams: req.MaxTeams,
-		Status:   req.Status,
-		Rules:    req.Rules,
+		EventID:         eventIDPtr,
+		Name:            req.Name,
+		Format:          req.Format,
+		Stage:           req.Stage,
+		BestOf:          req.BestOf,
+		MaxTeams:        req.MaxTeams,
+		Status:          req.Status,
+		SchoolLevel:     req.SchoolLevel,
+		DailyStartTime:  req.DailyStartTime,
+		DefaultNumMaps:  req.DefaultNumMaps,
+		DefaultMapNames: req.DefaultMapNames,
+		TiebreakerOrder: req.TiebreakerOrder,
+		Rules:           req.Rules,
 	}
 
 	if req.RegistrationStart != nil {
@@ -335,11 +394,14 @@ func (h *TournamentHandler) AdminAddTeams(c *fiber.Ctx) error {
 		}
 
 		if svcErr := h.tournamentService.AdminRegisterTeam(c.Context(), tournamentID, teamID); svcErr != nil {
-			// Check if it was a silent skip (already registered returns nil)
-			result.Errors = append(result.Errors, tidStr+": "+svcErr.Error())
+			// 409 Conflict = team already registered in this tournament → silently skip.
+			// Other errors (not found, game mismatch, etc.) = actual failures → count as error.
+			if appErr, ok := svcErr.(*apperror.AppError); ok && appErr.HTTPStatus == 409 {
+				result.Skipped++
+			} else {
+				result.Errors = append(result.Errors, tidStr+": "+svcErr.Error())
+			}
 		} else {
-			// AdminRegisterTeam returns nil for both success and already-registered
-			// We count both as success/skipped by checking existence after
 			result.Added++
 		}
 	}
@@ -363,6 +425,32 @@ func (h *TournamentHandler) AdminRemoveTeam(c *fiber.Ctx) error {
 	}
 
 	return response.NoContent(c)
+}
+
+type setChampionRequest struct {
+	TeamID string `json:"team_id"`
+}
+
+func (h *TournamentHandler) SetChampion(c *fiber.Ctx) error {
+	tournamentID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "Tournament ID tidak valid")
+	}
+
+	var req setChampionRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Payload tidak valid")
+	}
+	teamID, err := uuid.Parse(req.TeamID)
+	if err != nil {
+		return response.BadRequest(c, "Team ID tidak valid")
+	}
+
+	if svcErr := h.tournamentService.SetChampion(c.Context(), tournamentID, teamID); svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.OK(c, fiber.Map{"success": true})
 }
 
 // parseTime parses time string in RFC3339 or date-only format.

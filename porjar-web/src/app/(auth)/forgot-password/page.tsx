@@ -44,20 +44,20 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-6">
-      <h2 className="mb-1 text-xl font-semibold text-stone-900">Lupa Password</h2>
-      <p className="mb-6 text-sm text-stone-500">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-6">
+      <h2 className="mb-1 text-xl font-semibold text-stone-900 dark:text-zinc-100">Lupa Password</h2>
+      <p className="mb-6 text-sm text-stone-500 dark:text-zinc-400">
         Masukkan email untuk reset password
       </p>
 
       {isSubmitted ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="rounded-lg border border-green-200 dark:border-green-800/50 bg-green-50 dark:bg-green-950/30 px-4 py-3 text-sm text-green-700 dark:text-green-300">
             Jika email terdaftar, link reset password telah dikirim.
           </div>
           <Link
             href="/login"
-            className="block text-center text-sm font-medium text-porjar-red hover:text-porjar-red-dark"
+            className="block text-center text-sm font-medium text-esi-red hover:text-esi-red-dark"
           >
             Kembali ke halaman login
           </Link>
@@ -66,13 +66,13 @@ export default function ForgotPasswordPage() {
         <>
           <form onSubmit={handleSubmit} className="space-y-4">
             {errors.general && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+              <div className="rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
                 {errors.general}
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label htmlFor="email" className="text-sm font-medium text-stone-700">
+              <label htmlFor="email" className="text-sm font-medium text-stone-700 dark:text-zinc-300">
                 Email
               </label>
               <Input
@@ -81,21 +81,21 @@ export default function ForgotPasswordPage() {
                 placeholder="email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-porjar-red"
+                className="bg-white dark:bg-zinc-800 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:border-esi-red"
               />
               {errors.email && (
                 <p className="text-xs text-red-500">{errors.email}</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full bg-porjar-red hover:bg-porjar-red-dark text-white" disabled={isLoading}>
+            <Button type="submit" className="w-full bg-esi-red hover:bg-esi-red-dark text-white" disabled={isLoading}>
               {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Mengirim...</> : 'Kirim Link Reset'}
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-stone-500">
+          <p className="mt-6 text-center text-sm text-stone-500 dark:text-zinc-400">
             Ingat password?{' '}
-            <Link href="/login" className="font-medium text-porjar-red hover:text-porjar-red-dark">
+            <Link href="/login" className="font-medium text-esi-red hover:text-esi-red-dark">
               Masuk
             </Link>
           </p>

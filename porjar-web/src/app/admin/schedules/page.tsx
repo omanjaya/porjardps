@@ -36,6 +36,7 @@ import { ScheduleCalendar } from '@/components/modules/schedule/ScheduleCalendar
 import { ScheduleGeneratorDialog } from './ScheduleGeneratorDialog'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn, mediaUrl } from '@/lib/utils'
+import { useWebSocket } from '@/hooks/useWebSocket'
 import type { Schedule, GameSlug, PaginationMeta, Tournament } from '@/types'
 
 import { ScheduleFormDialog, emptyForm } from './ScheduleFormDialog'
@@ -135,6 +136,12 @@ export default function AdminSchedulesPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useWebSocket({
+    channels: ['live-scores'],
+    messageTypes: ['bracket_update', 'match_status', 'match_complete'],
+    onMessage: () => { loadData() },
+  })
 
   // ─── Quick stats ───
   const stats = useMemo(() => {
@@ -367,13 +374,13 @@ export default function AdminSchedulesPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <Skeleton className="h-10 w-64 bg-stone-200" />
+        <Skeleton className="h-10 w-64 bg-stone-200 dark:bg-zinc-700" />
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Skeleton className="h-24 rounded-xl bg-stone-100" />
-          <Skeleton className="h-24 rounded-xl bg-stone-100" />
-          <Skeleton className="h-24 rounded-xl bg-stone-100" />
+          <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
         </div>
-        <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
+        <Skeleton className="mt-4 h-96 w-full bg-stone-200 dark:bg-zinc-700" />
       </AdminLayout>
     )
   }
@@ -395,14 +402,14 @@ export default function AdminSchedulesPage() {
             <Button
               variant="outline"
               onClick={openCreate}
-              className="border-stone-300 text-stone-600 hover:bg-stone-50"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800"
             >
               <Plus size={16} className="mr-1" />
               Tambah Manual
             </Button>
             <Button
               onClick={() => setGeneratorOpen(true)}
-              className="bg-porjar-red hover:bg-porjar-red-dark text-white"
+              className="bg-esi-red hover:bg-esi-red-dark text-white"
             >
               <Sparkle size={16} className="mr-1" />
               Generate Jadwal
@@ -413,31 +420,31 @@ export default function AdminSchedulesPage() {
 
       {/* Quick Stats */}
       <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100">
+        <div className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30">
             <CalendarBlank size={22} weight="duotone" className="text-blue-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-stone-900">{stats.today}</p>
-            <p className="text-xs text-stone-500">Jadwal Hari Ini</p>
+            <p className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{stats.today}</p>
+            <p className="text-xs text-stone-500 dark:text-zinc-400">Jadwal Hari Ini</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100">
+        <div className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30">
             <Lightning size={22} weight="duotone" className="text-red-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-stone-900">{stats.ongoing}</p>
-            <p className="text-xs text-stone-500">Sedang Berlangsung</p>
+            <p className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{stats.ongoing}</p>
+            <p className="text-xs text-stone-500 dark:text-zinc-400">Sedang Berlangsung</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
+        <div className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-100 dark:bg-green-900/30">
             <Clock size={22} weight="duotone" className="text-green-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-stone-900">{stats.upcoming}</p>
-            <p className="text-xs text-stone-500">Akan Datang</p>
+            <p className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{stats.upcoming}</p>
+            <p className="text-xs text-stone-500 dark:text-zinc-400">Akan Datang</p>
           </div>
         </div>
       </div>
@@ -492,22 +499,22 @@ export default function AdminSchedulesPage() {
           onShiftDay={(dayNum) => { setShiftTarget(dayNum); setShiftOpen(true) }}
         />
       ) : viewMode === 'calendar' ? (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-4">
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-4">
           <ScheduleCalendar schedules={schedules} onScheduleClick={openEdit} />
         </div>
       ) : (
         /* List View */
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-stone-200 hover:bg-transparent bg-stone-50">
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider whitespace-nowrap">Judul</TableHead>
-                  <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Game</TableHead>
-                  <TableHead className="text-stone-600 uppercase text-xs tracking-wider">Waktu</TableHead>
-                  <TableHead className="hidden sm:table-cell text-stone-600 uppercase text-xs tracking-wider">Venue</TableHead>
-                  <TableHead className="hidden md:table-cell text-stone-600 uppercase text-xs tracking-wider">Status</TableHead>
-                  <TableHead className="text-right text-stone-600 uppercase text-xs tracking-wider">Aksi</TableHead>
+                <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent bg-stone-50 dark:bg-zinc-800">
+                  <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider whitespace-nowrap">Judul</TableHead>
+                  <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Game</TableHead>
+                  <TableHead className="text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Waktu</TableHead>
+                  <TableHead className="hidden sm:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Venue</TableHead>
+                  <TableHead className="hidden md:table-cell text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Status</TableHead>
+                  <TableHead className="text-right text-stone-600 dark:text-zinc-400 uppercase text-xs tracking-wider">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -516,12 +523,12 @@ export default function AdminSchedulesPage() {
                   const gameConfig = gameSlug ? GAME_CONFIG[gameSlug] : null
 
                   return (
-                    <TableRow key={schedule.id} className="border-stone-100 hover:bg-red-50/50">
+                    <TableRow key={schedule.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50/50 dark:hover:bg-zinc-800/50">
                       <TableCell>
                         <div>
-                          <span className="font-medium text-stone-900">{schedule.title}</span>
+                          <span className="font-medium text-stone-900 dark:text-zinc-100">{schedule.title}</span>
                           {schedule.tournament && (
-                            <p className="text-xs text-stone-400">{schedule.tournament.name}</p>
+                            <p className="text-xs text-stone-400 dark:text-zinc-500">{schedule.tournament.name}</p>
                           )}
                         </div>
                       </TableCell>
@@ -529,13 +536,13 @@ export default function AdminSchedulesPage() {
                         {gameConfig ? (
                           <div className="flex items-center gap-1.5">
                             <img src={gameConfig.logo} alt="" className="h-5 w-5 object-contain" />
-                            <span className="text-xs text-stone-600">{schedule.game?.name}</span>
+                            <span className="text-xs text-stone-600 dark:text-zinc-400">{schedule.game?.name}</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-stone-400">-</span>
+                          <span className="text-xs text-stone-400 dark:text-zinc-500">-</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-stone-500 whitespace-nowrap">
+                      <TableCell className="text-sm text-stone-500 dark:text-zinc-400 whitespace-nowrap">
                         <div>
                           <p>{formatDateShort(schedule.scheduled_at)}</p>
                           <p className="text-xs">
@@ -544,7 +551,7 @@ export default function AdminSchedulesPage() {
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell text-sm text-stone-500">
+                      <TableCell className="hidden sm:table-cell text-sm text-stone-500 dark:text-zinc-400">
                         {schedule.venue ?? '-'}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
@@ -556,7 +563,7 @@ export default function AdminSchedulesPage() {
                             size="icon-xs"
                             variant="ghost"
                             onClick={() => openEdit(schedule)}
-                            className="text-stone-500 hover:text-stone-900"
+                            className="text-stone-500 hover:text-stone-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                           >
                             <PencilSimple size={14} />
                           </Button>
@@ -581,8 +588,8 @@ export default function AdminSchedulesPage() {
 
       {/* Pagination */}
       {meta && meta.total_pages > 1 && (
-        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs text-stone-500">
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-stone-500 dark:text-zinc-400">
             Menampilkan {(page - 1) * perPage + 1}-{Math.min(page * perPage, meta.total)} dari {meta.total} jadwal
           </p>
           <div className="flex items-center gap-1">
@@ -591,7 +598,7 @@ export default function AdminSchedulesPage() {
               variant="outline"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-300"
             >
               <CaretLeft size={14} />
             </Button>
@@ -602,14 +609,14 @@ export default function AdminSchedulesPage() {
                 const showGap = prev !== undefined && p - prev > 1
                 return (
                   <span key={p} className="flex items-center">
-                    {showGap && <span className="px-1 text-xs text-stone-400">...</span>}
+                    {showGap && <span className="px-1 text-xs text-stone-400 dark:text-zinc-500">...</span>}
                     <button
                       onClick={() => setPage(p)}
                       className={cn(
                         'h-8 w-8 rounded-md text-xs font-medium transition-colors',
                         p === page
-                          ? 'bg-porjar-red text-white'
-                          : 'text-stone-600 hover:bg-stone-100'
+                          ? 'bg-esi-red text-white'
+                          : 'text-stone-600 dark:text-zinc-300 hover:bg-stone-100 dark:hover:bg-zinc-800'
                       )}
                     >
                       {p}
@@ -622,7 +629,7 @@ export default function AdminSchedulesPage() {
               variant="outline"
               disabled={page >= (meta.total_pages ?? 1)}
               onClick={() => setPage((p) => p + 1)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-300"
             >
               <CaretRight size={14} />
             </Button>

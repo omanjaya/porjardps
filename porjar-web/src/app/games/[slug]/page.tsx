@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { api } from '@/lib/api'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -53,36 +52,36 @@ export default function GameDetailPage() {
 
   if (loading) {
     return (
-      <PublicLayout>
+      <>
         <div className="space-y-6">
-          <Skeleton className="h-48 w-full rounded-2xl bg-stone-100" />
+          <Skeleton className="h-48 w-full rounded-2xl bg-stone-100 dark:bg-zinc-800" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Skeleton className="h-24 rounded-xl bg-stone-100" />
-            <Skeleton className="h-24 rounded-xl bg-stone-100" />
+            <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
+            <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
           </div>
-          <Skeleton className="h-32 w-full rounded-xl bg-stone-100" />
-          <Skeleton className="h-32 w-full rounded-xl bg-stone-100" />
+          <Skeleton className="h-32 w-full rounded-xl bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-32 w-full rounded-xl bg-stone-100 dark:bg-zinc-800" />
         </div>
-      </PublicLayout>
+      </>
     )
   }
 
   if (!game) {
     return (
-      <PublicLayout>
+      <>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <GameController size={48} weight="duotone" className="mb-4 text-stone-400" />
-          <h2 className="text-lg font-semibold text-stone-900">Game tidak ditemukan</h2>
-          <p className="mt-1 text-sm text-stone-500">Game yang kamu cari tidak tersedia.</p>
+          <GameController size={48} weight="duotone" className="mb-4 text-stone-400 dark:text-zinc-500" />
+          <h2 className="text-lg font-semibold text-stone-900 dark:text-zinc-100">Game tidak ditemukan</h2>
+          <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">Game yang kamu cari tidak tersedia.</p>
           <Link
             href="/games"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-porjar-red hover:text-porjar-red-dark transition-colors"
+            className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-esi-red hover:text-esi-red-dark transition-colors"
           >
             <ArrowLeft size={14} />
             Kembali ke daftar game
           </Link>
         </div>
-      </PublicLayout>
+      </>
     )
   }
 
@@ -95,44 +94,44 @@ export default function GameDetailPage() {
   const totalMatches = tournaments.length
 
   return (
-    <PublicLayout>
+    <>
       <div ref={containerRef}>
       {/* Back link */}
       <Link
         href="/games"
-        className="anim-fade mb-4 inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-porjar-red transition-colors"
+        className="anim-fade mb-4 inline-flex items-center gap-1.5 text-sm text-stone-500 dark:text-zinc-400 hover:text-esi-red transition-colors"
       >
         <ArrowLeft size={14} />
         Semua Game
       </Link>
 
       {/* Hero Banner */}
-      <div className="anim-hero relative mb-8 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+      <div className="anim-hero relative mb-8 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
         {/* Background image */}
         <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage: `url(${gameBg})` }} />
-        <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/70" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white dark:from-zinc-900 via-white/95 dark:via-zinc-900/95 to-white/70 dark:to-zinc-900/70" />
         {/* Red top bar */}
-        <div className="absolute inset-x-0 top-0 h-1 bg-porjar-red" />
+        <div className="absolute inset-x-0 top-0 h-1 bg-esi-red" />
 
         <div className="relative z-10 flex flex-col items-center gap-4 p-6 md:flex-row md:items-start md:gap-6 md:p-8">
           {/* Game Logo */}
-          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white border border-stone-200 shadow-sm">
+          <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 shadow-sm">
             <Image src={gameLogo} alt={game.name} width={64} height={64} className="h-16 w-16 object-contain" />
           </div>
 
           {/* Game Info */}
           <div className="flex-1 text-center md:text-left">
-            <h1 className="text-2xl font-bold text-stone-900 md:text-3xl">{game.name}</h1>
+            <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100 md:text-3xl">{game.name}</h1>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 md:justify-start">
-              <span className="inline-flex items-center rounded-full border border-porjar-red/20 bg-red-50 px-3 py-1 text-xs font-semibold text-porjar-red">
+              <span className="inline-flex items-center rounded-full border border-esi-red/20 bg-red-50 dark:bg-red-950 px-3 py-1 text-xs font-semibold text-esi-red">
                 {game.game_type === 'bracket' ? 'Bracket' : 'Battle Royale'}
               </span>
-              <span className="inline-flex items-center gap-1 text-sm text-stone-500">
+              <span className="inline-flex items-center gap-1 text-sm text-stone-500 dark:text-zinc-400">
                 <Users size={14} weight="duotone" />
                 {game.min_team_members}-{game.max_team_members} pemain
               </span>
               {game.max_substitutes > 0 && (
-                <span className="text-sm text-stone-400">
+                <span className="text-sm text-stone-400 dark:text-zinc-500">
                   +{game.max_substitutes} cadangan
                 </span>
               )}
@@ -143,28 +142,28 @@ export default function GameDetailPage() {
 
       {/* Stats Overview */}
       <div className="anim-section mb-8 grid gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50">
-            <Users size={24} weight="duotone" className="text-porjar-red" />
+        <div className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950">
+            <Users size={24} weight="duotone" className="text-esi-red" />
           </div>
           <div>
-            <p className="text-2xl font-bold tabular-nums text-stone-900">{totalTeams}</p>
-            <p className="text-sm text-stone-500">Total Tim Terdaftar</p>
+            <p className="text-2xl font-bold tabular-nums text-stone-900 dark:text-zinc-100">{totalTeams}</p>
+            <p className="text-sm text-stone-500 dark:text-zinc-400">Total Tim Terdaftar</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50">
-            <Trophy size={24} weight="duotone" className="text-porjar-red" />
+        <div className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 dark:bg-red-950">
+            <Trophy size={24} weight="duotone" className="text-esi-red" />
           </div>
           <div>
-            <p className="text-2xl font-bold tabular-nums text-stone-900">{totalMatches}</p>
-            <p className="text-sm text-stone-500">Turnamen</p>
+            <p className="text-2xl font-bold tabular-nums text-stone-900 dark:text-zinc-100">{totalMatches}</p>
+            <p className="text-sm text-stone-500 dark:text-zinc-400">Turnamen</p>
           </div>
         </div>
       </div>
 
       {/* Tournaments List */}
-      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500">
+      <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
         Turnamen ({tournaments.length})
       </h2>
 
@@ -179,19 +178,19 @@ export default function GameDetailPage() {
           {tournaments.map((tournament) => (
             <div
               key={tournament.id}
-              className="anim-list-item rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition-colors hover:border-stone-300"
+              className="anim-list-item rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm transition-colors hover:border-stone-300 dark:hover:border-zinc-600"
             >
               {/* Red left border accent based on status */}
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 {/* Left: Info */}
-                <div className="min-w-0 flex-1 border-l-4 border-porjar-red pl-4">
+                <div className="min-w-0 flex-1 border-l-4 border-esi-red pl-4">
                   <div className="flex items-center gap-2.5">
-                    <h3 className="text-base font-semibold text-stone-900">{tournament.name}</h3>
+                    <h3 className="text-base font-semibold text-stone-900 dark:text-zinc-100">{tournament.name}</h3>
                     <StatusBadge status={tournament.status} />
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-stone-500">
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-stone-500 dark:text-zinc-400">
                     {/* Format badge */}
-                    <span className="inline-flex items-center rounded-md bg-stone-100 px-2 py-0.5 font-medium text-stone-700">
+                    <span className="inline-flex items-center rounded-md bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 font-medium text-stone-700 dark:text-zinc-300">
                       {tournament.format.replace(/_/g, ' ')}
                     </span>
                     <span className="font-medium">BO{tournament.best_of}</span>
@@ -229,7 +228,7 @@ export default function GameDetailPage() {
                   {game.game_type === 'bracket' && (
                     <Link
                       href={`/tournaments/${tournament.id}/bracket`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-porjar-red px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-porjar-red-dark"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-esi-red px-3.5 py-2 text-xs font-semibold text-white transition-colors hover:bg-esi-red-dark"
                     >
                       <TreeStructure size={14} weight="duotone" />
                       Lihat Bracket
@@ -237,7 +236,7 @@ export default function GameDetailPage() {
                   )}
                   <Link
                     href={`/tournaments/${tournament.id}/standings`}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3.5 py-2 text-xs font-semibold text-stone-700 dark:text-zinc-300 transition-colors hover:bg-stone-50 dark:bg-zinc-800/50 hover:text-stone-900 dark:text-zinc-100"
                   >
                     <ChartBar size={14} weight="duotone" />
                     Lihat Klasemen
@@ -249,6 +248,6 @@ export default function GameDetailPage() {
         </div>
       )}
       </div>
-    </PublicLayout>
+    </>
   )
 }

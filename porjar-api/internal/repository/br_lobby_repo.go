@@ -25,11 +25,11 @@ func NewBRLobbyRepo(db *pgxpool.Pool) model.BRLobbyRepository {
 func (r *brLobbyRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.BRLobby, error) {
 	l := &model.BRLobby{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, room_id, room_password,
-		        status, scheduled_at, started_at, completed_at
+		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),
+		        COALESCE(map_names, '{}'), room_id, room_password, status, scheduled_at, started_at, completed_at
 		 FROM br_lobbies WHERE id = $1`, id).
-		Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber,
-			&l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt)
+		Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber, &l.NumMaps,
+			&l.MapNames, &l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -40,11 +40,19 @@ func (r *brLobbyRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.BRLobb
 }
 
 func (r *brLobbyRepo) Create(ctx context.Context, l *model.BRLobby) error {
+	numMaps := l.NumMaps
+	if numMaps < 1 {
+		numMaps = 1
+	}
+	mapNames := l.MapNames
+	if mapNames == nil {
+		mapNames = []string{}
+	}
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO br_lobbies (id, tournament_id, lobby_name, lobby_number, day_number,
+		`INSERT INTO br_lobbies (id, tournament_id, lobby_name, lobby_number, day_number, num_maps, map_names,
 		        room_id, room_password, status, scheduled_at, started_at, completed_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-		l.ID, l.TournamentID, l.LobbyName, l.LobbyNumber, l.DayNumber,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		l.ID, l.TournamentID, l.LobbyName, l.LobbyNumber, l.DayNumber, numMaps, mapNames,
 		l.RoomID, l.RoomPassword, l.Status, l.ScheduledAt, l.StartedAt, l.CompletedAt)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
@@ -53,12 +61,20 @@ func (r *brLobbyRepo) Create(ctx context.Context, l *model.BRLobby) error {
 }
 
 func (r *brLobbyRepo) Update(ctx context.Context, l *model.BRLobby) error {
+	numMaps := l.NumMaps
+	if numMaps < 1 {
+		numMaps = 1
+	}
+	mapNames := l.MapNames
+	if mapNames == nil {
+		mapNames = []string{}
+	}
 	_, err := r.db.Exec(ctx,
-		`UPDATE br_lobbies SET lobby_name = $2, lobby_number = $3, day_number = $4,
-		        room_id = $5, room_password = $6, status = $7, scheduled_at = $8,
-		        started_at = $9, completed_at = $10
+		`UPDATE br_lobbies SET lobby_name = $2, lobby_number = $3, day_number = $4, num_maps = $5,
+		        map_names = $6, room_id = $7, room_password = $8, status = $9, scheduled_at = $10,
+		        started_at = $11, completed_at = $12
 		 WHERE id = $1`,
-		l.ID, l.LobbyName, l.LobbyNumber, l.DayNumber,
+		l.ID, l.LobbyName, l.LobbyNumber, l.DayNumber, numMaps, mapNames,
 		l.RoomID, l.RoomPassword, l.Status, l.ScheduledAt, l.StartedAt, l.CompletedAt)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
@@ -76,10 +92,11 @@ func (r *brLobbyRepo) Delete(ctx context.Context, id uuid.UUID) error {
 
 func (r *brLobbyRepo) ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*model.BRLobby, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, room_id, room_password,
-		        status, scheduled_at, started_at, completed_at
+		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),
+		        COALESCE(map_names, '{}'), room_id, room_password, status, scheduled_at, started_at, completed_at
 		 FROM br_lobbies WHERE tournament_id = $1
-		 ORDER BY day_number ASC, lobby_number ASC`, tournamentID)
+		 ORDER BY day_number ASC, lobby_number ASC
+		 LIMIT 500`, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournament: %w", err)
 	}
@@ -88,8 +105,8 @@ func (r *brLobbyRepo) ListByTournament(ctx context.Context, tournamentID uuid.UU
 	var lobbies []*model.BRLobby
 	for rows.Next() {
 		l := &model.BRLobby{}
-		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber,
-			&l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber, &l.NumMaps,
+			&l.MapNames, &l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
 			return nil, fmt.Errorf("ListByTournament scan: %w", err)
 		}
 		lobbies = append(lobbies, l)
@@ -112,8 +129,8 @@ func (r *brLobbyRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status str
 
 func (r *brLobbyRepo) ListScheduledBefore(ctx context.Context, before time.Time) ([]*model.BRLobby, error) {
 	rows, err := r.db.Query(ctx,
-		`SELECT id, tournament_id, lobby_name, lobby_number, day_number,
-		        room_id, room_password, status, scheduled_at, started_at, completed_at
+		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),
+		        COALESCE(map_names, '{}'), room_id, room_password, status, scheduled_at, started_at, completed_at
 		 FROM br_lobbies
 		 WHERE status = 'scheduled' AND scheduled_at IS NOT NULL AND scheduled_at <= $1`, before)
 	if err != nil {
@@ -124,9 +141,34 @@ func (r *brLobbyRepo) ListScheduledBefore(ctx context.Context, before time.Time)
 	var lobbies []*model.BRLobby
 	for rows.Next() {
 		l := &model.BRLobby{}
-		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber,
-			&l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
+		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber, &l.NumMaps,
+			&l.MapNames, &l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
 			return nil, fmt.Errorf("ListScheduledBefore scan: %w", err)
+		}
+		lobbies = append(lobbies, l)
+	}
+	return lobbies, nil
+}
+
+func (r *brLobbyRepo) FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BRLobby, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),
+		        COALESCE(map_names, '{}'), room_id, room_password, status, scheduled_at, started_at, completed_at
+		 FROM br_lobbies
+		 WHERE status = 'live'
+		 ORDER BY started_at DESC NULLS LAST
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("FindLiveAcrossAllTournaments: %w", err)
+	}
+	defer rows.Close()
+
+	var lobbies []*model.BRLobby
+	for rows.Next() {
+		l := &model.BRLobby{}
+		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber, &l.NumMaps,
+			&l.MapNames, &l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
+			return nil, fmt.Errorf("FindLiveAcrossAllTournaments scan: %w", err)
 		}
 		lobbies = append(lobbies, l)
 	}

@@ -55,13 +55,13 @@ export function InstallPrompt() {
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md animate-in slide-in-from-bottom-4 duration-300">
-      <div className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white/95 p-4 shadow-xl backdrop-blur-sm">
+      <div className="flex items-center gap-3 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-900/95 p-4 shadow-xl backdrop-blur-sm">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50">
-          <DownloadSimple size={22} weight="duotone" className="text-porjar-red" />
+          <DownloadSimple size={22} weight="duotone" className="text-esi-red" />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-stone-800">
-            Pasang PORJAR di HP kamu
+            Pasang ESI di HP kamu
           </p>
           <p className="text-xs text-stone-500">
             Akses lebih cepat tanpa buka browser
@@ -69,7 +69,7 @@ export function InstallPrompt() {
         </div>
         <button
           onClick={handleInstall}
-          className="shrink-0 rounded-lg bg-porjar-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+          className="shrink-0 rounded-lg bg-esi-red px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700"
         >
           Install
         </button>

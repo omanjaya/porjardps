@@ -68,11 +68,11 @@ export function CountdownTimer({
   return (
     <div className="flex flex-col items-center gap-1">
       {label && (
-        <span className="text-sm font-medium text-stone-500">{label}</span>
+        <span className="text-sm font-medium text-stone-500 dark:text-zinc-400">{label}</span>
       )}
       <span
         className={cn(
-          'font-mono font-bold tabular-nums tracking-wider text-stone-900',
+          'font-mono font-bold tabular-nums tracking-wider text-stone-900 dark:text-zinc-100',
           sizeClasses[size]
         )}
       >

@@ -191,15 +191,15 @@ export function ImportUploadSection() {
   const allInvalid = validations.length > 0 && validCount === 0
 
   return (
-    <div className="rounded-xl border border-porjar-border bg-white shadow-sm">
-      <div className="border-b border-porjar-border p-5">
+    <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 shadow-sm">
+      <div className="border-b border-esi-border p-5">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-porjar-text">
-              <FileCsv size={22} weight="bold" className="text-porjar-red" />
+            <h2 className="flex items-center gap-2 text-lg font-bold text-esi-text">
+              <FileCsv size={22} weight="bold" className="text-esi-red" />
               Import Peserta (CSV)
             </h2>
-            <p className="mt-1 text-sm text-porjar-muted">
+            <p className="mt-1 text-sm text-esi-muted">
               Upload file CSV dengan data peserta, tim, dan sekolah sekaligus
             </p>
           </div>
@@ -207,7 +207,7 @@ export function ImportUploadSection() {
             size="sm"
             variant="outline"
             onClick={downloadTemplate}
-            className="gap-1.5 border-porjar-border text-porjar-muted hover:bg-porjar-bg hover:text-porjar-text"
+            className="gap-1.5 border-esi-border text-esi-muted hover:bg-esi-bg hover:text-esi-text"
           >
             <DownloadSimple size={14} />
             Download Template
@@ -223,8 +223,8 @@ export function ImportUploadSection() {
                 key={h}
                 className={`rounded-md border px-2 py-0.5 text-[10px] font-medium ${
                   info?.required
-                    ? 'border-porjar-red/20 bg-porjar-red/5 text-porjar-red'
-                    : 'border-porjar-border bg-porjar-bg text-porjar-muted'
+                    ? 'border-esi-red/20 bg-esi-red/5 text-esi-red'
+                    : 'border-esi-border bg-esi-bg text-esi-muted'
                 }`}
               >
                 {h}{info?.required ? '*' : ''}
@@ -233,7 +233,7 @@ export function ImportUploadSection() {
           })}
           <button
             onClick={() => setShowColumnInfo((v) => !v)}
-            className="ml-1 rounded-md p-0.5 text-porjar-muted transition-colors hover:text-porjar-text"
+            className="ml-1 rounded-md p-0.5 text-esi-muted transition-colors hover:text-esi-text"
             title="Lihat keterangan kolom"
           >
             <Info size={14} weight="bold" />
@@ -242,20 +242,20 @@ export function ImportUploadSection() {
 
         {/* Column descriptions table */}
         {showColumnInfo && (
-          <div className="mt-3 overflow-hidden rounded-lg border border-porjar-border">
+          <div className="mt-3 overflow-hidden rounded-lg border border-esi-border">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-porjar-bg">
-                  <th className="px-3 py-2 text-left font-semibold text-porjar-text">Kolom</th>
-                  <th className="px-3 py-2 text-center font-semibold text-porjar-text">Wajib</th>
-                  <th className="px-3 py-2 text-left font-semibold text-porjar-text">Keterangan</th>
+                <tr className="bg-esi-bg">
+                  <th className="px-3 py-2 text-left font-semibold text-esi-text">Kolom</th>
+                  <th className="px-3 py-2 text-center font-semibold text-esi-text">Wajib</th>
+                  <th className="px-3 py-2 text-left font-semibold text-esi-text">Keterangan</th>
                 </tr>
               </thead>
               <tbody>
                 {COLUMN_DESCRIPTIONS.map((col) => (
-                  <tr key={col.col} className="border-t border-porjar-border">
+                  <tr key={col.col} className="border-t border-esi-border">
                     <td className="px-3 py-1.5">
-                      <code className="rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-mono text-porjar-red">
+                      <code className="rounded bg-stone-100 dark:bg-zinc-800 px-1.5 py-0.5 text-[11px] font-mono text-esi-red">
                         {col.col}
                       </code>
                     </td>
@@ -265,12 +265,12 @@ export function ImportUploadSection() {
                           Ya
                         </span>
                       ) : (
-                        <span className="inline-flex items-center justify-center rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500">
+                        <span className="inline-flex items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-stone-500 dark:text-zinc-400">
                           Tidak
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 text-porjar-muted">{col.desc}</td>
+                    <td className="px-3 py-1.5 text-esi-muted">{col.desc}</td>
                   </tr>
                 ))}
               </tbody>
@@ -289,23 +289,23 @@ export function ImportUploadSection() {
             onClick={() => fileInputRef.current?.click()}
             className={`cursor-pointer rounded-xl border-2 border-dashed p-10 text-center transition-all ${
               dragOver
-                ? 'border-porjar-red bg-red-50/50 shadow-inner'
-                : 'border-porjar-border bg-porjar-bg hover:border-stone-400 hover:bg-stone-100'
+                ? 'border-esi-red bg-red-50 dark:bg-red-950/30 shadow-inner'
+                : 'border-esi-border bg-esi-bg hover:border-stone-400 hover:bg-stone-100 dark:hover:bg-zinc-700 dark:bg-zinc-800'
             }`}
           >
             <div className={`mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl transition-colors ${
-              dragOver ? 'bg-porjar-red/10' : 'bg-stone-200/70'
+              dragOver ? 'bg-esi-red/10' : 'bg-stone-200/70'
             }`}>
-              <FileCsv size={32} weight="duotone" className={dragOver ? 'text-porjar-red' : 'text-stone-400'} />
+              <FileCsv size={32} weight="duotone" className={dragOver ? 'text-esi-red' : 'text-stone-400 dark:text-zinc-500'} />
             </div>
-            <p className="text-sm font-medium text-porjar-text">
-              Drag & drop file CSV, atau <span className="text-porjar-red underline underline-offset-2">klik untuk browse</span>
+            <p className="text-sm font-medium text-esi-text">
+              Drag & drop file CSV, atau <span className="text-esi-red underline underline-offset-2">klik untuk browse</span>
             </p>
-            <div className="mt-2 flex items-center justify-center gap-3 text-xs text-porjar-muted">
-              <span className="inline-flex items-center gap-1 rounded-full border border-porjar-border bg-white px-2.5 py-0.5">
+            <div className="mt-2 flex items-center justify-center gap-3 text-xs text-esi-muted">
+              <span className="inline-flex items-center gap-1 rounded-full border border-esi-border bg-white dark:bg-zinc-900 px-2.5 py-0.5">
                 Format: <strong>.csv</strong>
               </span>
-              <span className="inline-flex items-center gap-1 rounded-full border border-porjar-border bg-white px-2.5 py-0.5">
+              <span className="inline-flex items-center gap-1 rounded-full border border-esi-border bg-white dark:bg-zinc-900 px-2.5 py-0.5">
                 Maks: <strong>5 MB</strong>
               </span>
             </div>
@@ -321,12 +321,12 @@ export function ImportUploadSection() {
 
         {/* File Info */}
         {file && (
-          <div className="flex items-center gap-3 rounded-lg border border-porjar-border bg-porjar-bg p-3">
+          <div className="flex items-center gap-3 rounded-lg border border-esi-border bg-esi-bg p-3">
             <FileText size={20} className="text-blue-500" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-porjar-text">{file.name}</p>
+              <p className="truncate text-sm font-medium text-esi-text">{file.name}</p>
               <div className="mt-0.5 flex items-center gap-3 text-xs">
-                <span className="text-porjar-muted">
+                <span className="text-esi-muted">
                   {preview?.rows.length ?? 0} baris data &middot; {(file.size / 1024).toFixed(1)} KB
                 </span>
                 {validations.length > 0 && (
@@ -345,7 +345,7 @@ export function ImportUploadSection() {
             </div>
             <button
               onClick={clearFile}
-              className="rounded-md p-1 text-porjar-muted transition-colors hover:bg-stone-200 hover:text-porjar-text"
+              className="rounded-md p-1 text-esi-muted transition-colors hover:bg-stone-200 hover:text-esi-text"
             >
               <X size={16} />
             </button>
@@ -354,7 +354,7 @@ export function ImportUploadSection() {
 
         {/* Preview Table */}
         {preview && preview.rows.length > 0 && (
-          <div className="max-h-80 overflow-auto rounded-lg border border-porjar-border">
+          <div className="max-h-80 overflow-auto rounded-lg border border-esi-border">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 z-10 bg-stone-800 text-white shadow-sm">
                 <tr>
@@ -376,11 +376,11 @@ export function ImportUploadSection() {
                       key={idx}
                       className={`border-t transition-colors ${
                         isValid
-                          ? 'border-porjar-border bg-white hover:bg-green-50/30'
-                          : 'border-red-200 bg-red-50/60 hover:bg-red-50'
+                          ? 'border-esi-border bg-white dark:bg-zinc-900 hover:bg-green-50 dark:bg-green-950/30'
+                          : 'border-red-200 bg-red-50 dark:bg-red-950/30 hover:bg-red-50 dark:bg-red-950/30'
                       }`}
                     >
-                      <td className="px-3 py-1.5 font-mono text-porjar-muted">{idx + 1}</td>
+                      <td className="px-3 py-1.5 font-mono text-esi-muted">{idx + 1}</td>
                       <td className="px-3 py-1.5">
                         {isValid ? (
                           <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-700">
@@ -400,13 +400,13 @@ export function ImportUploadSection() {
                       {preview.headers.map((h) => (
                         <td
                           key={h}
-                          className={`max-w-[180px] px-3 py-1.5 ${isValid ? 'text-porjar-text' : 'text-red-800'}`}
+                          className={`max-w-[180px] px-3 py-1.5 ${isValid ? 'text-esi-text' : 'text-red-800'}`}
                           title={row[h] || undefined}
                         >
                           {row[h] ? (
                             <span className="block truncate">{truncateText(row[h], 30)}</span>
                           ) : (
-                            <span className="text-stone-300">-</span>
+                            <span className="text-stone-300 dark:text-zinc-600">-</span>
                           )}
                         </td>
                       ))}
@@ -416,7 +416,7 @@ export function ImportUploadSection() {
               </tbody>
             </table>
             {preview.rows.length > 50 && (
-              <div className="bg-porjar-bg px-3 py-2 text-center text-xs text-porjar-muted">
+              <div className="bg-esi-bg px-3 py-2 text-center text-xs text-esi-muted">
                 ... dan {preview.rows.length - 50} baris lainnya
               </div>
             )}
@@ -425,7 +425,7 @@ export function ImportUploadSection() {
 
         {/* Error details for invalid rows */}
         {validations.some((v) => !v.valid) && (
-          <div className="max-h-40 overflow-auto rounded-lg border border-red-200 bg-red-50 p-3">
+          <div className="max-h-40 overflow-auto rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 p-3">
             <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-red-700">
               <WarningCircle size={14} weight="fill" />
               Detail Error ({invalidCount} baris):
@@ -451,7 +451,7 @@ export function ImportUploadSection() {
               className={`gap-2 text-white ${
                 allInvalid
                   ? 'bg-stone-400 cursor-not-allowed'
-                  : 'bg-porjar-red hover:bg-porjar-red-dark'
+                  : 'bg-esi-red hover:bg-esi-red-dark'
               }`}
             >
               {importing ? (
@@ -483,24 +483,24 @@ export function ImportUploadSection() {
 
         {/* Result Summary */}
         {result && (
-          <div className="rounded-lg border border-porjar-border bg-porjar-bg p-5">
-            <h3 className="mb-3 text-sm font-bold text-porjar-text">Hasil Import</h3>
+          <div className="rounded-lg border border-esi-border bg-esi-bg p-5">
+            <h3 className="mb-3 text-sm font-bold text-esi-text">Hasil Import</h3>
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle size={18} className="text-green-500" />
-                <span className="text-porjar-text">
+                <span className="text-esi-text">
                   <span className="font-bold text-green-600">{result.users_imported}</span> user diimport
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-blue-500" />
-                <span className="text-porjar-text">
+                <span className="text-esi-text">
                   <span className="font-bold text-blue-600">{result.teams_created}</span> tim dibuat
                 </span>
               </div>
               <div className="flex items-center gap-2">
                 <WarningCircle size={18} className="text-amber-500" />
-                <span className="text-porjar-text">
+                <span className="text-esi-text">
                   <span className="font-bold text-amber-600">{result.skipped}</span> dilewati
                 </span>
               </div>
@@ -511,7 +511,7 @@ export function ImportUploadSection() {
                 <p className="mb-1 text-xs font-medium text-red-600">Errors:</p>
                 <div className="space-y-1">
                   {result.errors.map((err, i) => (
-                    <p key={i} className="text-xs text-porjar-muted">{err}</p>
+                    <p key={i} className="text-xs text-esi-muted">{err}</p>
                   ))}
                 </div>
               </div>
@@ -521,7 +521,7 @@ export function ImportUploadSection() {
               size="sm"
               variant="outline"
               onClick={clearFile}
-              className="mt-4 border-porjar-border text-porjar-muted hover:bg-white"
+              className="mt-4 border-esi-border text-esi-muted hover:bg-white dark:bg-zinc-900"
             >
               Import Lagi
             </Button>

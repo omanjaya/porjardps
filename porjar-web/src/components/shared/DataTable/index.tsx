@@ -39,6 +39,8 @@ interface DataTableProps<T> {
     className: string
   }>
   onRowClick?: (item: T) => void
+  /** Maximum rows to render at once when no server-side pagination is provided. Default 50. */
+  maxDisplayRows?: number
 }
 
 type SortDirection = 'asc' | 'desc'
@@ -52,6 +54,7 @@ export function DataTable<T extends Record<string, unknown>>({
   emptyMessage = 'Tidak ada data',
   emptyIcon: EmptyIcon,
   onRowClick,
+  maxDisplayRows = 50,
 }: DataTableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDirection>('asc')
@@ -66,9 +69,7 @@ export function DataTable<T extends Record<string, unknown>>({
   }
 
   const sortedData = useMemo(() => {
-    if (!sortKey) return data
-
-    return [...data].sort((a, b) => {
+    const sorted = !sortKey ? data : [...data].sort((a, b) => {
       const aVal = a[sortKey]
       const bVal = b[sortKey]
 
@@ -87,18 +88,24 @@ export function DataTable<T extends Record<string, unknown>>({
 
       return sortDir === 'desc' ? -result : result
     })
-  }, [data, sortKey, sortDir])
+
+    // When no server-side pagination is provided, cap rendered rows to avoid DOM bloat
+    if (!pagination && sorted.length > maxDisplayRows) {
+      return sorted.slice(0, maxDisplayRows)
+    }
+    return sorted
+  }, [data, sortKey, sortDir, pagination, maxDisplayRows])
 
   // Loading skeleton
   if (loading) {
     return (
-      <div className="rounded-lg border border-stone-200 overflow-hidden">
+      <div className="rounded-lg border border-stone-200 dark:border-zinc-700 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-stone-200 hover:bg-transparent">
+              <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
                 {columns.map((col) => (
-                  <TableHead key={col.key} className="text-stone-600 bg-stone-50 whitespace-nowrap">
+                  <TableHead key={col.key} className="text-stone-600 dark:text-zinc-400 bg-stone-50 dark:bg-zinc-800 whitespace-nowrap">
                     {col.header}
                   </TableHead>
                 ))}
@@ -106,10 +113,10 @@ export function DataTable<T extends Record<string, unknown>>({
             </TableHeader>
             <TableBody>
               {Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i} className="border-stone-100">
+                <TableRow key={i} className="border-stone-100 dark:border-zinc-800">
                   {columns.map((col) => (
                     <TableCell key={col.key}>
-                      <Skeleton className="h-4 w-full bg-stone-200/50" />
+                      <Skeleton className="h-4 w-full bg-stone-200/50 dark:bg-zinc-700/50" />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -124,13 +131,13 @@ export function DataTable<T extends Record<string, unknown>>({
   // Empty state
   if (data.length === 0) {
     return (
-      <div className="rounded-lg border border-stone-200 overflow-hidden">
+      <div className="rounded-lg border border-stone-200 dark:border-zinc-700 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-stone-200 hover:bg-transparent">
+              <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
                 {columns.map((col) => (
-                  <TableHead key={col.key} className="text-stone-600 bg-stone-50 whitespace-nowrap">
+                  <TableHead key={col.key} className="text-stone-600 dark:text-zinc-400 bg-stone-50 dark:bg-zinc-800 whitespace-nowrap">
                     {col.header}
                   </TableHead>
                 ))}
@@ -152,27 +159,28 @@ export function DataTable<T extends Record<string, unknown>>({
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-stone-200 overflow-hidden">
+      <div className="rounded-lg border border-stone-200 dark:border-zinc-700 overflow-hidden">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="border-stone-200 hover:bg-transparent">
+              <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
                 {columns.map((col) => (
                   <TableHead
                     key={col.key}
-                    className={`text-stone-600 bg-stone-50 whitespace-nowrap ${col.className ?? ''}`}
+                    className={`text-stone-600 dark:text-zinc-400 bg-stone-50 dark:bg-zinc-800 whitespace-nowrap ${col.className ?? ''}`}
                   >
                     {col.sortable ? (
                       <button
                         type="button"
                         onClick={() => handleSort(col.key)}
-                        className="inline-flex items-center gap-1 hover:text-stone-900 transition-colors"
+                        aria-label={`Sort by ${col.header}`}
+                        className="inline-flex items-center gap-1 hover:text-stone-900 dark:hover:text-zinc-100 transition-colors"
                       >
                         {col.header}
                         <ArrowsDownUp
                           size={14}
                           weight="bold"
-                          className={sortKey === col.key ? 'text-porjar-red' : 'text-stone-400'}
+                          className={sortKey === col.key ? 'text-esi-red' : 'text-stone-400'}
                         />
                       </button>
                     ) : (
@@ -187,14 +195,14 @@ export function DataTable<T extends Record<string, unknown>>({
                 <TableRow
                   key={idx}
                   onClick={onRowClick ? () => onRowClick(item) : undefined}
-                  className={`border-stone-100 transition-colors hover:bg-red-50/40 ${
+                  className={`border-stone-100 dark:border-zinc-800 transition-colors hover:bg-red-50/40 dark:hover:bg-red-950/20 ${
                     onRowClick ? 'cursor-pointer' : ''
                   }`}
                 >
                   {columns.map((col) => (
                     <TableCell
                       key={col.key}
-                      className={`text-stone-800 ${col.className ?? ''}`}
+                      className={`text-stone-800 dark:text-zinc-200 ${col.className ?? ''}`}
                     >
                       {col.render ? col.render(item) : (item[col.key] as React.ReactNode)}
                     </TableCell>
@@ -218,7 +226,7 @@ export function DataTable<T extends Record<string, unknown>>({
               size="sm"
               disabled={pagination.page <= 1}
               onClick={() => onPageChange?.(pagination.page - 1)}
-              className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900 disabled:opacity-40"
+              className="border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800 hover:text-stone-900 dark:hover:text-zinc-100 disabled:opacity-40"
             >
               Sebelumnya
             </Button>
@@ -227,7 +235,7 @@ export function DataTable<T extends Record<string, unknown>>({
               size="sm"
               disabled={pagination.page >= pagination.total_pages}
               onClick={() => onPageChange?.(pagination.page + 1)}
-              className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900 disabled:opacity-40"
+              className="border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800 hover:text-stone-900 dark:hover:text-zinc-100 disabled:opacity-40"
             >
               Selanjutnya
             </Button>

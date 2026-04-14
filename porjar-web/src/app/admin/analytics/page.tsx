@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { useAuthStore } from '@/store/auth-store'
 import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -12,14 +13,31 @@ import {
   Sword,
   Lightning,
 } from '@phosphor-icons/react'
-import {
-  RegistrationChart,
-  GameDistributionChart,
-  TournamentProgressChart,
-  MatchHeatmap,
-  SchoolParticipationChart,
-} from '@/components/modules/admin/AnalyticsCharts'
-import { StatTrend } from '@/components/modules/admin/StatTrend'
+
+const RegistrationChart = dynamic(
+  () => import('@/components/modules/admin/AnalyticsCharts').then(mod => ({ default: mod.RegistrationChart })),
+  { ssr: false }
+)
+const GameDistributionChart = dynamic(
+  () => import('@/components/modules/admin/AnalyticsCharts').then(mod => ({ default: mod.GameDistributionChart })),
+  { ssr: false }
+)
+const TournamentProgressChart = dynamic(
+  () => import('@/components/modules/admin/AnalyticsCharts').then(mod => ({ default: mod.TournamentProgressChart })),
+  { ssr: false }
+)
+const MatchHeatmap = dynamic(
+  () => import('@/components/modules/admin/AnalyticsCharts').then(mod => ({ default: mod.MatchHeatmap })),
+  { ssr: false }
+)
+const SchoolParticipationChart = dynamic(
+  () => import('@/components/modules/admin/AnalyticsCharts').then(mod => ({ default: mod.SchoolParticipationChart })),
+  { ssr: false }
+)
+const StatTrend = dynamic(
+  () => import('@/components/modules/admin/StatTrend').then(mod => ({ default: mod.StatTrend })),
+  { ssr: false }
+)
 
 // ═══════════════════════════════════════════════
 // Types
@@ -60,16 +78,16 @@ function generateSparkline(length: number, base: number): number[] {
 
 function ChartSkeleton({ className = 'h-80' }: { className?: string }) {
   return (
-    <div className={`rounded-xl border border-stone-200 bg-white shadow-sm p-4 sm:p-5 ${className}`}>
+    <div className={`rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-4 sm:p-5 ${className}`}>
       <Skeleton className="mb-4 h-4 w-40 bg-stone-200" />
-      <Skeleton className="h-full w-full rounded-lg bg-stone-100" />
+      <Skeleton className="h-full w-full rounded-lg bg-stone-100 dark:bg-zinc-800" />
     </div>
   )
 }
 
 function StatSkeleton() {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm px-5 py-4">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm px-5 py-4">
       <Skeleton className="mb-2 h-7 w-16 bg-stone-200" />
       <Skeleton className="mb-1 h-4 w-24 bg-stone-200" />
       <Skeleton className="h-3 w-12 bg-stone-200" />
@@ -105,6 +123,17 @@ export default function AdminAnalyticsPage() {
     loadAnalytics(range)
   }, [range, loadAnalytics])
 
+  // Memoize sparkline data so Math.random() isn't called on every render
+  const sparklines = useMemo(() => {
+    if (!data) return null
+    return {
+      players: generateSparkline(10, data.total_players),
+      teams: generateSparkline(10, data.total_teams),
+      matches: generateSparkline(10, data.total_matches),
+      tournaments: generateSparkline(10, data.active_tournaments),
+    }
+  }, [data])
+
   const dateRangeButtons: { label: string; value: DateRange }[] = [
     { label: '7 Hari', value: '7d' },
     { label: '30 Hari', value: '30d' },
@@ -115,17 +144,17 @@ export default function AdminAnalyticsPage() {
     <AdminLayout>
       <PageHeader
         title="Analitik"
-        description="Statistik dan visualisasi data PORJAR"
+        description="Statistik dan visualisasi data ESI Denpasar"
         actions={
-          <div className="flex items-center rounded-lg border border-stone-200 bg-stone-100 p-0.5">
+          <div className="flex items-center rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800 p-0.5">
             {dateRangeButtons.map((btn) => (
               <button
                 key={btn.value}
                 onClick={() => setRange(btn.value)}
                 className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                   range === btn.value
-                    ? 'bg-porjar-red text-white'
-                    : 'text-stone-500 hover:text-stone-900'
+                    ? 'bg-esi-red text-white'
+                    : 'text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100'
                 }`}
               >
                 {btn.label}
@@ -150,31 +179,31 @@ export default function AdminAnalyticsPage() {
               label="Total Pemain"
               value={data.total_players}
               trend={`+${Math.floor(data.total_players * 0.08)}%`}
-              sparklineData={generateSparkline(10, data.total_players)}
+              sparklineData={sparklines!.players}
             />
             <StatTrend
               label="Total Tim"
               value={data.total_teams}
               trend={`+${Math.floor(data.total_teams * 0.12)}%`}
-              sparklineData={generateSparkline(10, data.total_teams)}
+              sparklineData={sparklines!.teams}
             />
             <StatTrend
               label="Total Pertandingan"
               value={data.total_matches}
               trend={`+${Math.floor(data.total_matches * 0.05)}%`}
-              sparklineData={generateSparkline(10, data.total_matches)}
+              sparklineData={sparklines!.matches}
             />
             <StatTrend
               label="Turnamen Aktif"
               value={data.active_tournaments}
               trend={data.active_tournaments > 0 ? '+0%' : '0%'}
-              sparklineData={generateSparkline(10, data.active_tournaments)}
+              sparklineData={sparklines!.tournaments}
             />
           </>
         ) : (
-          <div className="col-span-full rounded-xl border border-stone-200 bg-white shadow-sm p-8 text-center">
-            <Trophy size={40} weight="duotone" className="mx-auto mb-3 text-stone-300" />
-            <p className="text-sm text-stone-500">Tidak dapat memuat data analitik</p>
+          <div className="col-span-full rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-8 text-center">
+            <Trophy size={40} weight="duotone" className="mx-auto mb-3 text-stone-300 dark:text-zinc-600" />
+            <p className="text-sm text-stone-500 dark:text-zinc-400">Tidak dapat memuat data analitik</p>
           </div>
         )}
       </div>

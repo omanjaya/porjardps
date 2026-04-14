@@ -2,10 +2,13 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
 
 type StandingsService struct {
@@ -14,6 +17,23 @@ type StandingsService struct {
 	lobbyRepo     model.BRLobbyRepository
 	bracketRepo   model.BracketRepository
 	penaltyRepo   model.BRPenaltyRepository
+	hub           *ws.Hub
+}
+
+func (s *StandingsService) SetHub(h *ws.Hub) { s.hub = h }
+
+func (s *StandingsService) broadcastStandingsUpdate(tournamentID uuid.UUID) {
+	if s.hub == nil {
+		return
+	}
+	payload, err := ws.NewBroadcastData("standings_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+	})
+	if err != nil {
+		slog.Error("failed to marshal standings broadcast", "error", err)
+		return
+	}
+	s.hub.BroadcastToRoom(fmt.Sprintf("tournament:%s", tournamentID.String()), payload)
 }
 
 func NewStandingsService(
@@ -41,7 +61,17 @@ func (s *StandingsService) GetByTournament(ctx context.Context, tournamentID uui
 	return standings, nil
 }
 
-// RecalculateBR aggregates all lobby results per team and updates standings
+// GetByTournamentWithTeams returns standings with nested team data for API responses
+func (s *StandingsService) GetByTournamentWithTeams(ctx context.Context, tournamentID uuid.UUID) ([]*model.StandingWithTeam, error) {
+	standings, err := s.standingsRepo.ListWithTeamsByTournament(ctx, tournamentID)
+	if err != nil {
+		return nil, apperror.Wrap(err, "list standings with teams")
+	}
+	return standings, nil
+}
+
+// RecalculateBR aggregates all lobby results per team and updates standings.
+// For multi-map lobbies, all maps within a lobby are summed and counted as one "match played".
 func (s *StandingsService) RecalculateBR(ctx context.Context, tournamentID uuid.UUID) error {
 	// Fetch all results for the tournament in a single query (avoids N+1 per lobby)
 	allResults, err := s.resultRepo.ListByTournament(ctx, tournamentID)
@@ -49,29 +79,30 @@ func (s *StandingsService) RecalculateBR(ctx context.Context, tournamentID uuid.
 		return apperror.Wrap(err, "list results for tournament")
 	}
 
-	// Aggregate results per team
+	// Aggregate results per team.
+	// Track distinct lobby IDs so matchesPlayed = number of lobbies, not individual map results.
 	type teamAgg struct {
 		totalPoints          int
 		totalKills           int
 		totalPlacementPoints int
-		matchesPlayed        int
 		bestPlacement        int
 		sumPlacement         int
+		lobbies              map[uuid.UUID]bool
 	}
 	agg := make(map[uuid.UUID]*teamAgg)
 
 	for _, r := range allResults {
 		a, ok := agg[r.TeamID]
 		if !ok {
-			a = &teamAgg{bestPlacement: r.Placement}
+			a = &teamAgg{bestPlacement: r.Placement, lobbies: make(map[uuid.UUID]bool)}
 			agg[r.TeamID] = a
 		}
 		a.totalPoints += r.TotalPoints
 		a.totalKills += r.Kills
 		a.totalPlacementPoints += r.PlacementPoints
-		a.matchesPlayed++
+		a.lobbies[r.LobbyID] = true
 		a.sumPlacement += r.Placement
-		if r.Placement < a.bestPlacement {
+		if r.Placement < a.bestPlacement || a.bestPlacement == 0 {
 			a.bestPlacement = r.Placement
 		}
 	}
@@ -93,14 +124,18 @@ func (s *StandingsService) RecalculateBR(ctx context.Context, tournamentID uuid.
 	// Upsert standings for each team
 	var standings []*model.Standing
 	for teamID, a := range agg {
+		matchesPlayed := len(a.lobbies)
 		bestP := a.bestPlacement
-		avgP := float64(a.sumPlacement) / float64(a.matchesPlayed)
+		avgP := 0.0
+		if matchesPlayed > 0 {
+			avgP = float64(a.sumPlacement) / float64(matchesPlayed)
+		}
 
 		standing := &model.Standing{
 			ID:                   uuid.New(),
 			TournamentID:         tournamentID,
 			TeamID:               teamID,
-			MatchesPlayed:        a.matchesPlayed,
+			MatchesPlayed:        matchesPlayed,
 			TotalPoints:          a.totalPoints,
 			TotalKills:           a.totalKills,
 			TotalPlacementPoints: a.totalPlacementPoints,
@@ -115,7 +150,7 @@ func (s *StandingsService) RecalculateBR(ctx context.Context, tournamentID uuid.
 	}
 
 	// Update rank positions
-	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID); err != nil {
+	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID, nil); err != nil {
 		return apperror.Wrap(err, "update rank positions")
 	}
 
@@ -134,7 +169,7 @@ func (s *StandingsService) UpdateAfterBracketMatch(ctx context.Context, tourname
 	}
 
 	// Update rank positions
-	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID); err != nil {
+	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID, nil); err != nil {
 		return apperror.Wrap(err, "update rank positions")
 	}
 

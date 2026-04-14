@@ -4,6 +4,7 @@ import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ImportUploadSection } from './ImportUploadSection'
 import { CredentialSection } from './CredentialSection'
+import { ChallongeImportSection } from './ChallongeImportSection'
 
 export default function AdminImportPage() {
   return (
@@ -14,6 +15,7 @@ export default function AdminImportPage() {
       />
 
       <div className="space-y-6">
+        <ChallongeImportSection />
         <ImportUploadSection />
         <CredentialSection />
       </div>

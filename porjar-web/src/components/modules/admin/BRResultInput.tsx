@@ -171,14 +171,25 @@ export function BRResultInput({
     const errors: string[] = []
     const usedPlacements = new Set<number>()
 
+    // Only check duplicate placements among normal-status teams
     for (const team of teams) {
       const r = results[team.id]
-      if (!r) continue
+      if (!r || r.status !== 'normal') continue
       if (r.placement > 0) {
         if (usedPlacements.has(r.placement)) {
           errors.push(`Placement #${r.placement} digunakan lebih dari satu tim`)
         }
         usedPlacements.add(r.placement)
+      }
+    }
+
+    // Validate player kills don't exceed team kills
+    for (const team of teams) {
+      const r = results[team.id]
+      if (!r || r.players.length === 0) continue
+      const playerKillsTotal = r.players.reduce((sum, p) => sum + (p.kills || 0), 0)
+      if (playerKillsTotal > r.kills) {
+        errors.push(`Total kills pemain ${team.name} (${playerKillsTotal}) melebihi kills tim (${r.kills})`)
       }
     }
 
@@ -228,18 +239,18 @@ export function BRResultInput({
   return (
     <div className="space-y-4">
       {/* Lobby header */}
-      <div className="rounded-xl bg-porjar-bg px-4 py-2.5">
-        <p className="text-sm font-medium text-stone-700">
+      <div className="rounded-xl bg-esi-bg px-4 py-2.5">
+        <p className="text-sm font-medium text-stone-700 dark:text-zinc-300">
           {lobby.lobby_name} &mdash; Day {lobby.day_number}
         </p>
-        <p className="text-xs text-stone-400 mt-0.5">
+        <p className="text-xs text-stone-400 dark:text-zinc-500 mt-0.5">
           Kill: {killPointValue}pt | WWCD Bonus: {wwcdBonus}pt
         </p>
       </div>
 
       {/* Validation errors */}
       {validationErrors.length > 0 && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/30 p-3">
           {validationErrors.map((err, i) => (
             <p key={i} className="flex items-center gap-1.5 text-xs text-red-600">
               <Warning size={12} weight="fill" />
@@ -250,23 +261,23 @@ export function BRResultInput({
       )}
 
       {/* Result input table */}
-      <div className="rounded-xl border border-stone-200 bg-white overflow-hidden shadow-sm overflow-x-auto">
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="border-stone-200 hover:bg-transparent">
-              <TableHead className="text-stone-500 w-8" />
-              <TableHead className="text-stone-500">Tim</TableHead>
-              <TableHead className="text-center text-stone-500 w-20">Posisi</TableHead>
-              <TableHead className="text-center text-stone-500 w-20">Kills</TableHead>
-              <TableHead className="text-center text-stone-500 w-20">Damage</TableHead>
-              <TableHead className="text-center text-stone-500 w-20">Status</TableHead>
-              <TableHead className="text-right text-stone-500 w-16">Pts</TableHead>
-              <TableHead className="text-right text-stone-500 w-16">Kill</TableHead>
+            <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
+              <TableHead className="text-stone-500 dark:text-zinc-400 w-8" />
+              <TableHead className="text-stone-500 dark:text-zinc-400">Tim</TableHead>
+              <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-20">Posisi</TableHead>
+              <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-20">Kills</TableHead>
+              <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-20">Damage</TableHead>
+              <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-20">Status</TableHead>
+              <TableHead className="text-right text-stone-500 dark:text-zinc-400 w-16">Pts</TableHead>
+              <TableHead className="text-right text-stone-500 dark:text-zinc-400 w-16">Kill</TableHead>
               {wwcdBonus > 0 && (
-                <TableHead className="text-center text-stone-500 w-14">WWCD</TableHead>
+                <TableHead className="text-center text-stone-500 dark:text-zinc-400 w-14">WWCD</TableHead>
               )}
-              <TableHead className="text-right text-stone-500 w-16">Penalty</TableHead>
-              <TableHead className="text-right text-stone-500 w-20">Total</TableHead>
+              <TableHead className="text-right text-stone-500 dark:text-zinc-400 w-16">Penalty</TableHead>
+              <TableHead className="text-right text-stone-500 dark:text-zinc-400 w-20">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -292,16 +303,16 @@ export function BRResultInput({
       </div>
 
       {/* Preview Kalkulasi button */}
-      <div className="rounded-xl border border-stone-200 bg-porjar-bg p-3">
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-esi-bg p-3">
         <button
           onClick={() => setShowCalcPreview(!showCalcPreview)}
           className="flex w-full items-center justify-between text-left"
         >
-          <span className="flex items-center gap-2 text-sm font-medium text-stone-700">
+          <span className="flex items-center gap-2 text-sm font-medium text-stone-700 dark:text-zinc-300">
             <Eye size={16} />
             Preview Kalkulasi
           </span>
-          <span className="text-xs text-stone-400">
+          <span className="text-xs text-stone-400 dark:text-zinc-500">
             {showCalcPreview ? 'Sembunyikan' : 'Tampilkan'}
           </span>
         </button>
@@ -309,35 +320,35 @@ export function BRResultInput({
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-stone-200">
-                  <th className="px-2 py-1 text-left text-stone-500">Tim</th>
-                  <th className="px-2 py-1 text-right text-stone-500">Place</th>
-                  <th className="px-2 py-1 text-right text-stone-500">Place Pts</th>
-                  <th className="px-2 py-1 text-right text-stone-500">Kill Pts</th>
+                <tr className="border-b border-stone-200 dark:border-zinc-700">
+                  <th className="px-2 py-1 text-left text-stone-500 dark:text-zinc-400">Tim</th>
+                  <th className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">Place</th>
+                  <th className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">Place Pts</th>
+                  <th className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">Kill Pts</th>
                   {wwcdBonus > 0 && (
-                    <th className="px-2 py-1 text-right text-stone-500">WWCD</th>
+                    <th className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">WWCD</th>
                   )}
                   <th className="px-2 py-1 text-right text-red-500">Penalty</th>
-                  <th className="px-2 py-1 text-right text-stone-500">Total</th>
+                  <th className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {previews.map((row) =>
                   row ? (
-                    <tr key={row.team.id} className="border-b border-stone-100">
-                      <td className="px-2 py-1 text-stone-700">{row.team.name}</td>
-                      <td className="px-2 py-1 text-right text-stone-500">
+                    <tr key={row.team.id} className="border-b border-stone-100 dark:border-zinc-700">
+                      <td className="px-2 py-1 text-stone-700 dark:text-zinc-300">{row.team.name}</td>
+                      <td className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">
                         {row.placement > 0 ? `#${row.placement}` : '-'}
                       </td>
-                      <td className="px-2 py-1 text-right text-stone-500">{row.placementPts}</td>
-                      <td className="px-2 py-1 text-right text-stone-500">{row.killPts}</td>
+                      <td className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">{row.placementPts}</td>
+                      <td className="px-2 py-1 text-right text-stone-500 dark:text-zinc-400">{row.killPts}</td>
                       {wwcdBonus > 0 && (
                         <td className="px-2 py-1 text-right text-amber-500">{row.wwcd}</td>
                       )}
                       <td className="px-2 py-1 text-right text-red-500">
                         {row.penalty > 0 ? `-${row.penalty}` : '-'}
                       </td>
-                      <td className="px-2 py-1 text-right font-bold text-porjar-red">{row.total}</td>
+                      <td className="px-2 py-1 text-right font-bold text-esi-red">{row.total}</td>
                     </tr>
                   ) : null
                 )}
@@ -350,7 +361,7 @@ export function BRResultInput({
       <Button
         onClick={handleSubmit}
         disabled={submitting || validationErrors.length > 0}
-        className="w-full bg-porjar-red hover:bg-porjar-red-dark text-white"
+        className="w-full bg-esi-red hover:bg-esi-red-dark text-white"
       >
         {submitting ? 'Menyimpan...' : 'Simpan Hasil Lobby'}
       </Button>

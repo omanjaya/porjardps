@@ -70,14 +70,14 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-6">
-        <h2 className="mb-1 text-xl font-semibold text-stone-900">Reset Password</h2>
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-6">
+        <h2 className="mb-1 text-xl font-semibold text-stone-900 dark:text-zinc-100">Reset Password</h2>
+        <div className="mt-4 rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           Token reset tidak ditemukan. Pastikan link yang kamu gunakan benar.
         </div>
         <Link
           href="/forgot-password"
-          className="mt-4 block text-center text-sm font-medium text-porjar-red hover:text-porjar-red-dark"
+          className="mt-4 block text-center text-sm font-medium text-esi-red hover:text-esi-red-dark"
         >
           Minta link reset baru
         </Link>
@@ -86,21 +86,21 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-6">
-      <h2 className="mb-1 text-xl font-semibold text-stone-900">Reset Password</h2>
-      <p className="mb-6 text-sm text-stone-500">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-6">
+      <h2 className="mb-1 text-xl font-semibold text-stone-900 dark:text-zinc-100">Reset Password</h2>
+      <p className="mb-6 text-sm text-stone-500 dark:text-zinc-400">
         Masukkan password baru untuk akun kamu
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {errors.general && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+          <div className="rounded-lg border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 text-sm text-red-600 dark:text-red-400">
             {errors.general}
           </div>
         )}
 
         <div className="space-y-1.5">
-          <label htmlFor="new_password" className="text-sm font-medium text-stone-700">
+          <label htmlFor="new_password" className="text-sm font-medium text-stone-700 dark:text-zinc-300">
             Password Baru
           </label>
           <Input
@@ -109,7 +109,7 @@ function ResetPasswordForm() {
             placeholder="Minimal 8 karakter"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className="bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-porjar-red"
+            className="bg-white dark:bg-zinc-800 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:border-esi-red"
           />
           {newPassword && (
             <div className="space-y-1">
@@ -118,7 +118,7 @@ function ResetPasswordForm() {
                   <div
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                      i <= passwordStrength.level ? passwordStrength.color : 'bg-stone-200'
+                      i <= passwordStrength.level ? passwordStrength.color : 'bg-stone-200 dark:bg-zinc-700'
                     }`}
                   />
                 ))}
@@ -137,7 +137,7 @@ function ResetPasswordForm() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-sm font-medium text-stone-700">
+          <label htmlFor="confirmPassword" className="text-sm font-medium text-stone-700 dark:text-zinc-300">
             Konfirmasi Password
           </label>
           <Input
@@ -146,21 +146,21 @@ function ResetPasswordForm() {
             placeholder="Ulangi password baru"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="bg-white border-stone-300 text-stone-900 placeholder:text-stone-400 focus:border-porjar-red"
+            className="bg-white dark:bg-zinc-800 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus:border-esi-red"
           />
           {errors.confirmPassword && (
             <p className="text-xs text-red-500">{errors.confirmPassword}</p>
           )}
         </div>
 
-        <Button type="submit" className="w-full bg-porjar-red hover:bg-porjar-red-dark text-white" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-esi-red hover:bg-esi-red-dark text-white" disabled={isLoading}>
           {isLoading ? <><LoadingSpinner size="sm" className="text-white" /> Menyimpan...</> : 'Reset Password'}
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-stone-500">
+      <p className="mt-6 text-center text-sm text-stone-500 dark:text-zinc-400">
         Ingat password?{' '}
-        <Link href="/login" className="font-medium text-porjar-red hover:text-porjar-red-dark">
+        <Link href="/login" className="font-medium text-esi-red hover:text-esi-red-dark">
           Masuk
         </Link>
       </p>
@@ -171,7 +171,7 @@ function ResetPasswordForm() {
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-6 flex items-center justify-center">
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm p-6 flex items-center justify-center">
         <LoadingSpinner size="sm" className="text-stone-400" />
       </div>
     }>

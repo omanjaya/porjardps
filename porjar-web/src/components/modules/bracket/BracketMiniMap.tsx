@@ -81,7 +81,7 @@ export function BracketMiniMap({
       {/* Toggle button */}
       <button
         onClick={() => setVisible((v) => !v)}
-        className="flex items-center gap-1 rounded-md border border-stone-200 bg-white/95 px-2 py-1 text-[10px] font-medium text-stone-500 shadow-sm backdrop-blur-sm transition-colors hover:bg-stone-50 hover:text-stone-700"
+        className="flex items-center gap-1 rounded-md border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/95 px-2 py-1 text-[10px] font-medium text-stone-500 dark:text-zinc-400 shadow-sm backdrop-blur-sm transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 hover:text-stone-700 dark:text-zinc-300"
         title={visible ? 'Sembunyikan minimap' : 'Tampilkan minimap'}
       >
         {visible ? (
@@ -102,7 +102,7 @@ export function BracketMiniMap({
         <div
           ref={mapRef}
           onClick={handleClick}
-          className="relative cursor-crosshair overflow-hidden rounded-lg border border-stone-300/60 bg-slate-900/85 shadow-lg backdrop-blur-sm transition-opacity"
+          className="relative cursor-crosshair overflow-hidden rounded-lg border border-stone-300 dark:border-zinc-600/60 bg-slate-900/85 shadow-lg backdrop-blur-sm transition-opacity"
           style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}
           title="Klik untuk berpindah ke area ini"
         >
@@ -141,7 +141,7 @@ export function BracketMiniMap({
 
           {/* Viewport indicator */}
           <div
-            className="absolute rounded-sm border border-white/70 bg-white/10 transition-all duration-75"
+            className="absolute rounded-sm border border-white/70 bg-white dark:bg-zinc-900/10 transition-all duration-75"
             style={{
               left: Math.max(0, vpX),
               top: Math.max(0, vpY),

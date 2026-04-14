@@ -2,13 +2,25 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
+
+// Tournament Status Lifecycle:
+//   upcoming → registration → ongoing → completed
+//   upcoming → registration → active → completed
+//   Any state → cancelled (terminal)
+//   completed, cancelled → no further transitions
+
+type PointDistributor interface {
+	DistributePoints(ctx context.Context, tournamentID uuid.UUID) error
+}
 
 type TournamentService struct {
 	tournamentRepo     model.TournamentRepository
@@ -16,6 +28,26 @@ type TournamentService struct {
 	teamRepo           model.TeamRepository
 	teamMemberRepo     model.TeamMemberRepository
 	gameRepo           model.GameRepository
+	schoolRepo         model.SchoolRepository
+	hub                *ws.Hub
+	pointDistributor   PointDistributor
+}
+
+func (s *TournamentService) SetHub(h *ws.Hub)                     { s.hub = h }
+func (s *TournamentService) SetPointDistributor(pd PointDistributor) { s.pointDistributor = pd }
+func (s *TournamentService) SetSchoolRepo(r model.SchoolRepository)  { s.schoolRepo = r }
+
+func (s *TournamentService) broadcastTournamentUpdate(tournamentID uuid.UUID, action string, data interface{}) {
+	if s.hub == nil {
+		return
+	}
+	payload, err := ws.NewBroadcastData("tournament_update", data)
+	if err != nil {
+		slog.Error("failed to marshal tournament broadcast", "error", err)
+		return
+	}
+	s.hub.BroadcastToRoom(fmt.Sprintf("tournament:%s", tournamentID.String()), payload)
+	s.hub.BroadcastToRoom("live-scores", payload)
 }
 
 func NewTournamentService(
@@ -35,12 +67,15 @@ func NewTournamentService(
 }
 
 type CreateTournamentInput struct {
+	EventID           uuid.UUID  `json:"event_id"`
 	GameID            uuid.UUID  `json:"game_id"`
 	Name              string     `json:"name"`
 	Format            string     `json:"format"`
 	Stage             string     `json:"stage"`
 	BestOf            int        `json:"best_of"`
 	MaxTeams          *int       `json:"max_teams"`
+	SchoolLevel       *string    `json:"school_level"`
+	DailyStartTime    *string    `json:"daily_start_time"`
 	RegistrationStart *time.Time `json:"registration_start"`
 	RegistrationEnd   *time.Time `json:"registration_end"`
 	StartDate         *time.Time `json:"start_date"`
@@ -49,12 +84,18 @@ type CreateTournamentInput struct {
 }
 
 type UpdateTournamentInput struct {
+	EventID           *uuid.UUID `json:"event_id"`
 	Name              *string    `json:"name"`
 	Format            *string    `json:"format"`
 	Stage             *string    `json:"stage"`
 	BestOf            *int       `json:"best_of"`
 	MaxTeams          *int       `json:"max_teams"`
 	Status            *string    `json:"status"`
+	SchoolLevel       *string    `json:"school_level"`
+	DailyStartTime    *string    `json:"daily_start_time"`
+	DefaultNumMaps    *int       `json:"default_num_maps"`
+	DefaultMapNames   []string   `json:"default_map_names"`
+	TiebreakerOrder   []string   `json:"tiebreaker_order"`
 	RegistrationStart *time.Time `json:"registration_start"`
 	RegistrationEnd   *time.Time `json:"registration_end"`
 	StartDate         *time.Time `json:"start_date"`
@@ -74,17 +115,31 @@ func (s *TournamentService) Create(ctx context.Context, input CreateTournamentIn
 		return nil, apperror.BusinessRule("INVALID_FORMAT_FOR_GAME", "Format turnamen tidak sesuai dengan tipe game")
 	}
 
+	// Validate BestOf (must be >= 1 and odd)
+	if input.BestOf < 1 {
+		return nil, apperror.BusinessRule("INVALID_BEST_OF", "Best of harus minimal 1")
+	}
+	if input.BestOf%2 == 0 {
+		return nil, apperror.BusinessRule("INVALID_BEST_OF", "Best of harus bilangan ganjil (1, 3, 5, 7)")
+	}
+
 	now := time.Now()
 	tournament := &model.Tournament{
 		ID:                uuid.New(),
+		EventID:           input.EventID,
 		GameID:            input.GameID,
 		Name:              input.Name,
 		Format:            input.Format,
 		Stage:             input.Stage,
 		BestOf:            input.BestOf,
 		MaxTeams:          input.MaxTeams,
+		SchoolLevel:       input.SchoolLevel,
+		DailyStartTime:    input.DailyStartTime,
 		Status:            "upcoming",
 		KillPointValue:    1.0,
+		DefaultNumMaps:    1,
+		DefaultMapNames:   []string{},
+		TiebreakerOrder:   []string{"wwcd", "placement_points", "kills", "best_placement"},
 		RegistrationStart: input.RegistrationStart,
 		RegistrationEnd:   input.RegistrationEnd,
 		StartDate:         input.StartDate,
@@ -92,6 +147,11 @@ func (s *TournamentService) Create(ctx context.Context, input CreateTournamentIn
 		Rules:             input.Rules,
 		CreatedAt:         now,
 		UpdatedAt:         now,
+	}
+
+	// BUG 4: Validate date ordering on create
+	if err := validateDateOrder(tournament); err != nil {
+		return nil, err
 	}
 
 	if err := s.tournamentRepo.Create(ctx, tournament); err != nil {
@@ -116,6 +176,62 @@ func (s *TournamentService) Update(ctx context.Context, id uuid.UUID, input Upda
 		return nil, apperror.NotFound("TOURNAMENT")
 	}
 
+	// BUG 1: Validate status value and transitions
+	if input.Status != nil && *input.Status != tournament.Status {
+		validStatuses := map[string]bool{
+			"upcoming": true, "registration": true, "ongoing": true,
+			"active": true, "completed": true, "cancelled": true,
+		}
+		if !validStatuses[*input.Status] {
+			return nil, apperror.BusinessRule("INVALID_STATUS", "Status harus salah satu dari: upcoming, registration, ongoing, active, completed, cancelled")
+		}
+
+		allowedTransitions := map[string][]string{
+			"upcoming":     {"registration", "cancelled"},
+			"registration": {"ongoing", "cancelled"},
+			"ongoing":      {"completed", "cancelled"},
+			"active":       {"completed", "cancelled"},
+			"completed":    {},
+			"cancelled":    {},
+		}
+		allowed := allowedTransitions[tournament.Status]
+		valid := false
+		for _, s := range allowed {
+			if s == *input.Status {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, apperror.BusinessRule("INVALID_STATUS_TRANSITION",
+				"Transisi status dari '"+tournament.Status+"' ke '"+*input.Status+"' tidak diperbolehkan")
+		}
+	}
+
+	// BUG 2: Validate BestOf (must be >= 1 and odd)
+	if input.BestOf != nil {
+		if *input.BestOf < 1 {
+			return nil, apperror.BusinessRule("INVALID_BEST_OF", "Best of harus minimal 1")
+		}
+		if *input.BestOf%2 == 0 {
+			return nil, apperror.BusinessRule("INVALID_BEST_OF", "Best of harus bilangan ganjil (1, 3, 5, 7)")
+		}
+	}
+
+	// BUG 3: Validate format against game type if format is being changed
+	if input.Format != nil && *input.Format != tournament.Format {
+		game, err := s.gameRepo.FindByID(ctx, tournament.GameID)
+		if err != nil || game == nil {
+			return nil, apperror.NotFound("GAME")
+		}
+		if !isValidFormatForGameType(*input.Format, game.GameType) {
+			return nil, apperror.BusinessRule("INVALID_FORMAT_FOR_GAME", "Format turnamen tidak sesuai dengan tipe game")
+		}
+	}
+
+	if input.EventID != nil {
+		tournament.EventID = *input.EventID
+	}
 	if input.Name != nil {
 		tournament.Name = *input.Name
 	}
@@ -149,11 +265,45 @@ func (s *TournamentService) Update(ctx context.Context, id uuid.UUID, input Upda
 	if input.Rules != nil {
 		tournament.Rules = input.Rules
 	}
+	if input.SchoolLevel != nil {
+		tournament.SchoolLevel = input.SchoolLevel
+	}
+	if input.DailyStartTime != nil {
+		tournament.DailyStartTime = input.DailyStartTime
+	}
+	if input.DefaultNumMaps != nil {
+		tournament.DefaultNumMaps = *input.DefaultNumMaps
+	}
+	if input.DefaultMapNames != nil {
+		tournament.DefaultMapNames = input.DefaultMapNames
+	}
+	if input.TiebreakerOrder != nil {
+		tournament.TiebreakerOrder = input.TiebreakerOrder
+	}
+
+	// BUG 4: Validate date ordering
+	if err := validateDateOrder(tournament); err != nil {
+		return nil, err
+	}
+
 	tournament.UpdatedAt = time.Now()
 
 	if err := s.tournamentRepo.Update(ctx, tournament); err != nil {
 		return nil, apperror.Wrap(err, "update tournament")
 	}
+
+	// Auto-distribute event points when tournament is completed
+	if input.Status != nil && *input.Status == "completed" && s.pointDistributor != nil {
+		if err := s.pointDistributor.DistributePoints(ctx, id); err != nil {
+			slog.Error("failed to distribute event points", "tournament_id", id, "error", err)
+		}
+	}
+
+	s.broadcastTournamentUpdate(id, "updated", map[string]interface{}{
+		"tournament_id": id.String(),
+		"action":        "updated",
+		"status":        tournament.Status,
+	})
 
 	return tournament, nil
 }
@@ -162,6 +312,12 @@ func (s *TournamentService) Delete(ctx context.Context, id uuid.UUID) error {
 	tournament, err := s.tournamentRepo.FindByID(ctx, id)
 	if err != nil || tournament == nil {
 		return apperror.NotFound("TOURNAMENT")
+	}
+
+	// Check if tournament has registered teams
+	teams, err := s.tournamentTeamRepo.ListByTournament(ctx, id)
+	if err == nil && len(teams) > 0 {
+		return apperror.Conflict("TOURNAMENT_HAS_TEAMS", "Tidak dapat menghapus turnamen yang sudah memiliki tim terdaftar")
 	}
 
 	if err := s.tournamentRepo.Delete(ctx, id); err != nil {
@@ -178,59 +334,6 @@ func (s *TournamentService) List(ctx context.Context, filter model.TournamentFil
 	}
 	s.enrichTournaments(ctx, tournaments)
 	return tournaments, total, nil
-}
-
-// enrichTournaments populates Game and TeamCount for a list of tournaments.
-// Uses batch queries to avoid N+1 problems.
-func (s *TournamentService) enrichTournaments(ctx context.Context, tournaments []*model.Tournament) {
-	if len(tournaments) == 0 {
-		return
-	}
-
-	// Collect unique game IDs and tournament IDs
-	gameIDSet := make(map[uuid.UUID]struct{})
-	tournamentIDs := make([]uuid.UUID, 0, len(tournaments))
-	for _, t := range tournaments {
-		gameIDSet[t.GameID] = struct{}{}
-		tournamentIDs = append(tournamentIDs, t.ID)
-	}
-
-	// Batch fetch games
-	gameMap := make(map[uuid.UUID]*model.Game)
-	if s.gameRepo != nil && len(gameIDSet) > 0 {
-		gameIDs := make([]uuid.UUID, 0, len(gameIDSet))
-		for id := range gameIDSet {
-			gameIDs = append(gameIDs, id)
-		}
-		if games, err := s.gameRepo.FindByIDs(ctx, gameIDs); err == nil {
-			for _, g := range games {
-				gameMap[g.ID] = g
-			}
-		} else {
-			slog.Error("failed to batch fetch games for enrichment", "error", err)
-		}
-	}
-
-	// Batch fetch team counts
-	teamCountMap := make(map[uuid.UUID]int)
-	if counts, err := s.tournamentRepo.CountTeamsBatch(ctx, tournamentIDs); err == nil {
-		teamCountMap = counts
-	} else {
-		slog.Error("failed to batch fetch team counts for enrichment", "error", err)
-	}
-
-	// Apply enrichment
-	for _, t := range tournaments {
-		if game, ok := gameMap[t.GameID]; ok {
-			t.Game = &model.GameSummary{
-				ID:       game.ID,
-				Name:     game.Name,
-				Slug:     game.Slug,
-				GameType: game.GameType,
-			}
-		}
-		t.TeamCount = teamCountMap[t.ID]
-	}
 }
 
 func (s *TournamentService) RegisterTeam(ctx context.Context, tournamentID, teamID, captainUserID uuid.UUID) error {
@@ -288,6 +391,13 @@ func (s *TournamentService) RegisterTeam(ctx context.Context, tournamentID, team
 	}
 	if memberCount < game.MinTeamMembers {
 		return apperror.BusinessRule("TEAM_INSUFFICIENT_MEMBERS", "Tim belum memiliki cukup anggota")
+	}
+
+	// Validate school level matches tournament
+	if tournament.SchoolLevel != nil && *tournament.SchoolLevel != "" {
+		if team.SchoolLevel == nil || *team.SchoolLevel != *tournament.SchoolLevel {
+			return apperror.BusinessRule("SCHOOL_LEVEL_MISMATCH", "Tingkat sekolah tim tidak sesuai dengan kategori turnamen")
+		}
 	}
 
 	// Check not already registered
@@ -363,10 +473,17 @@ func (s *TournamentService) AdminRegisterTeam(ctx context.Context, tournamentID,
 		return apperror.BusinessRule("GAME_MISMATCH", "Game tim tidak sesuai dengan game turnamen")
 	}
 
-	// Check if already registered — skip silently
+	// Validate school level matches tournament
+	if tournament.SchoolLevel != nil && *tournament.SchoolLevel != "" {
+		if team.SchoolLevel == nil || *team.SchoolLevel != *tournament.SchoolLevel {
+			return apperror.BusinessRule("SCHOOL_LEVEL_MISMATCH", "Tingkat sekolah tim tidak sesuai dengan kategori turnamen")
+		}
+	}
+
+	// Check if already registered — return conflict
 	existing, err := s.tournamentTeamRepo.FindByTournamentAndTeam(ctx, tournamentID, teamID)
 	if err == nil && existing != nil {
-		return nil
+		return apperror.Conflict("ALREADY_REGISTERED", "Tim sudah terdaftar di turnamen ini")
 	}
 
 	tt := &model.TournamentTeam{
@@ -378,6 +495,57 @@ func (s *TournamentService) AdminRegisterTeam(ctx context.Context, tournamentID,
 
 	if err := s.tournamentTeamRepo.Create(ctx, tt); err != nil {
 		return apperror.Wrap(err, "admin register team")
+	}
+
+	return nil
+}
+
+// SetChampion records the winning team of a tournament and marks it completed.
+// Safe to call multiple times; overwrites prior champion.
+func (s *TournamentService) SetChampion(ctx context.Context, tournamentID uuid.UUID, teamID uuid.UUID) error {
+	tournament, err := s.tournamentRepo.FindByID(ctx, tournamentID)
+	if err != nil || tournament == nil {
+		return apperror.NotFound("TOURNAMENT")
+	}
+
+	team, err := s.teamRepo.FindByID(ctx, teamID)
+	if err != nil || team == nil {
+		return apperror.NotFound("TEAM")
+	}
+
+	teamID2 := team.ID
+	name := team.Name
+	var logo *string
+	if team.LogoURL != nil && *team.LogoURL != "" {
+		logo = team.LogoURL
+	} else if s.schoolRepo != nil && team.SchoolID != nil {
+		if school, err := s.schoolRepo.FindByID(ctx, *team.SchoolID); err == nil && school != nil && school.LogoURL != nil {
+			logo = school.LogoURL
+		}
+	}
+
+	tournament.ChampionTeamID = &teamID2
+	tournament.ChampionTeamName = &name
+	tournament.ChampionTeamLogo = logo
+	if tournament.Status != "completed" {
+		tournament.Status = "completed"
+	}
+	tournament.UpdatedAt = time.Now()
+
+	if err := s.tournamentRepo.Update(ctx, tournament); err != nil {
+		return apperror.Wrap(err, "set champion")
+	}
+
+	s.broadcastTournamentUpdate(tournamentID, "champion_set", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"team_id":       teamID2.String(),
+		"team_name":     name,
+	})
+
+	if s.pointDistributor != nil {
+		if err := s.pointDistributor.DistributePoints(ctx, tournamentID); err != nil {
+			slog.Error("failed to distribute event points on champion set", "tournament_id", tournamentID, "error", err)
+		}
 	}
 
 	return nil
@@ -404,12 +572,3 @@ func (s *TournamentService) AdminRemoveTeam(ctx context.Context, tournamentID, t
 	return nil
 }
 
-// isValidFormatForGameType checks if the tournament format is valid for the game type.
-func isValidFormatForGameType(format, gameType string) bool {
-	// Common formats: single_elimination, double_elimination, round_robin, swiss, battle_royale
-	// Game types: moba, fps, battle_royale, fighting, racing, etc.
-	if gameType == "battle_royale" && format != "battle_royale" && format != "battle_royale_points" && format != "round_robin" {
-		return false
-	}
-	return true
-}

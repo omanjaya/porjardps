@@ -1,0 +1,1 @@
+ALTER TABLE match_submissions ADD COLUMN IF NOT EXISTS game_number INT NOT NULL DEFAULT 1;

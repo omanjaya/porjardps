@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'PORJAR Embed',
+  title: 'ESI Embed',
   robots: { index: false, follow: false },
 }
 
@@ -11,7 +11,7 @@ export default function EmbedLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-porjar-bg text-stone-900">
+    <div className="min-h-screen bg-esi-bg text-stone-900">
       <div className="relative">
         {children}
       </div>
@@ -23,9 +23,9 @@ export default function EmbedLayout({
             href="https://esport.porjar-denpasar.id"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-porjar-red hover:text-red-600"
+            className="text-esi-red hover:text-red-600"
           >
-            PORJAR
+            ESI
           </a>
         </span>
       </div>

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/service"
@@ -14,6 +15,7 @@ import (
 type BRHandler struct {
 	brService        *service.BRService
 	standingsService *service.StandingsService
+	tournamentRepo   model.TournamentRepository
 }
 
 func NewBRHandler(brService *service.BRService, standingsService *service.StandingsService) *BRHandler {
@@ -23,9 +25,14 @@ func NewBRHandler(brService *service.BRService, standingsService *service.Standi
 	}
 }
 
+func (h *BRHandler) SetTournamentRepo(repo model.TournamentRepository) {
+	h.tournamentRepo = repo
+}
+
 func (h *BRHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
 	// Admin routes
 	app.Post("/admin/lobbies", authMw, adminMw, h.CreateLobby)
+	app.Put("/admin/lobbies/:id", authMw, adminMw, h.UpdateLobby)
 	app.Delete("/admin/lobbies/:id", authMw, adminMw, h.DeleteLobby)
 	app.Put("/admin/lobbies/:id/status", authMw, adminMw, h.UpdateLobbyStatus)
 	app.Post("/admin/lobbies/:id/results", authMw, adminMw, h.InputResults)
@@ -39,18 +46,21 @@ func (h *BRHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handl
 	app.Get("/lobbies/:id", h.GetLobby)
 	app.Get("/tournaments/:id/lobbies", h.GetLobbysByTournament)
 	app.Get("/tournaments/:id/standings", h.GetStandings)
+	app.Get("/tournaments/:id/standings/export", h.ExportStandingsPDF)
 	app.Get("/tournaments/:id/point-rules", h.GetPointRules)
 	app.Get("/tournaments/:id/qualification", h.GetQualification)
 }
 
 type createLobbyRequest struct {
-	TournamentID string  `json:"tournament_id"`
-	LobbyName    string  `json:"lobby_name"`
-	LobbyNumber  int     `json:"lobby_number"`
-	DayNumber    int     `json:"day_number"`
-	RoomID       *string `json:"room_id"`
-	RoomPassword *string `json:"room_password"`
-	ScheduledAt  *string `json:"scheduled_at"`
+	TournamentID string   `json:"tournament_id"`
+	LobbyName    string   `json:"lobby_name"`
+	LobbyNumber  int      `json:"lobby_number"`
+	DayNumber    int      `json:"day_number"`
+	NumMaps      int      `json:"num_maps"`
+	MapNames     []string `json:"map_names"`
+	RoomID       *string  `json:"room_id"`
+	RoomPassword *string  `json:"room_password"`
+	ScheduledAt  *string  `json:"scheduled_at"`
 }
 
 func (h *BRHandler) CreateLobby(c *fiber.Ctx) error {
@@ -84,7 +94,19 @@ func (h *BRHandler) CreateLobby(c *fiber.Ctx) error {
 		}
 	}
 
-	lobby, svcErr := h.brService.CreateLobby(c.Context(), tournamentID, req.LobbyName, req.LobbyNumber, req.DayNumber, req.RoomID, req.RoomPassword, scheduledAt)
+	numMaps := req.NumMaps
+	if numMaps <= 0 {
+		numMaps = 1
+	}
+
+	// Validate MapNames count does not exceed NumMaps
+	if len(req.MapNames) > 0 && len(req.MapNames) > numMaps {
+		return response.Err(c, apperror.ValidationError(map[string]string{
+			"map_names": fmt.Sprintf("Jumlah map_names (%d) tidak boleh melebihi num_maps (%d)", len(req.MapNames), numMaps),
+		}))
+	}
+
+	lobby, svcErr := h.brService.CreateLobby(c.Context(), tournamentID, req.LobbyName, req.LobbyNumber, req.DayNumber, numMaps, req.MapNames, req.RoomID, req.RoomPassword, scheduledAt)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
@@ -94,6 +116,50 @@ func (h *BRHandler) CreateLobby(c *fiber.Ctx) error {
 
 type updateLobbyStatusRequest struct {
 	Status string `json:"status"`
+}
+
+type updateLobbyRequest struct {
+	LobbyName    string   `json:"lobby_name"`
+	NumMaps      int      `json:"num_maps"`
+	MapNames     []string `json:"map_names"`
+	RoomID       *string  `json:"room_id"`
+	RoomPassword *string  `json:"room_password"`
+	ScheduledAt  *string  `json:"scheduled_at"`
+}
+
+func (h *BRHandler) UpdateLobby(c *fiber.Ctx) error {
+	lobbyID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "Lobby ID tidak valid")
+	}
+
+	var req updateLobbyRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Format request tidak valid")
+	}
+
+	if req.LobbyName == "" {
+		return response.Err(c, apperror.ValidationError(map[string]string{"lobby_name": "Nama lobby wajib diisi"}))
+	}
+
+	numMaps := req.NumMaps
+	if numMaps <= 0 {
+		numMaps = 1
+	}
+
+	var scheduledAt *time.Time
+	if req.ScheduledAt != nil {
+		if t, err := parseTime(*req.ScheduledAt); err == nil {
+			scheduledAt = &t
+		}
+	}
+
+	lobby, svcErr := h.brService.UpdateLobby(c.Context(), lobbyID, req.LobbyName, numMaps, req.MapNames, req.RoomID, req.RoomPassword, scheduledAt)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.OK(c, lobby)
 }
 
 func (h *BRHandler) DeleteLobby(c *fiber.Ctx) error {
@@ -148,7 +214,8 @@ type resultInputRequest struct {
 }
 
 type inputResultsRequest struct {
-	Results []resultInputRequest `json:"results"`
+	MapNumber int                  `json:"map_number"` // 1-based; defaults to 1 if omitted
+	Results   []resultInputRequest `json:"results"`
 }
 
 func (h *BRHandler) InputResults(c *fiber.Ctx) error {
@@ -176,9 +243,14 @@ func (h *BRHandler) InputResults(c *fiber.Ctx) error {
 				"results": fmt.Sprintf("Team ID pada index %d tidak valid", i),
 			}))
 		}
-		if r.Placement <= 0 {
+		if r.Placement < 1 || r.Placement > 100 {
 			return response.Err(c, apperror.ValidationError(map[string]string{
-				"results": fmt.Sprintf("Placement pada index %d harus lebih dari 0", i),
+				"results": fmt.Sprintf("Placement pada index %d tidak valid (harus antara 1 dan 100)", i),
+			}))
+		}
+		if r.PenaltyPoints < 0 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"results": fmt.Sprintf("Penalty points pada index %d tidak boleh negatif", i),
 			}))
 		}
 		results = append(results, service.ResultInput{
@@ -193,7 +265,14 @@ func (h *BRHandler) InputResults(c *fiber.Ctx) error {
 		})
 	}
 
-	if svcErr := h.brService.InputResults(c.Context(), lobbyID, results); svcErr != nil {
+	mapNumber := req.MapNumber
+	if mapNumber <= 0 {
+		return response.Err(c, apperror.ValidationError(map[string]string{
+			"map_number": "Nomor map tidak valid, harus lebih dari 0",
+		}))
+	}
+
+	if svcErr := h.brService.InputResults(c.Context(), lobbyID, mapNumber, results); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
 
@@ -229,78 +308,6 @@ func (h *BRHandler) GetLobbysByTournament(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, lobbies)
-}
-
-func (h *BRHandler) GetStandings(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	standings, svcErr := h.standingsService.GetByTournament(c.Context(), tournamentID)
-	if svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, standings)
-}
-
-func (h *BRHandler) GetPointRules(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	rules, svcErr := h.brService.GetPointRules(c.Context(), tournamentID)
-	if svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, rules)
-}
-
-// UpdatePointRules updates point rules + kill_point_value + wwcd_bonus for a tournament
-type updatePointRulesRequest struct {
-	KillPointValue         *float64 `json:"kill_point_value"`
-	WWCDBonus              *int     `json:"wwcd_bonus"`
-	QualificationThreshold *int     `json:"qualification_threshold"`
-	MaxLobbyTeams          *int     `json:"max_lobby_teams"`
-	Rules                  []struct {
-		Placement int `json:"placement"`
-		Points    int `json:"points"`
-	} `json:"rules"`
-}
-
-func (h *BRHandler) UpdatePointRules(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	var req updatePointRulesRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Format request tidak valid")
-	}
-
-	// Note: The actual tournament update should be done via tournament service
-	// This endpoint focuses on point rules. Tournament fields (kill_point_value, wwcd_bonus, etc.)
-	// are stored on the tournament and should be updated via PUT /admin/tournaments/:id
-	// For now, we just update the point rules if provided.
-
-	if len(req.Rules) > 0 {
-		// Delete existing rules and recreate
-		_, svcErr := h.brService.GetPointRules(c.Context(), tournamentID)
-		if svcErr != nil {
-			return response.HandleError(c, svcErr)
-		}
-
-		// Use service to recreate rules
-		if svcErr := h.brService.UpdatePointRules(c.Context(), tournamentID, req.Rules, req.KillPointValue, req.WWCDBonus, req.QualificationThreshold, req.MaxLobbyTeams); svcErr != nil {
-			return response.HandleError(c, svcErr)
-		}
-	}
-
-	return response.OK(c, fiber.Map{"message": "Point rules berhasil diperbarui"})
 }
 
 // InputPlayerResults inputs per-player results for a lobby result
@@ -353,105 +360,4 @@ func (h *BRHandler) InputPlayerResults(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, fiber.Map{"message": "Data pemain berhasil disimpan"})
-}
-
-// ApplyPenalty applies a penalty to a team
-type applyPenaltyRequest struct {
-	TeamID  string  `json:"team_id"`
-	LobbyID *string `json:"lobby_id"`
-	Type    string  `json:"type"`
-	Points  int     `json:"points"`
-	Reason  *string `json:"reason"`
-}
-
-func (h *BRHandler) ApplyPenalty(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	var req applyPenaltyRequest
-	if err := c.BodyParser(&req); err != nil {
-		return response.BadRequest(c, "Format request tidak valid")
-	}
-
-	details := make(map[string]string)
-	teamID, err := uuid.Parse(req.TeamID)
-	if err != nil {
-		details["team_id"] = "Team ID tidak valid"
-	}
-
-	validTypes := map[string]bool{
-		"late_join": true, "disconnect": true, "behavior": true, "custom": true,
-	}
-	if !validTypes[req.Type] {
-		details["type"] = "Tipe penalti tidak valid. Gunakan: late_join, disconnect, behavior, custom"
-	}
-	if req.Points <= 0 {
-		details["points"] = "Poin penalti harus lebih dari 0"
-	}
-	if len(details) > 0 {
-		return response.Err(c, apperror.ValidationError(details))
-	}
-
-	var lobbyID *uuid.UUID
-	if req.LobbyID != nil {
-		parsed, err := uuid.Parse(*req.LobbyID)
-		if err != nil {
-			return response.Err(c, apperror.ValidationError(map[string]string{
-				"lobby_id": "Lobby ID tidak valid",
-			}))
-		}
-		lobbyID = &parsed
-	}
-
-	// Get admin user ID from context
-	appliedBy, _ := uuid.Parse(c.Locals("userID").(string))
-
-	if svcErr := h.brService.ApplyPenalty(c.Context(), tournamentID, teamID, lobbyID, req.Type, req.Points, req.Reason, appliedBy); svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, fiber.Map{"message": "Penalti berhasil diterapkan"})
-}
-
-func (h *BRHandler) GetPenalties(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	penalties, svcErr := h.brService.GetPenalties(c.Context(), tournamentID)
-	if svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, penalties)
-}
-
-func (h *BRHandler) RemovePenalty(c *fiber.Ctx) error {
-	penaltyID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Penalty ID tidak valid")
-	}
-
-	if svcErr := h.brService.RemovePenalty(c.Context(), penaltyID); svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, fiber.Map{"message": "Penalti berhasil dihapus"})
-}
-
-func (h *BRHandler) GetQualification(c *fiber.Ctx) error {
-	tournamentID, err := uuid.Parse(c.Params("id"))
-	if err != nil {
-		return response.BadRequest(c, "Tournament ID tidak valid")
-	}
-
-	data, svcErr := h.brService.GetQualification(c.Context(), tournamentID)
-	if svcErr != nil {
-		return response.HandleError(c, svcErr)
-	}
-
-	return response.OK(c, data)
 }

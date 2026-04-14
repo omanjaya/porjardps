@@ -24,28 +24,29 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn, mediaUrl } from '@/lib/utils'
+import { JsonLd } from '@/components/shared/JsonLd'
 import type { TeamDetail, TeamMember, GameSlug } from '@/types'
 
 const roleConfig: Record<string, { label: string; textColor: string; bgColor: string; borderColor: string; ring: string }> = {
   captain: {
     label: 'Kapten',
     textColor: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    bgColor: 'bg-amber-50 dark:bg-amber-950',
+    borderColor: 'border-amber-200 dark:border-amber-800',
     ring: 'ring-2 ring-amber-400/30',
   },
   member: {
     label: 'Anggota',
     textColor: 'text-blue-700',
-    bgColor: 'bg-blue-50',
-    borderColor: 'border-blue-200',
+    bgColor: 'bg-blue-50 dark:bg-blue-950',
+    borderColor: 'border-blue-200 dark:border-blue-800',
     ring: 'ring-1 ring-stone-200',
   },
   substitute: {
     label: 'Cadangan',
-    textColor: 'text-stone-500',
-    bgColor: 'bg-stone-100',
-    borderColor: 'border-stone-200',
+    textColor: 'text-stone-500 dark:text-zinc-400',
+    bgColor: 'bg-stone-100 dark:bg-zinc-800',
+    borderColor: 'border-stone-200 dark:border-zinc-700',
     ring: 'ring-1 ring-stone-100',
   },
 }
@@ -75,7 +76,7 @@ function MemberAvatar({ name, role, gameColor }: { name: string; role: string; g
   return (
     <div className={cn(
       'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl font-heading text-sm font-black',
-      role === 'captain' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 text-stone-500',
+      role === 'captain' ? 'bg-amber-100 text-amber-700' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400',
       rc.ring
     )}>
       {initials}
@@ -239,8 +240,8 @@ function RosterSection({
         )}>
           <Users size={14} weight="bold" className={gameConfig?.color ?? 'text-slate-400'} />
         </div>
-        <h2 className="font-heading text-base font-black text-stone-900">Roster</h2>
-        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-bold text-stone-500">
+        <h2 className="font-heading text-base font-black text-stone-900 dark:text-zinc-100">Roster</h2>
+        <span className="rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-bold text-stone-500 dark:text-zinc-400">
           {sorted.length} Pemain
         </span>
       </div>
@@ -253,8 +254,8 @@ function RosterSection({
         <div className="flex gap-3 overflow-x-auto pb-3 scroll-smooth snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {sorted.length === 0 ? (
             <div className="flex w-full flex-col items-center py-10 text-center">
-              <Users size={32} weight="thin" className="mb-2 text-stone-300" />
-              <p className="text-sm text-stone-500">Belum ada anggota</p>
+              <Users size={32} weight="thin" className="mb-2 text-stone-300 dark:text-zinc-600" />
+              <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada anggota</p>
             </div>
           ) : (
             sorted.map((member, i) => (
@@ -296,9 +297,9 @@ export default function TeamDetailPage() {
     return (
       <PublicLayout>
         <div className="space-y-4">
-          <Skeleton className="h-52 rounded-2xl bg-stone-100" />
-          <Skeleton className="h-64 rounded-2xl bg-stone-100" />
-          <Skeleton className="h-36 rounded-2xl bg-stone-100" />
+          <Skeleton className="h-52 rounded-2xl bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-64 rounded-2xl bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-36 rounded-2xl bg-stone-100 dark:bg-zinc-800" />
         </div>
       </PublicLayout>
     )
@@ -307,11 +308,11 @@ export default function TeamDetailPage() {
   if (error || !team) {
     return (
       <PublicLayout>
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-stone-100 bg-stone-50 py-24 text-center">
-          <WarningCircle size={48} weight="thin" className="mb-3 text-stone-300" />
-          <p className="text-base font-semibold text-stone-600">{error ? 'Terjadi Kesalahan' : 'Tim Tidak Ditemukan'}</p>
-          <p className="mt-1 text-sm text-stone-400">{error ?? 'Tim yang kamu cari tidak ada atau sudah dihapus.'}</p>
-          <Link href="/teams" className="mt-6 flex items-center gap-1.5 text-sm font-semibold text-porjar-red hover:underline">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-stone-100 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50 py-24 text-center">
+          <WarningCircle size={48} weight="thin" className="mb-3 text-stone-300 dark:text-zinc-600" />
+          <p className="text-base font-semibold text-stone-600 dark:text-zinc-400">{error ? 'Terjadi Kesalahan' : 'Tim Tidak Ditemukan'}</p>
+          <p className="mt-1 text-sm text-stone-400 dark:text-zinc-500">{error ?? 'Tim yang kamu cari tidak ada atau sudah dihapus.'}</p>
+          <Link href="/teams" className="mt-6 flex items-center gap-1.5 text-sm font-semibold text-esi-red hover:underline">
             <CaretLeft size={14} />
             Kembali ke daftar tim
           </Link>
@@ -329,23 +330,36 @@ export default function TeamDetailPage() {
   })
   const members = team.members ?? []
 
+  const teamJsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsTeam',
+    name: team.name,
+    sport: gameConfig?.name || 'Esports',
+    url: `https://esidenpasar.com/teams/${team.id}`,
+    memberOf: team.school?.name
+      ? { '@type': 'Organization', name: team.school.name }
+      : undefined,
+    numberOfPlayers: members.length,
+  }
+
   return (
     <PublicLayout>
+      <JsonLd data={teamJsonLd} />
       {/* Breadcrumb */}
       <div className="mb-5 flex items-center gap-2 text-sm animate-in fade-in duration-300">
-        <Link href="/teams" className="flex items-center gap-1 text-stone-400 hover:text-stone-600 transition-colors">
+        <Link href="/teams" className="flex items-center gap-1 text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:text-zinc-400 transition-colors">
           <CaretLeft size={13} />
           Tim Peserta
         </Link>
-        <span className="text-stone-300">/</span>
-        <span className="font-medium text-stone-700 truncate">{team.name}</span>
+        <span className="text-stone-300 dark:text-zinc-600">/</span>
+        <span className="font-medium text-stone-700 dark:text-zinc-300 truncate">{team.name}</span>
       </div>
 
       {/* Hero banner */}
       <div
         className={cn(
           'relative mb-6 overflow-hidden rounded-2xl border shadow-md animate-in fade-in slide-in-from-bottom-4 duration-500',
-          gameConfig?.borderColor ?? 'border-stone-200'
+          gameConfig?.borderColor ?? 'border-stone-200 dark:border-zinc-700'
         )}
       >
         {/* Game art background */}
@@ -437,25 +451,25 @@ export default function TeamDetailPage() {
           className="lg:col-span-2 animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
           style={{ animationDelay: '100ms' }}
         >
-          <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
             {/* Section header */}
-            <div className={cn('flex items-center gap-3 border-b border-stone-100 px-5 py-4')}>
-              <div className={cn('flex h-8 w-8 items-center justify-center rounded-xl', gameConfig?.bgColor ?? 'bg-stone-100')}>
-                <Users size={16} weight="bold" className={gameConfig?.color ?? 'text-stone-500'} />
+            <div className={cn('flex items-center gap-3 border-b border-stone-100 dark:border-zinc-800 px-5 py-4')}>
+              <div className={cn('flex h-8 w-8 items-center justify-center rounded-xl', gameConfig?.bgColor ?? 'bg-stone-100 dark:bg-zinc-800')}>
+                <Users size={16} weight="bold" className={gameConfig?.color ?? 'text-stone-500 dark:text-zinc-400'} />
               </div>
-              <h2 className="font-bold text-stone-900">Anggota Tim</h2>
-              <span className="ml-auto rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-bold text-stone-500">
+              <h2 className="font-bold text-stone-900 dark:text-zinc-100">Anggota Tim</h2>
+              <span className="ml-auto rounded-full bg-stone-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs font-bold text-stone-500 dark:text-zinc-400">
                 {sortedMembers.length}
               </span>
             </div>
 
             {sortedMembers.length === 0 ? (
               <div className="flex flex-col items-center py-12 text-center">
-                <Users size={36} weight="thin" className="mb-2 text-stone-300" />
-                <p className="text-sm text-stone-500">Belum ada anggota</p>
+                <Users size={36} weight="thin" className="mb-2 text-stone-300 dark:text-zinc-600" />
+                <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada anggota</p>
               </div>
             ) : (
-              <div className="divide-y divide-stone-50">
+              <div className="divide-y divide-stone-50 dark:divide-zinc-800">
                 {sortedMembers.map((member, i) => {
                   const rc = roleConfig[member.role] ?? roleConfig.member
                   const RoleIcon = roleIcons[member.role] ?? UserCircle
@@ -464,9 +478,9 @@ export default function TeamDetailPage() {
                     <div
                       key={member.id}
                       className={cn(
-                        'flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-stone-50/60',
+                        'flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-stone-50 dark:bg-zinc-800/50',
                         'animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both',
-                        member.role === 'captain' ? 'bg-amber-50/30' : ''
+                        member.role === 'captain' ? 'bg-amber-50 dark:bg-amber-950/30' : ''
                       )}
                       style={{ animationDelay: `${150 + i * 50}ms` }}
                     >
@@ -476,7 +490,7 @@ export default function TeamDetailPage() {
                       {/* Info */}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-semibold text-stone-900">
+                          <span className="truncate text-sm font-semibold text-stone-900 dark:text-zinc-100">
                             {member.in_game_name || member.full_name}
                           </span>
                           <span className={cn(
@@ -488,10 +502,10 @@ export default function TeamDetailPage() {
                         </div>
                         <div className="mt-0.5 flex items-center gap-3">
                           {member.in_game_name && member.full_name !== member.in_game_name && (
-                            <span className="text-xs text-stone-400">{member.full_name}</span>
+                            <span className="text-xs text-stone-400 dark:text-zinc-500">{member.full_name}</span>
                           )}
                           {member.in_game_id && (
-                            <span className="text-[11px] text-stone-400 font-mono">
+                            <span className="text-[11px] text-stone-400 dark:text-zinc-500 font-mono">
                               ID: {member.in_game_id}
                             </span>
                           )}
@@ -501,9 +515,9 @@ export default function TeamDetailPage() {
                       {/* Right side */}
                       <div className="flex items-center gap-3 shrink-0">
                         {member.jersey_number != null && (
-                          <div className="flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1">
-                            <TShirt size={12} className="text-stone-400" />
-                            <span className="text-xs font-bold text-stone-600">
+                          <div className="flex items-center gap-1 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-2 py-1">
+                            <TShirt size={12} className="text-stone-400 dark:text-zinc-500" />
+                            <span className="text-xs font-bold text-stone-600 dark:text-zinc-400">
                               #{member.jersey_number}
                             </span>
                           </div>
@@ -525,36 +539,36 @@ export default function TeamDetailPage() {
           className="animate-in fade-in slide-in-from-bottom-4 duration-500 fill-mode-both"
           style={{ animationDelay: '200ms' }}
         >
-          <div className="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-stone-100 px-5 py-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50">
+          <div className="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-stone-100 dark:border-zinc-800 px-5 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-950">
                 <Trophy size={16} weight="bold" className="text-amber-500" />
               </div>
-              <h2 className="font-bold text-stone-900">Turnamen</h2>
-              <span className="ml-auto rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-bold text-stone-500">
+              <h2 className="font-bold text-stone-900 dark:text-zinc-100">Turnamen</h2>
+              <span className="ml-auto rounded-full bg-stone-100 dark:bg-zinc-800 px-2.5 py-0.5 text-xs font-bold text-stone-500 dark:text-zinc-400">
                 {(team.tournaments ?? []).length}
               </span>
             </div>
 
             {(team.tournaments ?? []).length === 0 ? (
               <div className="flex flex-col items-center py-10 text-center">
-                <Trophy size={32} weight="thin" className="mb-2 text-stone-300" />
-                <p className="text-sm text-stone-500">Belum mengikuti turnamen</p>
+                <Trophy size={32} weight="thin" className="mb-2 text-stone-300 dark:text-zinc-600" />
+                <p className="text-sm text-stone-500 dark:text-zinc-400">Belum mengikuti turnamen</p>
               </div>
             ) : (
-              <div className="divide-y divide-stone-50">
+              <div className="divide-y divide-stone-50 dark:divide-zinc-800">
                 {(team.tournaments ?? []).map((t, i) => (
                   <Link
                     key={t.id}
                     href={`/tournaments/${t.id}`}
-                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-stone-50"
+                    className="flex items-center justify-between gap-3 px-5 py-3.5 transition-colors hover:bg-stone-50 dark:bg-zinc-800/50"
                     style={{ animationDelay: `${200 + i * 50}ms` }}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950">
                         <Trophy size={13} weight="fill" className="text-amber-400" />
                       </div>
-                      <span className="truncate text-sm font-medium text-stone-800">
+                      <span className="truncate text-sm font-medium text-stone-800 dark:text-zinc-200">
                         {t.name}
                       </span>
                     </div>
@@ -586,7 +600,7 @@ export default function TeamDetailPage() {
                   <Image src={gameConfig.logo} alt="" width={32} height={32} className="h-8 w-8 object-contain" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500">Cabang</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-stone-500 dark:text-zinc-400">Cabang</p>
                   <p className={cn('font-heading text-base font-black', gameConfig.color)}>
                     {team.game?.name}
                   </p>

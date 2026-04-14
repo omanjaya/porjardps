@@ -5,14 +5,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog'
+import { FormDialog } from '@/components/shared/FormDialog'
 
 const EVENT_LABELS: Record<string, string> = {
   'match.completed': 'Match Selesai',
@@ -94,7 +87,8 @@ export function WebhookFormDialog({
     )
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
     if (!formName || !formURL || formEvents.length === 0) {
       toast.error('Lengkapi semua field yang wajib diisi')
       return
@@ -131,41 +125,41 @@ export function WebhookFormDialog({
   const isEdit = mode === 'edit'
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="border-stone-200 bg-white text-stone-900 sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Webhook' : 'Tambah Webhook'}</DialogTitle>
-          <DialogDescription className="text-stone-500">
-            {isEdit
-              ? 'Perbarui konfigurasi webhook'
-              : 'Buat webhook baru untuk menerima notifikasi event'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
+    <FormDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title={isEdit ? 'Edit Webhook' : 'Tambah Webhook'}
+      description={isEdit ? 'Perbarui konfigurasi webhook' : 'Buat webhook baru untuk menerima notifikasi event'}
+      onSubmit={handleSubmit}
+      submitting={processing}
+      maxWidth="lg"
+    >
+      <>
+
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
+            <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">
               Nama Webhook *
             </label>
             <Input
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               placeholder="Contoh: Discord Notifier"
-              className="border-stone-300 bg-white text-stone-900 focus:border-porjar-red focus:ring-porjar-red/20"
+              className="border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:ring-esi-red/20"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
+            <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">
               URL Endpoint *
             </label>
             <Input
               value={formURL}
               onChange={(e) => setFormURL(e.target.value)}
               placeholder="https://example.com/webhook"
-              className="border-stone-300 bg-white text-stone-900 focus:border-porjar-red focus:ring-porjar-red/20"
+              className="border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:ring-esi-red/20"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
+            <label className="mb-1 block text-sm font-medium text-stone-700 dark:text-zinc-300">
               Secret (HMAC Signature)
             </label>
             <div className="flex gap-2">
@@ -173,35 +167,35 @@ export function WebhookFormDialog({
                 value={formSecret}
                 onChange={(e) => setFormSecret(e.target.value)}
                 placeholder="Kosongkan untuk auto-generate"
-                className="border-stone-300 bg-white text-stone-900 focus:border-porjar-red focus:ring-porjar-red/20"
+                className="border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:ring-esi-red/20"
               />
               <Button
                 variant="outline"
                 size="sm"
                 onClick={generateSecret}
-                className="shrink-0 border-stone-300 text-stone-600 hover:bg-stone-50"
+                className="shrink-0 border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50"
               >
                 Generate
               </Button>
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-stone-700">
+            <label className="mb-2 block text-sm font-medium text-stone-700 dark:text-zinc-300">
               Events *
             </label>
             <div className="grid grid-cols-2 gap-2">
               {events.map((event) => (
                 <label
                   key={event}
-                  className="flex cursor-pointer items-center gap-2 rounded border border-stone-200 p-2 transition hover:border-stone-400"
+                  className="flex cursor-pointer items-center gap-2 rounded border border-stone-200 dark:border-zinc-700 p-2 transition hover:border-stone-400"
                 >
                   <input
                     type="checkbox"
                     checked={formEvents.includes(event)}
                     onChange={() => toggleEvent(event)}
-                    className="rounded border-stone-300 bg-white"
+                    className="rounded border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
                   />
-                  <span className="text-sm text-stone-700">
+                  <span className="text-sm text-stone-700 dark:text-zinc-300">
                     {EVENT_LABELS[event] || event}
                   </span>
                 </label>
@@ -215,30 +209,13 @@ export function WebhookFormDialog({
                   type="checkbox"
                   checked={formActive}
                   onChange={(e) => setFormActive(e.target.checked)}
-                  className="rounded border-stone-300 bg-white"
+                  className="rounded border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900"
                 />
-                <span className="text-sm text-stone-700">Aktif</span>
+                <span className="text-sm text-stone-700 dark:text-zinc-300">Aktif</span>
               </label>
             </div>
           )}
-        </div>
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-stone-300 text-stone-600"
-          >
-            Batal
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={processing}
-            className="bg-porjar-red hover:bg-porjar-red-dark text-white"
-          >
-            {processing ? 'Menyimpan...' : 'Simpan'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </>
+    </FormDialog>
   )
 }

@@ -8,11 +8,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { Export, FileCsv, Image as ImageIcon, SpinnerGap } from '@phosphor-icons/react'
+import { Export, FileCsv, FilePdf, Image as ImageIcon, SpinnerGap } from '@phosphor-icons/react'
 
 interface ExportOption {
   label: string
-  type: 'csv' | 'png'
+  type: 'csv' | 'png' | 'pdf'
   onExport: () => void | Promise<void>
 }
 
@@ -35,6 +35,7 @@ export function ExportButton({ options }: ExportButtonProps) {
   const iconMap = {
     csv: FileCsv,
     png: ImageIcon,
+    pdf: FilePdf,
   }
 
   return (
@@ -44,7 +45,7 @@ export function ExportButton({ options }: ExportButtonProps) {
           <Button
             size="sm"
             variant="outline"
-            className="border-stone-200 text-stone-700 hover:text-stone-900"
+            className="border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 hover:text-stone-900 dark:hover:text-zinc-100"
           >
             <Export size={14} className="mr-1" />
             Export

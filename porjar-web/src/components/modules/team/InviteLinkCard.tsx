@@ -12,6 +12,8 @@ import {
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/shared/EmptyState'
 
 interface TeamInvite {
   id: string
@@ -194,17 +196,16 @@ export function InviteLinkCard({ teamId }: InviteLinkCardProps) {
       {loading ? (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-lg bg-slate-700/50" />
+            <Skeleton key={i} className="h-14 rounded-lg bg-slate-700/50" />
           ))}
         </div>
       ) : invites.length === 0 ? (
-        <div className="flex flex-col items-center py-6 text-center">
-          <LinkIcon size={32} weight="thin" className="mb-2 text-slate-600" />
-          <p className="text-sm text-slate-400">Belum ada link undangan aktif</p>
-          <p className="mt-1 text-xs text-slate-500">
-            Buat link undangan agar pemain lain bisa bergabung ke tim
-          </p>
-        </div>
+        <EmptyState
+          size="sm"
+          icon={LinkIcon}
+          title="Belum ada link undangan aktif"
+          description="Buat link undangan agar pemain lain bisa bergabung ke tim."
+        />
       ) : (
         <div className="space-y-2">
           {invites.map((invite) => (

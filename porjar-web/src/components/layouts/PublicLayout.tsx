@@ -1,6 +1,7 @@
 'use client'
 
 import { Navbar } from '@/components/shared/Navbar'
+import { FooterCredit } from '@/components/shared/FooterCredit'
 
 interface PublicLayoutProps {
   children: React.ReactNode
@@ -8,7 +9,7 @@ interface PublicLayoutProps {
 
 export function PublicLayout({ children }: PublicLayoutProps) {
   return (
-    <div className="min-h-[100dvh] bg-porjar-bg flex flex-col">
+    <div className="min-h-[100dvh] bg-esi-bg flex flex-col">
       <Navbar position="sticky" />
 
       {/* Main Content */}
@@ -17,15 +18,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-porjar-border bg-white py-6">
-        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-porjar-muted">
-          <p>Panitia Porjar Denpasar 2026 &middot; Dinas Pemuda dan Olahraga Kota Denpasar</p>
-          <p className="mt-1">
-            Dibuat oleh{' '}
-            <a href="https://instagram.com/omanjayaaa" target="_blank" rel="noopener noreferrer" className="text-porjar-red hover:underline">
-              @omanjayaaa
-            </a>
-          </p>
+      <footer className="border-t border-esi-border bg-white dark:bg-zinc-900 py-5">
+        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-esi-muted">
+          <p>Panitia ESI Denpasar 2026 &middot; Dinas Pemuda dan Olahraga Kota Denpasar</p>
+          <FooterCredit />
         </div>
       </footer>
     </div>

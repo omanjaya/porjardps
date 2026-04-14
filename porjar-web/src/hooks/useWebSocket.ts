@@ -43,7 +43,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     return () => {
       channels.forEach((ch) => client.unsubscribe(ch))
       cleanups.forEach((cleanup) => cleanup())
-      client.disconnect()
+      // Don't disconnect the singleton client — other components may still use it.
+      // The client handles reconnection and cleanup internally.
     }
   }, [autoConnect, channels.join(','), messageTypes?.join(',')])
 

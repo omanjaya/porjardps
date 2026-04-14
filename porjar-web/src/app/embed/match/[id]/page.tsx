@@ -50,7 +50,7 @@ function EmbedMatchContent() {
 
   if (loading) {
     return (
-      <div className={cn('p-3', theme === 'dark' ? 'bg-slate-900' : 'bg-porjar-bg')}>
+      <div className={cn('p-3', theme === 'dark' ? 'bg-slate-900' : 'bg-esi-bg')}>
         <Skeleton className={cn('h-32 w-full', theme === 'dark' ? 'bg-slate-800' : 'bg-stone-200')} />
       </div>
     )
@@ -58,7 +58,7 @@ function EmbedMatchContent() {
 
   if (!match) {
     return (
-      <div className={cn('p-3 text-center text-sm', theme === 'dark' ? 'bg-slate-900 text-slate-500' : 'bg-porjar-bg text-stone-500')}>
+      <div className={cn('p-3 text-center text-sm', theme === 'dark' ? 'bg-slate-900 text-slate-500' : 'bg-esi-bg text-stone-500')}>
         Match tidak ditemukan
       </div>
     )
@@ -68,7 +68,7 @@ function EmbedMatchContent() {
     <div
       className={cn(
         'min-h-[120px] p-2',
-        theme === 'dark' ? 'bg-slate-900 text-slate-50' : 'bg-porjar-bg text-stone-900'
+        theme === 'dark' ? 'bg-slate-900 text-slate-50' : 'bg-esi-bg text-stone-900'
       )}
     >
       <LiveScoreCard match={match} />

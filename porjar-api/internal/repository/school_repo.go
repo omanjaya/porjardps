@@ -164,6 +164,22 @@ func (r *schoolRepo) List(ctx context.Context, filter model.SchoolFilter) ([]*mo
 	return schools, total, nil
 }
 
+func (r *schoolRepo) UpdateLogoURL(ctx context.Context, id uuid.UUID, logoURL *string) error {
+	_, err := r.db.Exec(ctx, `UPDATE schools SET logo_url = $2 WHERE id = $1`, id, logoURL)
+	if err != nil {
+		return fmt.Errorf("UpdateLogoURL: %w", err)
+	}
+	return nil
+}
+
+func (r *schoolRepo) Delete(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM schools WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("Delete: %w", err)
+	}
+	return nil
+}
+
 func (r *schoolRepo) HasTeams(ctx context.Context, id uuid.UUID) (bool, error) {
 	var count int
 	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams WHERE school_id = $1`, id).Scan(&count)

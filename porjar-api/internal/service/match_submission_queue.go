@@ -11,16 +11,19 @@ import (
 
 // bracketSubmissionPayload mirrors the fields required by SubmitBracketResult.
 type bracketSubmissionPayload struct {
-	ClaimedWinnerID string   `json:"claimed_winner_id"`
-	ScoreA          int      `json:"score_a"`
-	ScoreB          int      `json:"score_b"`
-	ScreenshotURLs  []string `json:"screenshot_urls"`
+	ScoreA         int      `json:"score_a"`
+	ScoreB         int      `json:"score_b"`
+	ScreenshotURLs []string `json:"screenshot_urls"`
 }
 
 // brSubmissionPayload mirrors the fields required by SubmitBRResult.
 type brSubmissionPayload struct {
+	MapNumber      int      `json:"map_number"`
 	Placement      int      `json:"placement"`
-	Kills          int      `json:"kills"`
+	KillsP1        int      `json:"kills_p1"`
+	KillsP2        int      `json:"kills_p2"`
+	KillsP3        int      `json:"kills_p3"`
+	KillsP4        int      `json:"kills_p4"`
 	ScreenshotURLs []string `json:"screenshot_urls"`
 }
 
@@ -47,23 +50,70 @@ func (s *MatchSubmissionService) ProcessBracketSubmission(ctx context.Context, j
 		return fmt.Errorf("process bracket submission: invalid submitted_by_id %q: %w", job.SubmittedByID, err)
 	}
 
-	claimedWinnerID, err := uuid.Parse(p.ClaimedWinnerID)
-	if err != nil {
-		return fmt.Errorf("process bracket submission: invalid claimed_winner_id %q: %w", p.ClaimedWinnerID, err)
-	}
-
 	_, svcErr := s.SubmitBracketResult(
 		ctx,
 		matchID,
 		teamID,
 		submittedBy,
-		claimedWinnerID,
 		p.ScoreA,
 		p.ScoreB,
 		p.ScreenshotURLs,
 	)
 	if svcErr != nil {
 		return fmt.Errorf("process bracket submission: %w", svcErr)
+	}
+
+	return nil
+}
+
+// groupSubmissionPayload mirrors the fields required by SubmitGroupResult.
+type groupSubmissionPayload struct {
+	ScoreA         int      `json:"score_a"`
+	ScoreB         int      `json:"score_b"`
+	ScreenshotURLs []string `json:"screenshot_urls"`
+	GameNumber     int      `json:"game_number"`
+}
+
+// ProcessGroupSubmission implements queue.JobProcessor.
+// It unmarshals the job payload and delegates to the existing SubmitGroupResult logic.
+func (s *MatchSubmissionService) ProcessGroupSubmission(ctx context.Context, job queue.SubmissionJob) error {
+	var p groupSubmissionPayload
+	if err := json.Unmarshal([]byte(job.Payload), &p); err != nil {
+		return fmt.Errorf("process group submission: unmarshal payload: %w", err)
+	}
+
+	matchID, err := uuid.Parse(job.MatchID)
+	if err != nil {
+		return fmt.Errorf("process group submission: invalid match_id %q: %w", job.MatchID, err)
+	}
+
+	teamID, err := uuid.Parse(job.TeamID)
+	if err != nil {
+		return fmt.Errorf("process group submission: invalid team_id %q: %w", job.TeamID, err)
+	}
+
+	submittedBy, err := uuid.Parse(job.SubmittedByID)
+	if err != nil {
+		return fmt.Errorf("process group submission: invalid submitted_by_id %q: %w", job.SubmittedByID, err)
+	}
+
+	gameNumber := p.GameNumber
+	if gameNumber <= 0 {
+		gameNumber = 1
+	}
+
+	_, svcErr := s.SubmitGroupResult(
+		ctx,
+		matchID,
+		teamID,
+		submittedBy,
+		p.ScoreA,
+		p.ScoreB,
+		p.ScreenshotURLs,
+		gameNumber,
+	)
+	if svcErr != nil {
+		return fmt.Errorf("process group submission: %w", svcErr)
 	}
 
 	return nil
@@ -92,13 +142,19 @@ func (s *MatchSubmissionService) ProcessBRSubmission(ctx context.Context, job qu
 		return fmt.Errorf("process br submission: invalid submitted_by_id %q: %w", job.SubmittedByID, err)
 	}
 
+	mapNumber := p.MapNumber
+	if mapNumber <= 0 {
+		mapNumber = 1
+	}
+
 	_, svcErr := s.SubmitBRResult(
 		ctx,
 		lobbyID,
 		teamID,
 		submittedBy,
+		mapNumber,
 		p.Placement,
-		p.Kills,
+		p.KillsP1, p.KillsP2, p.KillsP3, p.KillsP4,
 		p.ScreenshotURLs,
 	)
 	if svcErr != nil {

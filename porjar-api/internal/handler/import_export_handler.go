@@ -3,11 +3,11 @@ package handler
 import (
 	"bytes"
 	"encoding/csv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/credcrypto"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 )
 
@@ -50,73 +50,99 @@ func (h *ImportHandler) ExportCredentials(c *fiber.Ctx) error {
 	// Header
 	_ = writer.Write([]string{"nama", "nisn", "password_default", "sekolah", "tim", "game", "tingkat", "role"})
 
+	// Build user -> teams map via team_members
+	type userTeamInfo struct {
+		TeamName string
+		GameName string
+		GameSlug string
+		Role     string
+		School   string
+	}
+	userTeamMap := map[uuid.UUID][]userTeamInfo{}
+
+	// Fetch all team members for these users
+	for _, u := range users {
+		if u.NISN == nil {
+			continue
+		}
+		memberships, err := h.teamMemberRepo.FindByUser(c.Context(), u.ID)
+		if err != nil || len(memberships) == 0 {
+			continue
+		}
+		for _, m := range memberships {
+			team, err := h.teamRepo.FindByID(c.Context(), m.TeamID)
+			if err != nil || team == nil {
+				continue
+			}
+			game := gameCache[team.GameID]
+			gameName := ""
+			gameSlug := ""
+			if game != nil {
+				gameName = game.Name
+				gameSlug = game.Slug
+			}
+			role := "anggota"
+			if m.Role == "captain" {
+				role = "ketua"
+			}
+			schoolName := ""
+			if team.SchoolID != nil {
+				school, _ := h.schoolRepo.FindByID(c.Context(), *team.SchoolID)
+				if school != nil {
+					schoolName = school.Name
+				}
+			}
+			userTeamMap[u.ID] = append(userTeamMap[u.ID], userTeamInfo{
+				TeamName: team.Name,
+				GameName: gameName,
+				GameSlug: gameSlug,
+				Role:     role,
+				School:   schoolName,
+			})
+		}
+	}
+
 	for _, u := range users {
 		if u.NISN == nil {
 			continue
 		}
 
 		nisn := *u.NISN
-		nomorPertandingan := ""
-		if u.NomorPertandingan != nil {
-			nomorPertandingan = *u.NomorPertandingan
-		}
 		userTingkat := ""
 		if u.Tingkat != nil {
 			userTingkat = *u.Tingkat
 		}
 
-		// Filter by game slug if provided
-		if gameSlugFilter != "" {
-			nomorLower := strings.ToLower(nomorPertandingan)
-			slug, ok := nomorPertandinganToSlug[nomorLower]
-			if !ok || slug != gameSlugFilter {
+		teams := userTeamMap[u.ID]
+		if len(teams) == 0 {
+			// User has no team — still export with empty fields
+			if gameSlugFilter != "" {
 				continue
 			}
+			storedPW := credcrypto.GetCredPassword(c.Context(), h.rdb, h.encKey, u.ID)
+			_ = writer.Write([]string{
+				u.FullName, nisn, storedPW, "", "", "", userTingkat, "",
+			})
+			continue
 		}
 
-		// Find team membership for this user
-		teamName := ""
-		memberRole := ""
-		schoolName := ""
-
-		// Search across all games this user might be in
-		for _, game := range allGames {
-			team, err := h.teamRepo.FindByUserAndGame(c.Context(), u.ID, game.ID)
-			if err != nil || team == nil {
+		// Write one row per team membership
+		storedPW := credcrypto.GetCredPassword(c.Context(), h.rdb, h.encKey, u.ID)
+		for _, ti := range teams {
+			if gameSlugFilter != "" && ti.GameSlug != gameSlugFilter {
 				continue
 			}
-			teamName = team.Name
-
-			// Get member role
-			member, err := h.teamMemberRepo.FindByTeamAndUser(c.Context(), team.ID, u.ID)
-			if err == nil && member != nil {
-				if member.Role == "captain" {
-					memberRole = "ketua"
-				} else {
-					memberRole = "anggota"
-				}
-			}
-
-			// Get school name
-			if team.SchoolID != nil {
-				school, err := h.schoolRepo.FindByID(c.Context(), *team.SchoolID)
-				if err == nil && school != nil {
-					schoolName = school.Name
-				}
-			}
-			break
+			_ = writer.Write([]string{
+				u.FullName,
+				nisn,
+				storedPW,
+				ti.School,
+				ti.TeamName,
+				ti.GameName,
+				userTingkat,
+				ti.Role,
+			})
 		}
-
-		_ = writer.Write([]string{
-			u.FullName,
-			nisn,
-			"***", // password hanya ditampilkan saat import
-			schoolName,
-			teamName,
-			nomorPertandingan,
-			userTingkat,
-			memberRole,
-		})
 	}
 
 	writer.Flush()

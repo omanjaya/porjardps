@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { PublicLayout } from '@/components/layouts/PublicLayout'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -18,13 +19,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: gameName,
-    description: `Turnamen ${gameName} - PORJAR Denpasar Esport 2026`,
+    description: `Turnamen ${gameName} - ESI Denpasar Esport 2026`,
     openGraph: {
-      images: [{ url: `/api/og?title=${encodeURIComponent(gameName)}&subtitle=PORJAR+Denpasar+2026`, width: 1200, height: 630 }],
+      images: [{ url: `/api/og?title=${encodeURIComponent(gameName)}&subtitle=ESI+Denpasar+2026`, width: 1200, height: 630 }],
     },
   }
 }
 
 export default function GameSlugLayout({ children }: { children: React.ReactNode }) {
-  return children
+  return <PublicLayout>{children}</PublicLayout>
 }

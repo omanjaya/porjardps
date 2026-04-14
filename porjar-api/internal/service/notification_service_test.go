@@ -24,6 +24,18 @@ func (m *MockNotificationRepository) Create(ctx context.Context, n *model.Notifi
 	return m.Called(ctx, n).Error(0)
 }
 
+func (m *MockNotificationRepository) BulkCreate(ctx context.Context, notifications []*model.Notification) error {
+	return m.Called(ctx, notifications).Error(0)
+}
+
+func (m *MockNotificationRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Notification, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.Notification), args.Error(1)
+}
+
 func (m *MockNotificationRepository) FindByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*model.Notification, int, error) {
 	args := m.Called(ctx, userID, limit, offset)
 	if args.Get(0) == nil {

@@ -65,7 +65,7 @@ function buildWAMessage(schoolName: string, downloadUrl: string, pin: string): s
   return `Yth. Pembina/Pelatih
 *${schoolName}*
 
-Berikut kartu kredensial peserta PORJAR ESPORT 2026 dari sekolah Anda:
+Berikut kartu kredensial peserta ESI ESPORT 2026 dari sekolah Anda:
 
 📥 *Download Kartu Kredensial:*
 ${downloadUrl}
@@ -80,7 +80,7 @@ Mohon distribusikan ke seluruh peserta tim.
 _Link & PIN berlaku 7 hari._
 
 Terima kasih,
-Panitia PORJAR ESPORT 2026`
+Panitia ESI Denpasar 2026`
 }
 
 export function WADistribution() {
@@ -241,24 +241,24 @@ export function WADistribution() {
   }
 
   return (
-    <div className="rounded-xl border border-porjar-border bg-white shadow-sm">
-      <div className="border-b border-porjar-border p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-porjar-text">
+    <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 shadow-sm">
+      <div className="border-b border-esi-border p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-esi-text">
           <WhatsappLogo size={22} weight="bold" className="text-green-600" />
           Distribusi via WhatsApp
         </h2>
-        <p className="mt-1 text-sm text-porjar-muted">
+        <p className="mt-1 text-sm text-esi-muted">
           Kirim pesan kredensial ke pembina/pelatih sekolah via WhatsApp
         </p>
       </div>
 
       <div className="p-5 space-y-4">
         {/* Stats Bar */}
-        <div className="flex items-center justify-between rounded-lg border border-porjar-border bg-porjar-bg px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-esi-border bg-esi-bg px-4 py-3">
           <div className="flex items-center gap-4">
             <div className="text-sm">
-              <span className="font-bold text-porjar-text">{sentCount}</span>
-              <span className="text-porjar-muted">/{totalCount} sekolah terkirim</span>
+              <span className="font-bold text-esi-text">{sentCount}</span>
+              <span className="text-esi-muted">/{totalCount} sekolah terkirim</span>
             </div>
             <div className="h-2 w-40 overflow-hidden rounded-full bg-stone-200">
               <div
@@ -271,7 +271,7 @@ export function WADistribution() {
             size="sm"
             variant="outline"
             onClick={handleResetAll}
-            className="gap-1.5 border-porjar-border text-porjar-muted hover:bg-white"
+            className="gap-1.5 border-esi-border text-esi-muted hover:bg-white dark:bg-zinc-900"
           >
             <ArrowCounterClockwise size={14} />
             Reset Status
@@ -283,22 +283,22 @@ export function WADistribution() {
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <MagnifyingGlass
               size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-porjar-muted"
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-esi-muted"
             />
             <input
               type="text"
               placeholder="Cari sekolah..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-porjar-border bg-white py-1.5 pl-9 pr-3 text-sm text-porjar-text placeholder:text-stone-400 focus:border-porjar-red focus:outline-none focus:ring-1 focus:ring-porjar-red/20"
+              className="w-full rounded-lg border border-esi-border bg-white dark:bg-zinc-900 py-1.5 pl-9 pr-3 text-sm text-esi-text placeholder:text-stone-400 dark:text-zinc-500 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red/20"
             />
           </div>
           <div className="flex items-center gap-2">
-            <FunnelSimple size={16} className="text-porjar-muted" />
+            <FunnelSimple size={16} className="text-esi-muted" />
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as 'all' | 'sent' | 'unsent')}
-              className="rounded-lg border border-porjar-border bg-white px-3 py-1.5 text-sm text-porjar-text focus:border-porjar-red focus:outline-none focus:ring-1 focus:ring-porjar-red/20"
+              className="rounded-lg border border-esi-border bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm text-esi-text focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red/20"
             >
               <option value="all">Semua Status</option>
               <option value="unsent">Belum Dikirim</option>
@@ -313,9 +313,9 @@ export function WADistribution() {
             <LoadingSpinner size="md" />
           </div>
         ) : filteredSchools.length === 0 ? (
-          <div className="rounded-lg border border-porjar-border bg-porjar-bg p-8 text-center">
-            <WhatsappLogo size={32} className="mx-auto mb-2 text-stone-400" />
-            <p className="text-sm text-porjar-muted">
+          <div className="rounded-lg border border-esi-border bg-esi-bg p-8 text-center">
+            <WhatsappLogo size={32} className="mx-auto mb-2 text-stone-400 dark:text-zinc-500" />
+            <p className="text-sm text-esi-muted">
               {schoolsWithCredentials.length === 0
                 ? 'Belum ada sekolah dengan kredensial. Import peserta terlebih dahulu.'
                 : 'Tidak ada sekolah yang cocok dengan filter.'}
@@ -333,8 +333,8 @@ export function WADistribution() {
                   key={school.id}
                   className={`relative rounded-lg border p-3.5 transition-colors ${
                     isSent
-                      ? 'border-green-200 bg-green-50/50'
-                      : 'border-porjar-border bg-white hover:border-porjar-red/20'
+                      ? 'border-green-200 bg-green-50 dark:bg-green-950/30'
+                      : 'border-esi-border bg-white dark:bg-zinc-900 hover:border-esi-red/20'
                   }`}
                 >
                   {/* Status indicator */}
@@ -344,7 +344,7 @@ export function WADistribution() {
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
                         isSent
                           ? 'border border-green-200 bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'border border-stone-200 bg-stone-100 text-stone-500 hover:bg-stone-200'
+                          : 'border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 hover:bg-stone-200'
                       }`}
                       title={isSent ? 'Klik untuk tandai belum dikirim' : 'Klik untuk tandai sudah dikirim'}
                     >
@@ -357,24 +357,24 @@ export function WADistribution() {
                         'Belum dikirim'
                       )}
                     </button>
-                    <span className="inline-flex items-center gap-1 text-[10px] text-porjar-muted">
+                    <span className="inline-flex items-center gap-1 text-[10px] text-esi-muted">
                       <Users size={12} />
                       {studentCount} peserta
                     </span>
                   </div>
 
                   {/* School name */}
-                  <p className="mb-1.5 truncate text-sm font-semibold text-porjar-text" title={school.name}>
+                  <p className="mb-1.5 truncate text-sm font-semibold text-esi-text" title={school.name}>
                     {school.name}
                   </p>
 
                   {/* Phone */}
-                  <div className="mb-3 flex items-center gap-1.5 text-xs text-porjar-muted">
+                  <div className="mb-3 flex items-center gap-1.5 text-xs text-esi-muted">
                     <Phone size={13} />
                     {hasPhone ? (
                       <span className="font-mono">{school.coach_phone}</span>
                     ) : (
-                      <span className="italic text-stone-400">Belum ada nomor</span>
+                      <span className="italic text-stone-400 dark:text-zinc-500">Belum ada nomor</span>
                     )}
                   </div>
 
@@ -385,7 +385,7 @@ export function WADistribution() {
                     className={`flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
                       hasPhone && sendingSchoolId !== school.id
                         ? 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800'
-                        : 'cursor-not-allowed bg-stone-100 text-stone-400'
+                        : 'cursor-not-allowed bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500'
                     }`}
                   >
                     {sendingSchoolId === school.id ? (
@@ -412,7 +412,7 @@ export function WADistribution() {
         )}
 
         {/* Info */}
-        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3.5">
+        <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 p-3.5">
           <PaperPlaneTilt size={18} weight="fill" className="mt-0.5 shrink-0 text-amber-600" />
           <div className="text-xs text-amber-800">
             <p className="font-semibold">Cara pengiriman:</p>

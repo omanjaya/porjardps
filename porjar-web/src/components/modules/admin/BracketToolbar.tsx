@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -14,11 +15,13 @@ import {
   Lightning,
   CheckCircle,
   Clock,
+  ArrowsLeftRight,
 } from '@phosphor-icons/react'
 
 interface BracketToolbarProps {
   matchCount: number
   teamCount: number
+  format?: string
   generating: boolean
   stats: { pending: number; live: number; completed: number; total: number }
   rounds: number[]
@@ -31,11 +34,14 @@ interface BracketToolbarProps {
   onResetClick: () => void
   onBoConfigClick: () => void
   onScheduleRound: () => void
+  swapMode?: boolean
+  onSwapModeToggle?: () => void
 }
 
 export function BracketToolbar({
   matchCount,
   teamCount,
+  format,
   generating,
   stats,
   rounds,
@@ -48,9 +54,11 @@ export function BracketToolbar({
   onResetClick,
   onBoConfigClick,
   onScheduleRound,
+  swapMode,
+  onSwapModeToggle,
 }: BracketToolbarProps) {
   return (
-    <div className="sticky top-14 z-20 rounded-xl border border-stone-200 bg-white/80 backdrop-blur-xl p-3 shadow-sm">
+    <div className="sticky top-14 z-20 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900/80 backdrop-blur-xl p-3 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
         {/* Generate / Reset buttons */}
         <div className="flex items-center gap-2">
@@ -61,7 +69,7 @@ export function BracketToolbar({
               disabled={generating || teamCount < 2}
             >
               <TreeStructure size={14} className="mr-1.5" />
-              Generate Bracket
+              {format === 'round_robin' ? 'Generate Round Robin' : 'Generate Bracket'}
             </Button>
           ) : (
             <Button
@@ -88,7 +96,7 @@ export function BracketToolbar({
               <Clock size={12} />
               {stats.pending} pending
             </span>
-            <span className="flex items-center gap-1.5 text-porjar-red">
+            <span className="flex items-center gap-1.5 text-esi-red">
               <Lightning size={12} weight="fill" />
               {stats.live} live
             </span>
@@ -99,11 +107,32 @@ export function BracketToolbar({
           </div>
         )}
 
+        {/* Swap Mode toggle */}
+        {matchCount > 0 && onSwapModeToggle && (
+          <>
+            <div className="hidden sm:block h-6 w-px bg-stone-200" />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onSwapModeToggle}
+              className={cn(
+                'text-xs',
+                swapMode
+                  ? 'border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-400'
+                  : 'border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300'
+              )}
+            >
+              <ArrowsLeftRight size={14} className="mr-1.5" />
+              {swapMode ? 'Batal Tukar' : 'Tukar Tim'}
+            </Button>
+          </>
+        )}
+
         {/* Round BO config */}
         {matchCount > 0 && (
           <>
             <div className="hidden sm:block h-6 w-px bg-stone-200" />
-            <Button size="sm" variant="outline" onClick={onBoConfigClick} className="border-stone-200 text-stone-700 text-xs">
+            <Button size="sm" variant="outline" onClick={onBoConfigClick} className="border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 text-xs">
               BO Config
             </Button>
           </>
@@ -121,15 +150,15 @@ export function BracketToolbar({
                   setScheduleRoundDatetime('')
                 }}
               >
-                <SelectTrigger className="w-auto h-8 bg-white border-stone-200 text-stone-700 text-xs gap-1.5">
+                <SelectTrigger className="w-auto h-8 bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 text-xs gap-1.5">
                   <SelectValue placeholder="Jadwalkan Round..." />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-stone-200">
+                <SelectContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700">
                   {rounds.map((r) => (
                     <SelectItem
                       key={r}
                       value={String(r)}
-                      className="text-stone-700 text-xs focus:bg-stone-50 focus:text-stone-900"
+                      className="text-stone-700 dark:text-zinc-300 text-xs focus:bg-stone-50 dark:bg-zinc-800/50 focus:text-stone-900 dark:text-zinc-100"
                     >
                       Round {r}
                     </SelectItem>
@@ -142,13 +171,13 @@ export function BracketToolbar({
                     type="datetime-local"
                     value={scheduleRoundDatetime}
                     onChange={(e) => setScheduleRoundDatetime(e.target.value)}
-                    className="h-8 rounded-md border border-stone-200 bg-white px-2 text-xs text-stone-700 focus:outline-none focus:ring-2 focus:ring-porjar-red/30 focus:border-porjar-red"
+                    className="h-8 rounded-md border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-xs text-stone-700 dark:text-zinc-300 focus:outline-none focus:ring-2 focus:ring-esi-red/30 focus:border-esi-red"
                   />
                   <Button
                     size="sm"
                     onClick={onScheduleRound}
                     disabled={schedulingRound || !scheduleRoundDatetime}
-                    className="h-8 bg-porjar-red hover:bg-porjar-red-dark text-white text-xs"
+                    className="h-8 bg-esi-red hover:bg-esi-red-dark text-white text-xs"
                   >
                     {schedulingRound ? 'Menyimpan...' : 'Jadwalkan'}
                   </Button>

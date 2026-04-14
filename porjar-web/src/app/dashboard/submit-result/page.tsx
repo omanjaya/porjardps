@@ -1,158 +1,107 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/store/auth-store'
-import {
-  Trophy,
-  GameController,
-  ArrowLeft,
-  ArrowCounterClockwise,
-  WarningCircle,
-} from '@phosphor-icons/react'
+import { useState } from 'react'
+import Link from 'next/link'
+import { CheckCircle, House, PaperPlaneTilt } from '@phosphor-icons/react'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { SubmissionCard } from '@/components/modules/submission/SubmissionCard'
-import type { SubmissionData } from '@/components/modules/submission/SubmissionCard'
-import { Skeleton } from '@/components/ui/skeleton'
-import { api } from '@/lib/api'
-import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { BracketSubmitForm } from './BracketSubmitForm'
-import { BRSubmitForm } from './BRSubmitForm'
+import type { SubmissionData } from '@/components/modules/submission/SubmissionCard'
+import { useActiveMatches, type ActiveMatch } from './hooks/useActiveMatches'
+import { useSubmissionForm } from './hooks/useSubmissionForm'
+import { MatchSelector } from './components/MatchSelector'
+import { FormTypeSelector } from './components/FormTypeSelector'
+import { SubmissionStatus } from './components/SubmissionStatus'
+import { EditSubmissionDialog } from './components/EditSubmissionDialog'
 
-interface ActiveMatch {
-  id: string
-  type: 'bracket' | 'battle_royale'
-  team_a_name: string
-  team_b_name: string
-  game_name: string
-  game_slug: string
-  best_of?: number
-  lobby_name?: string
-  scheduled_at: string | null
+const STEPS = ['Pilih Match', 'Isi Hasil', 'Upload Bukti', 'Konfirmasi'] as const
+
+function ProgressStepper({ current }: { current: number }) {
+  return (
+    <div className="mb-4 sm:mb-6">
+      <div className="flex items-center justify-between gap-1 sm:gap-2">
+        {STEPS.map((label, i) => {
+          const stepNum = i + 1
+          const active = stepNum === current
+          const done = stepNum < current
+          return (
+            <div key={label} className="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
+              <div
+                className={cn(
+                  'flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors',
+                  done && 'bg-green-500 text-white',
+                  active && 'bg-esi-red text-white ring-4 ring-esi-red/20',
+                  !done && !active && 'bg-stone-200 dark:bg-zinc-800 text-stone-500 dark:text-zinc-500'
+                )}
+              >
+                {done ? '✓' : stepNum}
+              </div>
+              <span
+                className={cn(
+                  'hidden sm:block truncate text-xs font-semibold',
+                  active ? 'text-esi-text' : 'text-esi-muted'
+                )}
+              >
+                {label}
+              </span>
+              {i < STEPS.length - 1 && (
+                <div className={cn('h-0.5 flex-1 rounded', done ? 'bg-green-500' : 'bg-stone-200 dark:bg-zinc-800')} />
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-2 text-xs font-semibold text-esi-text sm:hidden">
+        Langkah {current} dari {STEPS.length}: <span className="text-esi-red">{STEPS[current - 1]}</span>
+      </p>
+    </div>
+  )
 }
 
 export default function SubmitResultPage() {
-  const router = useRouter()
-  const { isAuthenticated, isLoading: authLoading } = useAuthStore()
-  const [activeMatches, setActiveMatches] = useState<ActiveMatch[]>([])
-  const [submissions, setSubmissions] = useState<SubmissionData[]>([])
+  const { activeMatches, submissions, loading, loadData } = useActiveMatches()
   const [selectedMatch, setSelectedMatch] = useState<ActiveMatch | null>(null)
-  const [resubmittingSub, setResubmittingSub] = useState<SubmissionData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [submitting, setSubmitting] = useState(false)
+  const [editingFullSub, setEditingFullSub] = useState<SubmissionData | null>(null)
+  const [justSubmitted, setJustSubmitted] = useState(false)
 
-  // Bracket form
-  const [winner, setWinner] = useState<'team_a' | 'team_b' | ''>('')
-  const [scoreA, setScoreA] = useState('')
-  const [scoreB, setScoreB] = useState('')
-  const [screenshots, setScreenshots] = useState<string[]>([])
-
-  // BR form
-  const [placement, setPlacement] = useState('')
-  const [kills, setKills] = useState('')
-
-  useEffect(() => {
-    if (!isAuthenticated || authLoading) return
+  // Wrap loadData so a successful submission triggers the success screen.
+  const loadDataAndCelebrate = () => {
+    setJustSubmitted(true)
     loadData()
-  }, [isAuthenticated, authLoading])
-
-  async function loadData() {
-    try {
-      const [matches, subs] = await Promise.all([
-        api.get<ActiveMatch[]>('/submissions/active-matches').catch(() => [] as ActiveMatch[]),
-        api.get<SubmissionData[]>('/submissions/my').catch(() => [] as SubmissionData[]),
-      ])
-      setActiveMatches(matches ?? [])
-      setSubmissions(subs ?? [])
-    } catch {
-      toast.error('Gagal memuat data pertandingan')
-    } finally {
-      setLoading(false)
-    }
   }
 
-  function resetForm() {
-    setWinner('')
-    setScoreA('')
-    setScoreB('')
-    setScreenshots([])
-    setPlacement('')
-    setKills('')
-    setResubmittingSub(null)
+  const form = useSubmissionForm({ loadData: loadDataAndCelebrate, setSelectedMatch })
+
+  // Determine current step (1-4) for progress indicator.
+  let currentStep = 1
+  if (selectedMatch) {
+    const isBR = selectedMatch.type === 'battle_royale'
+    const filledResult = isBR
+      ? Boolean(form.placement)
+      : Boolean(form.scoreA && form.scoreB && form.scoreA !== form.scoreB)
+    const hasScreenshots = form.screenshots.length > 0
+    if (form.submitting) currentStep = 4
+    else if (hasScreenshots && filledResult) currentStep = 4
+    else if (filledResult) currentStep = 3
+    else currentStep = 2
   }
 
   function selectMatch(match: ActiveMatch) {
     setSelectedMatch(match)
-    resetForm()
+    form.resetForm()
   }
 
-  async function handleSubmitBracket() {
-    if (!selectedMatch) return
-    if (!winner) { toast.error('Pilih pemenang pertandingan'); return }
-    if (!scoreA || !scoreB) { toast.error('Masukkan skor pertandingan'); return }
-    if (screenshots.length === 0) { toast.error('Upload minimal 1 screenshot'); return }
-
-    setSubmitting(true)
-    try {
-      await api.post('/submissions', {
-        match_id: selectedMatch.id,
-        match_type: 'bracket',
-        claimed_winner: winner,
-        claimed_score_a: parseInt(scoreA),
-        claimed_score_b: parseInt(scoreB),
-        screenshots,
-      })
-      toast.success('Hasil pertandingan berhasil dikirim!')
-      setSelectedMatch(null)
-      resetForm()
-      loadData()
-    } catch {
-      toast.error('Gagal mengirim hasil. Coba lagi.')
-    } finally {
-      setSubmitting(false)
-    }
+  function handleBack() {
+    setSelectedMatch(null)
+    form.resetForm()
   }
 
-  async function handleSubmitBR() {
-    if (!selectedMatch) return
-    if (!placement) { toast.error('Pilih placement'); return }
-    if (!kills && kills !== '0') { toast.error('Masukkan jumlah kills'); return }
-    if (screenshots.length === 0) { toast.error('Upload minimal 1 screenshot'); return }
-
-    setSubmitting(true)
-    try {
-      await api.post('/submissions', {
-        match_id: selectedMatch.id,
-        match_type: 'battle_royale',
-        claimed_placement: parseInt(placement),
-        claimed_kills: parseInt(kills),
-        screenshots,
-      })
-      toast.success('Hasil pertandingan berhasil dikirim!')
-      setSelectedMatch(null)
-      resetForm()
-      loadData()
-    } catch {
-      toast.error('Gagal mengirim hasil. Coba lagi.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function handleResubmit(sub: SubmissionData) {
+  function handleResubmit(sub: SubmissionData) {
     const match = activeMatches.find(m => m.id === sub.match_id)
     if (match) {
       setSelectedMatch(match)
-      setResubmittingSub(sub)
-      // Pre-fill form with previous submission data
-      if (sub.claimed_score_a !== undefined) setScoreA(String(sub.claimed_score_a))
-      if (sub.claimed_score_b !== undefined) setScoreB(String(sub.claimed_score_b))
-      if (sub.claimed_winner) setWinner(sub.claimed_winner as 'team_a' | 'team_b')
-      if (sub.claimed_placement !== undefined) setPlacement(String(sub.claimed_placement))
-      if (sub.claimed_kills !== undefined) setKills(String(sub.claimed_kills))
-      setScreenshots([])
+      form.applyResubmit(sub)
     }
   }
 
@@ -167,185 +116,85 @@ export default function SubmitResultPage() {
         ]}
       />
 
-      {/* Active Matches */}
-      {!selectedMatch && (
+      {justSubmitted && (
+        <div className="rounded-2xl border border-green-200 dark:border-green-900/50 bg-gradient-to-b from-green-50 to-white dark:from-green-950/30 dark:to-zinc-900 p-6 sm:p-10 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+            <CheckCircle size={56} weight="fill" className="text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-esi-text">Hasil terkirim!</h2>
+          <p className="mt-2 text-sm text-esi-muted max-w-sm mx-auto">
+            Admin akan verifikasi dalam 15 menit. Kamu akan mendapat notifikasi setelah hasil diverifikasi.
+          </p>
+          <div className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center">
+            <Button
+              onClick={() => setJustSubmitted(false)}
+              className="min-h-[48px] bg-esi-red text-white hover:brightness-110"
+            >
+              <PaperPlaneTilt size={18} weight="fill" className="mr-1.5" />
+              Submit Match Lain
+            </Button>
+            <Link
+              href="/dashboard"
+              className="inline-flex min-h-[48px] items-center justify-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 text-sm font-semibold text-esi-text hover:bg-stone-50 dark:hover:bg-zinc-800"
+            >
+              <House size={18} weight="duotone" />
+              Ke Dashboard
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {!justSubmitted && selectedMatch && <ProgressStepper current={currentStep} />}
+
+      {!justSubmitted && !selectedMatch && (
         <>
-          {submissions.some(s => s.status === 'rejected') && (
-            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 flex items-center gap-2">
-              <WarningCircle size={16} className="text-amber-600 shrink-0" />
-              <p className="text-sm text-amber-700">Kamu punya hasil yang ditolak. Klik untuk melihat alasan dan kirim ulang.</p>
-            </div>
-          )}
-
-          <div className="mb-4 sm:mb-6">
-            <h2 className="mb-3 flex items-center gap-2 text-base font-bold uppercase tracking-wide text-porjar-text">
-              <Trophy size={18} weight="fill" className="text-porjar-red" />
-              Pertandingan Aktif
-            </h2>
-
-            {loading ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {Array.from({ length: 2 }).map((_, i) => (
-                  <Skeleton key={i} className="h-28 rounded-xl bg-porjar-border" />
-                ))}
-              </div>
-            ) : activeMatches.length > 0 ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {activeMatches.map(match => (
-                  <button
-                    key={match.id}
-                    onClick={() => selectMatch(match)}
-                    className="group rounded-xl border border-stone-200 bg-white p-4 text-left shadow-sm transition-all hover:border-porjar-red/30 hover:shadow-md"
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-porjar-red/10">
-                        <GameController size={14} weight="duotone" className="text-porjar-red" />
-                      </div>
-                      <span className="text-xs font-semibold uppercase tracking-wider text-porjar-muted">
-                        {match.game_name}
-                      </span>
-                      <span className={cn(
-                        '-skew-x-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase',
-                        match.type === 'bracket'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-orange-100 text-orange-700'
-                      )}>
-                        {match.type === 'bracket' ? 'Bracket' : 'BR'}
-                      </span>
-                    </div>
-                    {match.type === 'bracket' ? (
-                      <p className="text-sm font-semibold text-porjar-text line-clamp-2">
-                        {match.team_a_name} vs {match.team_b_name}
-                      </p>
-                    ) : (
-                      <p className="text-sm font-semibold text-porjar-text">
-                        {match.lobby_name ?? 'Lobby'}
-                      </p>
-                    )}
-                    <p className="mt-1 text-xs text-porjar-red font-medium group-hover:underline">
-                      Kirim hasil &rarr;
-                    </p>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-sm">
-                <GameController size={40} weight="duotone" className="mx-auto mb-3 text-porjar-border" />
-                <p className="text-sm text-porjar-muted">Tidak ada pertandingan aktif saat ini</p>
-              </div>
-            )}
-          </div>
-
-          {/* Submission History */}
-          <div>
-            <h2 className="mb-3 flex items-center gap-2 text-base font-bold uppercase tracking-wide text-porjar-text">
-              <ArrowCounterClockwise size={18} weight="fill" className="text-porjar-red" />
-              Riwayat Pengiriman
-            </h2>
-
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 rounded-xl bg-porjar-border" />
-                ))}
-              </div>
-            ) : submissions.length > 0 ? (
-              <div className="space-y-3">
-                {submissions.map(sub => (
-                  <div key={sub.id}>
-                    <SubmissionCard submission={sub} />
-                    {sub.status === 'rejected' && (
-                      <button
-                        onClick={() => handleResubmit(sub)}
-                        className="mt-2 ml-4 flex items-center gap-1 text-xs font-medium text-porjar-red hover:underline"
-                      >
-                        <ArrowCounterClockwise size={12} />
-                        Kirim ulang
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-xl border border-stone-200 bg-white p-8 text-center shadow-sm">
-                <p className="text-sm text-porjar-muted">Belum ada riwayat pengiriman</p>
-              </div>
-            )}
-          </div>
+          <ProgressStepper current={1} />
+          <MatchSelector
+            matches={activeMatches}
+            loading={loading}
+            onSelect={selectMatch}
+          />
+          <SubmissionStatus
+            submissions={submissions}
+            loading={loading}
+            onEditSubmission={setEditingFullSub}
+            onResubmit={handleResubmit}
+          />
         </>
       )}
 
-      {/* Submission Form */}
-      {selectedMatch && (
-        <div className="space-y-4">
-          <button
-            onClick={() => { setSelectedMatch(null); resetForm() }}
-            className="flex items-center gap-1.5 text-sm font-medium text-porjar-muted hover:text-porjar-red transition-colors"
-          >
-            <ArrowLeft size={16} />
-            Kembali ke daftar pertandingan
-          </button>
+      {!justSubmitted && selectedMatch && (
+        <FormTypeSelector
+          selectedMatch={selectedMatch}
+          resubmittingSub={form.resubmittingSub}
+          onBack={handleBack}
+          scoreA={form.scoreA}
+          setScoreA={form.setScoreA}
+          scoreB={form.scoreB}
+          setScoreB={form.setScoreB}
+          placement={form.placement}
+          setPlacement={form.setPlacement}
+          killsP1={form.killsP1}
+          setKillsP1={form.setKillsP1}
+          killsP2={form.killsP2}
+          setKillsP2={form.setKillsP2}
+          killsP3={form.killsP3}
+          setKillsP3={form.setKillsP3}
+          killsP4={form.killsP4}
+          setKillsP4={form.setKillsP4}
+          setScreenshots={form.setScreenshots}
+          submitting={form.submitting}
+          onSubmitBracket={() => form.handleSubmitBracket(selectedMatch)}
+          onSubmitBR={() => form.handleSubmitBR(selectedMatch)}
+        />
+      )}
 
-          <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-6 shadow-sm">
-            {/* Match info header */}
-            <div className="mb-4 sm:mb-6 rounded-lg bg-porjar-bg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <GameController size={18} weight="duotone" className="text-porjar-red" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-porjar-muted">
-                  {selectedMatch.game_name}
-                </span>
-              </div>
-              {selectedMatch.type === 'bracket' ? (
-                <p className="text-lg font-bold text-porjar-text">
-                  {selectedMatch.team_a_name} vs {selectedMatch.team_b_name}
-                </p>
-              ) : (
-                <p className="text-lg font-bold text-porjar-text">
-                  {selectedMatch.lobby_name ?? 'Lobby Battle Royale'}
-                </p>
-              )}
-            </div>
-
-            {/* Rejection reason alert */}
-            {resubmittingSub?.status === 'rejected' && resubmittingSub.rejection_reason && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 mb-4">
-                <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Alasan Penolakan</p>
-                <p className="text-sm text-red-600">{resubmittingSub.rejection_reason}</p>
-              </div>
-            )}
-
-            {/* Bracket Form */}
-            {selectedMatch.type === 'bracket' && (
-              <BracketSubmitForm
-                teamAName={selectedMatch.team_a_name}
-                teamBName={selectedMatch.team_b_name}
-                bestOf={selectedMatch.best_of}
-                winner={winner}
-                setWinner={setWinner}
-                scoreA={scoreA}
-                setScoreA={setScoreA}
-                scoreB={scoreB}
-                setScoreB={setScoreB}
-                onScreenshotsChange={setScreenshots}
-                submitting={submitting}
-                onSubmit={handleSubmitBracket}
-              />
-            )}
-
-            {/* BR Form */}
-            {selectedMatch.type === 'battle_royale' && (
-              <BRSubmitForm
-                placement={placement}
-                setPlacement={setPlacement}
-                kills={kills}
-                setKills={setKills}
-                onScreenshotsChange={setScreenshots}
-                submitting={submitting}
-                onSubmit={handleSubmitBR}
-              />
-            )}
-          </div>
-        </div>
+      {editingFullSub && (
+        <EditSubmissionDialog
+          submission={editingFullSub}
+          onClose={() => setEditingFullSub(null)}
+          onSaved={loadData}
+        />
       )}
     </DashboardLayout>
   )

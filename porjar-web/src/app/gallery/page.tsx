@@ -32,7 +32,7 @@ export default function GalleryPage() {
     <PublicLayout>
       <PageHeader
         title="Galeri & Highlight"
-        description="Kumpulan foto dan momen terbaik dari PORJAR Denpasar Esport 2026"
+        description="Kumpulan foto dan momen terbaik dari ESI Denpasar Esport 2026"
         breadcrumbs={[
           { label: 'Beranda', href: '/' },
           { label: 'Galeri' },
@@ -50,10 +50,10 @@ export default function GalleryPage() {
           ))}
         </div>
       ) : media.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-stone-200 bg-white p-16 text-center shadow-sm">
-          <Images size={56} weight="duotone" className="mb-4 text-stone-300" />
-          <p className="text-stone-500">Belum ada highlight</p>
-          <p className="mt-1 text-sm text-stone-400">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-16 text-center shadow-sm">
+          <Images size={56} weight="duotone" className="mb-4 text-stone-300 dark:text-zinc-600" />
+          <p className="text-stone-500 dark:text-zinc-400">Belum ada highlight</p>
+          <p className="mt-1 text-sm text-stone-400 dark:text-zinc-500">
             Foto dan momen terbaik akan ditampilkan di sini
           </p>
         </div>
@@ -64,7 +64,7 @@ export default function GalleryPage() {
             {media.map((item, index) => (
               <div
                 key={item.id}
-                className="group relative cursor-pointer overflow-hidden rounded-xl border border-stone-200 bg-white break-inside-avoid shadow-sm transition-all hover:border-stone-300 hover:shadow-md"
+                className="group relative cursor-pointer overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 break-inside-avoid shadow-sm transition-all hover:border-stone-300 dark:border-zinc-600 hover:shadow-md"
                 onClick={() => setLightboxIndex(index)}
               >
                 {item.file_type === 'image' ? (
@@ -74,8 +74,8 @@ export default function GalleryPage() {
                     className="w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 ) : (
-                  <div className="flex aspect-video items-center justify-center bg-stone-100">
-                    <Images size={32} className="text-stone-400" />
+                  <div className="flex aspect-video items-center justify-center bg-stone-100 dark:bg-zinc-800">
+                    <Images size={32} className="text-stone-400 dark:text-zinc-500" />
                   </div>
                 )}
 
@@ -95,7 +95,7 @@ export default function GalleryPage() {
 
                 {/* Highlight badge */}
                 {item.is_highlight && (
-                  <div className="absolute top-2 left-2 rounded-full bg-porjar-red px-2 py-0.5 text-[10px] font-bold text-white">
+                  <div className="absolute top-2 left-2 rounded-full bg-esi-red px-2 py-0.5 text-[10px] font-bold text-white">
                     HIGHLIGHT
                   </div>
                 )}

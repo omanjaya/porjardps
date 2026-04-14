@@ -24,12 +24,12 @@ func (r *standingsRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Stan
 	err := r.db.QueryRow(ctx,
 		`SELECT id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count
 		 FROM standings WHERE id = $1`, id).
 		Scan(&s.ID, &s.TournamentID, &s.TeamID, &s.GroupName, &s.MatchesPlayed,
 			&s.Wins, &s.Losses, &s.Draws, &s.RoundsWon, &s.RoundsLost,
 			&s.TotalPoints, &s.TotalKills, &s.TotalPlacementPoints,
-			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated)
+			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated, &s.PenaltyPoints, &s.WWCDCount)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -43,12 +43,12 @@ func (r *standingsRepo) Create(ctx context.Context, s *model.Standing) error {
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO standings (id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
 		s.ID, s.TournamentID, s.TeamID, s.GroupName, s.MatchesPlayed,
 		s.Wins, s.Losses, s.Draws, s.RoundsWon, s.RoundsLost,
 		s.TotalPoints, s.TotalKills, s.TotalPlacementPoints,
-		s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated)
+		s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated, s.PenaltyPoints, s.WWCDCount)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
 	}
@@ -60,12 +60,12 @@ func (r *standingsRepo) Update(ctx context.Context, s *model.Standing) error {
 		`UPDATE standings SET group_name = $2, matches_played = $3, wins = $4, losses = $5, draws = $6,
 		        rounds_won = $7, rounds_lost = $8, total_points = $9, total_kills = $10,
 		        total_placement_points = $11, best_placement = $12, avg_placement = $13,
-		        rank_position = $14, is_eliminated = $15
+		        rank_position = $14, is_eliminated = $15, penalty_points = $16, wwcd_count = $17
 		 WHERE id = $1`,
 		s.ID, s.GroupName, s.MatchesPlayed, s.Wins, s.Losses, s.Draws,
 		s.RoundsWon, s.RoundsLost, s.TotalPoints, s.TotalKills,
 		s.TotalPlacementPoints, s.BestPlacement, s.AvgPlacement,
-		s.RankPosition, s.IsEliminated)
+		s.RankPosition, s.IsEliminated, s.PenaltyPoints, s.WWCDCount)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
 	}
@@ -85,12 +85,12 @@ func (r *standingsRepo) FindByTournamentAndTeam(ctx context.Context, tournamentI
 	err := r.db.QueryRow(ctx,
 		`SELECT id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count
 		 FROM standings WHERE tournament_id = $1 AND team_id = $2`, tournamentID, teamID).
 		Scan(&s.ID, &s.TournamentID, &s.TeamID, &s.GroupName, &s.MatchesPlayed,
 			&s.Wins, &s.Losses, &s.Draws, &s.RoundsWon, &s.RoundsLost,
 			&s.TotalPoints, &s.TotalKills, &s.TotalPlacementPoints,
-			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated)
+			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated, &s.PenaltyPoints, &s.WWCDCount)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -104,9 +104,10 @@ func (r *standingsRepo) ListByTournament(ctx context.Context, tournamentID uuid.
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count
 		 FROM standings WHERE tournament_id = $1
-		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, total_kills DESC`, tournamentID)
+		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, wwcd_count DESC, total_placement_points DESC, total_kills DESC
+		 LIMIT 500`, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournament: %w", err)
 	}
@@ -118,7 +119,7 @@ func (r *standingsRepo) ListByTournament(ctx context.Context, tournamentID uuid.
 		if err := rows.Scan(&s.ID, &s.TournamentID, &s.TeamID, &s.GroupName, &s.MatchesPlayed,
 			&s.Wins, &s.Losses, &s.Draws, &s.RoundsWon, &s.RoundsLost,
 			&s.TotalPoints, &s.TotalKills, &s.TotalPlacementPoints,
-			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated); err != nil {
+			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated, &s.PenaltyPoints, &s.WWCDCount); err != nil {
 			return nil, fmt.Errorf("ListByTournament scan: %w", err)
 		}
 		standings = append(standings, s)
@@ -130,13 +131,53 @@ func (r *standingsRepo) ListByTournament(ctx context.Context, tournamentID uuid.
 	return standings, nil
 }
 
+func (r *standingsRepo) ListWithTeamsByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*model.StandingWithTeam, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT s.id, s.tournament_id, s.group_name, s.matches_played, s.wins, s.losses, s.draws,
+		        s.rounds_won, s.rounds_lost, s.total_points, s.total_kills, s.total_placement_points,
+		        s.best_placement, s.avg_placement, s.rank_position, s.is_eliminated, s.penalty_points, s.wwcd_count,
+		        t.id, t.name, t.seed, t.logo_url,
+		        sc.name, sc.logo_url
+		 FROM standings s
+		 JOIN teams t ON t.id = s.team_id
+		 LEFT JOIN schools sc ON sc.id = t.school_id
+		 WHERE s.tournament_id = $1
+		 ORDER BY s.rank_position ASC NULLS LAST, s.total_points DESC, s.wwcd_count DESC, s.total_placement_points DESC, s.total_kills DESC
+		 LIMIT 500`, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("ListWithTeamsByTournament: %w", err)
+	}
+	defer rows.Close()
+
+	var standings []*model.StandingWithTeam
+	for rows.Next() {
+		s := &model.StandingWithTeam{}
+		if err := rows.Scan(
+			&s.ID, &s.TournamentID, &s.GroupName, &s.MatchesPlayed,
+			&s.Wins, &s.Losses, &s.Draws, &s.RoundsWon, &s.RoundsLost,
+			&s.TotalPoints, &s.TotalKills, &s.TotalPlacementPoints,
+			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated, &s.PenaltyPoints, &s.WWCDCount,
+			&s.Team.ID, &s.Team.Name, &s.Team.Seed, &s.Team.LogoURL,
+			&s.Team.SchoolName, &s.Team.SchoolLogoURL,
+		); err != nil {
+			return nil, fmt.Errorf("ListWithTeamsByTournament scan: %w", err)
+		}
+		standings = append(standings, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ListWithTeamsByTournament rows: %w", err)
+	}
+
+	return standings, nil
+}
+
 func (r *standingsRepo) ListByTournamentAndGroup(ctx context.Context, tournamentID uuid.UUID, groupName string) ([]*model.Standing, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count
 		 FROM standings WHERE tournament_id = $1 AND group_name = $2
-		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, total_kills DESC`, tournamentID, groupName)
+		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, wwcd_count DESC, total_placement_points DESC, total_kills DESC`, tournamentID, groupName)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournamentAndGroup: %w", err)
 	}
@@ -148,7 +189,7 @@ func (r *standingsRepo) ListByTournamentAndGroup(ctx context.Context, tournament
 		if err := rows.Scan(&s.ID, &s.TournamentID, &s.TeamID, &s.GroupName, &s.MatchesPlayed,
 			&s.Wins, &s.Losses, &s.Draws, &s.RoundsWon, &s.RoundsLost,
 			&s.TotalPoints, &s.TotalKills, &s.TotalPlacementPoints,
-			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated); err != nil {
+			&s.BestPlacement, &s.AvgPlacement, &s.RankPosition, &s.IsEliminated, &s.PenaltyPoints, &s.WWCDCount); err != nil {
 			return nil, fmt.Errorf("ListByTournamentAndGroup scan: %w", err)
 		}
 		standings = append(standings, s)
@@ -165,8 +206,8 @@ func (r *standingsRepo) Upsert(ctx context.Context, s *model.Standing) error {
 	_, err := r.db.Exec(ctx,
 		`INSERT INTO standings (id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-		        best_placement, avg_placement, rank_position, is_eliminated)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 		 ON CONFLICT (tournament_id, team_id) DO UPDATE SET
 		        group_name = EXCLUDED.group_name,
 		        matches_played = EXCLUDED.matches_played,
@@ -181,11 +222,13 @@ func (r *standingsRepo) Upsert(ctx context.Context, s *model.Standing) error {
 		        best_placement = EXCLUDED.best_placement,
 		        avg_placement = EXCLUDED.avg_placement,
 		        rank_position = EXCLUDED.rank_position,
-		        is_eliminated = EXCLUDED.is_eliminated`,
+		        is_eliminated = EXCLUDED.is_eliminated,
+		        penalty_points = EXCLUDED.penalty_points,
+		        wwcd_count = EXCLUDED.wwcd_count`,
 		s.ID, s.TournamentID, s.TeamID, s.GroupName, s.MatchesPlayed,
 		s.Wins, s.Losses, s.Draws, s.RoundsWon, s.RoundsLost,
 		s.TotalPoints, s.TotalKills, s.TotalPlacementPoints,
-		s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated)
+		s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated, s.PenaltyPoints, s.WWCDCount)
 	if err != nil {
 		return fmt.Errorf("Upsert: %w", err)
 	}
@@ -203,8 +246,8 @@ func (r *standingsRepo) BulkUpsert(ctx context.Context, standings []*model.Stand
 		batch.Queue(
 			`INSERT INTO standings (id, tournament_id, team_id, group_name, matches_played, wins, losses, draws,
 			        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
-			        best_placement, avg_placement, rank_position, is_eliminated)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 			 ON CONFLICT (tournament_id, team_id) DO UPDATE SET
 			        group_name = EXCLUDED.group_name,
 			        matches_played = EXCLUDED.matches_played,
@@ -219,11 +262,13 @@ func (r *standingsRepo) BulkUpsert(ctx context.Context, standings []*model.Stand
 			        best_placement = EXCLUDED.best_placement,
 			        avg_placement = EXCLUDED.avg_placement,
 			        rank_position = EXCLUDED.rank_position,
-			        is_eliminated = EXCLUDED.is_eliminated`,
+			        is_eliminated = EXCLUDED.is_eliminated,
+			        penalty_points = EXCLUDED.penalty_points,
+			        wwcd_count = EXCLUDED.wwcd_count`,
 			s.ID, s.TournamentID, s.TeamID, s.GroupName, s.MatchesPlayed,
 			s.Wins, s.Losses, s.Draws, s.RoundsWon, s.RoundsLost,
 			s.TotalPoints, s.TotalKills, s.TotalPlacementPoints,
-			s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated)
+			s.BestPlacement, s.AvgPlacement, s.RankPosition, s.IsEliminated, s.PenaltyPoints, s.WWCDCount)
 	}
 
 	br := r.db.SendBatch(ctx, batch)
@@ -257,16 +302,64 @@ func (r *standingsRepo) IncrementBracketStats(ctx context.Context, tournamentID,
 	return nil
 }
 
-// UpdateRankPositions reorders standings by total_points DESC, total_kills DESC
-func (r *standingsRepo) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID) error {
-	_, err := r.db.Exec(ctx,
-		`UPDATE standings SET rank_position = sub.rank
+func (r *standingsRepo) DeleteByTournament(ctx context.Context, tournamentID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM standings WHERE tournament_id = $1`, tournamentID)
+	if err != nil {
+		return fmt.Errorf("DeleteByTournament: %w", err)
+	}
+	return nil
+}
+
+// validTiebreakerFields maps allowed tiebreaker keys to their SQL expressions.
+var validTiebreakerFields = map[string]string{
+	"wwcd":             "wwcd_count DESC",
+	"placement_points": "total_placement_points DESC",
+	"kills":            "total_kills DESC",
+	"best_placement":   "best_placement ASC NULLS LAST",
+}
+
+// defaultTiebreakerOrder is used when no order is configured.
+var defaultTiebreakerOrder = []string{"wwcd", "placement_points", "kills", "best_placement"}
+
+// UpdateRankPositions reorders standings using a configurable tiebreaker order.
+// After total_points DESC, each key in tiebreakerOrder maps to a SQL sort expression.
+// Unknown keys are silently ignored; missing keys from the default set are appended.
+func (r *standingsRepo) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID, tiebreakerOrder []string) error {
+	if len(tiebreakerOrder) == 0 {
+		tiebreakerOrder = defaultTiebreakerOrder
+	}
+
+	// Build ORDER BY: always start with total_points DESC
+	orderParts := []string{"total_points DESC"}
+	seen := map[string]bool{}
+	for _, key := range tiebreakerOrder {
+		if expr, ok := validTiebreakerFields[key]; ok && !seen[key] {
+			orderParts = append(orderParts, expr)
+			seen[key] = true
+		}
+	}
+	// Ensure best_placement is always last as final tiebreaker
+	if !seen["best_placement"] {
+		orderParts = append(orderParts, validTiebreakerFields["best_placement"])
+	}
+
+	orderBy := ""
+	for i, p := range orderParts {
+		if i > 0 {
+			orderBy += ", "
+		}
+		orderBy += p
+	}
+
+	query := fmt.Sprintf(`UPDATE standings SET rank_position = sub.rank
 		 FROM (
-		     SELECT id, ROW_NUMBER() OVER (ORDER BY total_points DESC, total_kills DESC, best_placement ASC NULLS LAST) as rank
+		     SELECT id, ROW_NUMBER() OVER (ORDER BY %s) as rank
 		     FROM standings
 		     WHERE tournament_id = $1
 		 ) sub
-		 WHERE standings.id = sub.id`, tournamentID)
+		 WHERE standings.id = sub.id`, orderBy)
+
+	_, err := r.db.Exec(ctx, query, tournamentID)
 	if err != nil {
 		return fmt.Errorf("UpdateRankPositions: %w", err)
 	}

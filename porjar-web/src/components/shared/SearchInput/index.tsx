@@ -44,19 +44,20 @@ export function SearchInput({
       <MagnifyingGlass
         size={18}
         weight="bold"
-        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500 pointer-events-none"
       />
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="pl-9 pr-8 bg-white border-stone-200 text-stone-900 placeholder:text-stone-400 focus-visible:border-porjar-red focus-visible:ring-porjar-red/20"
+        className="pl-9 pr-8 bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus-visible:border-esi-red focus-visible:ring-esi-red/20"
       />
       {value && (
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 transition-colors"
+          aria-label="Hapus pencarian"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500 hover:text-stone-700 dark:hover:text-zinc-200 transition-colors"
         >
           <X size={16} weight="bold" />
         </button>

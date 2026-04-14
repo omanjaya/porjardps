@@ -25,16 +25,24 @@ func NewTournamentRepo(db *pgxpool.Pool) model.TournamentRepository {
 func (r *tournamentRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Tournament, error) {
 	t := &model.Tournament{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, game_id, name, format, stage, best_of, max_teams, status,
+		`SELECT id, COALESCE(event_id, '00000000-0000-0000-0000-000000000000'), game_id, name, format, stage, best_of, max_teams, status,
 		        registration_start, registration_end, start_date, end_date, rules,
 		        COALESCE(kill_point_value, 1.0), COALESCE(wwcd_bonus, 0),
-		        qualification_threshold, max_lobby_teams,
+		        qualification_threshold, max_lobby_teams, school_level,
+		        TO_CHAR(daily_start_time, 'HH24:MI'),
+		        COALESCE(default_num_maps, 1), COALESCE(default_map_names, '{}'),
+		        COALESCE(tiebreaker_order, '{wwcd,placement_points,kills,best_placement}'),
+		        champion_team_id, champion_team_name, champion_team_logo,
 		        created_at, updated_at
 		 FROM tournaments WHERE id = $1`, id).
-		Scan(&t.ID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
+		Scan(&t.ID, &t.EventID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
 			&t.RegistrationStart, &t.RegistrationEnd, &t.StartDate, &t.EndDate, &t.Rules,
 			&t.KillPointValue, &t.WWCDBonus,
-			&t.QualificationThreshold, &t.MaxLobbyTeams,
+			&t.QualificationThreshold, &t.MaxLobbyTeams, &t.SchoolLevel,
+			&t.DailyStartTime,
+			&t.DefaultNumMaps, &t.DefaultMapNames,
+			&t.TiebreakerOrder,
+			&t.ChampionTeamID, &t.ChampionTeamName, &t.ChampionTeamLogo,
 			&t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -46,15 +54,23 @@ func (r *tournamentRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Tou
 }
 
 func (r *tournamentRepo) Create(ctx context.Context, t *model.Tournament) error {
+	var dailyStartTime interface{}
+	if t.DailyStartTime != nil {
+		dailyStartTime = *t.DailyStartTime
+	}
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO tournaments (id, game_id, name, format, stage, best_of, max_teams, status,
+		`INSERT INTO tournaments (id, event_id, game_id, name, format, stage, best_of, max_teams, status,
 		        registration_start, registration_end, start_date, end_date, rules,
 		        kill_point_value, wwcd_bonus, qualification_threshold, max_lobby_teams,
+		        school_level, daily_start_time, default_num_maps, default_map_names, tiebreaker_order,
+		        champion_team_id, champion_team_name, champion_team_logo,
 		        created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
-		t.ID, t.GameID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams, t.Status,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::TIME, $21, $22, $23, $24, $25, $26, $27, $28)`,
+		t.ID, t.EventID, t.GameID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams, t.Status,
 		t.RegistrationStart, t.RegistrationEnd, t.StartDate, t.EndDate, t.Rules,
 		t.KillPointValue, t.WWCDBonus, t.QualificationThreshold, t.MaxLobbyTeams,
+		t.SchoolLevel, dailyStartTime, t.DefaultNumMaps, t.DefaultMapNames, t.TiebreakerOrder,
+		t.ChampionTeamID, t.ChampionTeamName, t.ChampionTeamLogo,
 		t.CreatedAt, t.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
@@ -63,15 +79,25 @@ func (r *tournamentRepo) Create(ctx context.Context, t *model.Tournament) error 
 }
 
 func (r *tournamentRepo) Update(ctx context.Context, t *model.Tournament) error {
+	var dailyStartTime interface{}
+	if t.DailyStartTime != nil {
+		dailyStartTime = *t.DailyStartTime
+	}
 	_, err := r.db.Exec(ctx,
-		`UPDATE tournaments SET name = $2, format = $3, stage = $4, best_of = $5, max_teams = $6,
-		        status = $7, registration_start = $8, registration_end = $9, start_date = $10, end_date = $11, rules = $12,
-		        kill_point_value = $13, wwcd_bonus = $14, qualification_threshold = $15, max_lobby_teams = $16,
-		        updated_at = $17
+		`UPDATE tournaments SET event_id = $2, name = $3, format = $4, stage = $5, best_of = $6, max_teams = $7,
+		        status = $8, registration_start = $9, registration_end = $10, start_date = $11, end_date = $12, rules = $13,
+		        kill_point_value = $14, wwcd_bonus = $15, qualification_threshold = $16, max_lobby_teams = $17,
+		        school_level = $18, daily_start_time = $19::TIME,
+		        default_num_maps = $20, default_map_names = $21, tiebreaker_order = $22,
+		        champion_team_id = $23, champion_team_name = $24, champion_team_logo = $25,
+		        updated_at = $26
 		 WHERE id = $1`,
-		t.ID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams,
+		t.ID, t.EventID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams,
 		t.Status, t.RegistrationStart, t.RegistrationEnd, t.StartDate, t.EndDate, t.Rules,
 		t.KillPointValue, t.WWCDBonus, t.QualificationThreshold, t.MaxLobbyTeams,
+		t.SchoolLevel, dailyStartTime,
+		t.DefaultNumMaps, t.DefaultMapNames, t.TiebreakerOrder,
+		t.ChampionTeamID, t.ChampionTeamName, t.ChampionTeamLogo,
 		t.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
@@ -103,6 +129,11 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 		argIdx     int
 	)
 
+	if filter.EventID != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("event_id = $%d", argIdx))
+		args = append(args, *filter.EventID)
+	}
 	if filter.GameID != nil {
 		argIdx++
 		conditions = append(conditions, fmt.Sprintf("game_id = $%d", argIdx))
@@ -134,10 +165,14 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 	args = append(args, offset)
 
 	query := fmt.Sprintf(
-		`SELECT id, game_id, name, format, stage, best_of, max_teams, status,
+		`SELECT id, COALESCE(event_id, '00000000-0000-0000-0000-000000000000'), game_id, name, format, stage, best_of, max_teams, status,
 		        registration_start, registration_end, start_date, end_date, rules,
 		        COALESCE(kill_point_value, 1.0), COALESCE(wwcd_bonus, 0),
-		        qualification_threshold, max_lobby_teams,
+		        qualification_threshold, max_lobby_teams, school_level,
+		        TO_CHAR(daily_start_time, 'HH24:MI'),
+		        COALESCE(default_num_maps, 1), COALESCE(default_map_names, '{}'),
+		        COALESCE(tiebreaker_order, '{wwcd,placement_points,kills,best_placement}'),
+		        champion_team_id, champion_team_name, champion_team_logo,
 		        created_at, updated_at,
 		        COUNT(*) OVER() AS total_count
 		 FROM tournaments%s
@@ -155,10 +190,14 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 	var total int
 	for rows.Next() {
 		t := &model.Tournament{}
-		if err := rows.Scan(&t.ID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
+		if err := rows.Scan(&t.ID, &t.EventID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
 			&t.RegistrationStart, &t.RegistrationEnd, &t.StartDate, &t.EndDate, &t.Rules,
 			&t.KillPointValue, &t.WWCDBonus,
-			&t.QualificationThreshold, &t.MaxLobbyTeams,
+			&t.QualificationThreshold, &t.MaxLobbyTeams, &t.SchoolLevel,
+			&t.DailyStartTime,
+			&t.DefaultNumMaps, &t.DefaultMapNames,
+			&t.TiebreakerOrder,
+			&t.ChampionTeamID, &t.ChampionTeamName, &t.ChampionTeamLogo,
 			&t.CreatedAt, &t.UpdatedAt, &total); err != nil {
 			return nil, 0, fmt.Errorf("List scan: %w", err)
 		}
@@ -169,6 +208,16 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 	}
 
 	return tournaments, total, nil
+}
+
+func (r *tournamentRepo) CountActive(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRow(ctx,
+		`SELECT COUNT(*) FROM tournaments WHERE status NOT IN ('completed', 'cancelled')`).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("CountActive: %w", err)
+	}
+	return count, nil
 }
 
 func (r *tournamentRepo) CountTeams(ctx context.Context, tournamentID uuid.UUID) (int, error) {
@@ -238,6 +287,16 @@ func (r *tournamentTeamRepo) Create(ctx context.Context, tt *model.TournamentTea
 		tt.ID, tt.TournamentID, tt.TeamID, tt.GroupName, tt.Seed, tt.Status)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
+	}
+	return nil
+}
+
+func (r *tournamentTeamRepo) UpdateSeed(ctx context.Context, tournamentID, teamID uuid.UUID, seed *int) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE tournament_teams SET seed = $3 WHERE tournament_id = $1 AND team_id = $2`,
+		tournamentID, teamID, seed)
+	if err != nil {
+		return fmt.Errorf("UpdateSeed: %w", err)
 	}
 	return nil
 }

@@ -51,14 +51,14 @@ export function ScheduleBulkActions({
     <>
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-porjar-red/20 bg-porjar-red/5 px-4 py-2.5">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-esi-red/20 bg-esi-red/5 px-4 py-2.5">
           <input
             type="checkbox"
             checked={selectedIds.size === totalCount}
             onChange={toggleSelectAll}
             className="rounded border-stone-300"
           />
-          <span className="text-sm font-medium text-stone-700">
+          <span className="text-sm font-medium text-stone-700 dark:text-zinc-200">
             {selectedIds.size} jadwal dipilih
           </span>
           <Button
@@ -110,7 +110,7 @@ export function ScheduleBulkActions({
                 onChange={(e) => setShiftMinutes(e.target.value)}
                 onFocus={(e) => e.target.select()}
                 placeholder="misal: 60 (maju 1 jam) atau -30 (mundur 30 menit)"
-                className="bg-white border-stone-300 text-stone-900 focus:border-porjar-red [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                className="bg-white border-stone-300 text-stone-900 focus:border-esi-red [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {[-60, -30, -15, 15, 30, 60].map((m) => (
@@ -120,7 +120,7 @@ export function ScheduleBulkActions({
                     className={cn(
                       'rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors',
                       shiftMinutes === String(m)
-                        ? 'border-porjar-red bg-porjar-red text-white'
+                        ? 'border-esi-red bg-esi-red text-white'
                         : 'border-stone-200 text-stone-600 hover:bg-stone-50'
                     )}
                   >
@@ -134,7 +134,7 @@ export function ScheduleBulkActions({
             <Button variant="outline" onClick={() => setShiftOpen(false)} className="border-stone-300 text-stone-600">
               Batal
             </Button>
-            <Button onClick={onShiftSubmit} disabled={shifting || !shiftMinutes} className="bg-porjar-red hover:bg-porjar-red-dark text-white">
+            <Button onClick={onShiftSubmit} disabled={shifting || !shiftMinutes} className="bg-esi-red hover:bg-esi-red-dark text-white">
               {shifting ? 'Menggeser...' : 'Geser Jadwal'}
             </Button>
           </DialogFooter>

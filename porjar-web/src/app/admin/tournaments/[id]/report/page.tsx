@@ -164,10 +164,12 @@ export default function TournamentReportPage() {
   const params = useParams<{ id: string }>()
   const [report, setReport] = useState<TournamentReport | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   const loadReport = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
     try {
+      setError(null)
       const r = await api.get<TournamentReport>(`/admin/tournaments/${params.id}/report`)
       if (r) {
         r.standings = r.standings ?? []
@@ -179,8 +181,10 @@ export default function TournamentReportPage() {
         r.top_players.most_kills = r.top_players.most_kills ?? []
       }
       setReport(r)
-    } catch {
-      toast.error('Gagal memuat laporan turnamen')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Gagal memuat laporan turnamen'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -242,9 +246,9 @@ export default function TournamentReportPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <Skeleton className="h-10 w-64 bg-slate-800" />
-        <Skeleton className="mt-4 h-12 w-full bg-slate-800" />
-        <Skeleton className="mt-4 h-96 w-full bg-slate-800" />
+        <Skeleton className="h-10 w-64 bg-stone-200 dark:bg-zinc-700" />
+        <Skeleton className="mt-4 h-12 w-full bg-stone-200 dark:bg-zinc-700" />
+        <Skeleton className="mt-4 h-96 w-full bg-stone-200 dark:bg-zinc-700" />
       </AdminLayout>
     )
   }
@@ -252,7 +256,24 @@ export default function TournamentReportPage() {
   if (!report) {
     return (
       <AdminLayout>
-        <div className="py-16 text-center text-slate-400">Laporan tidak tersedia</div>
+        <div className="py-16 text-center">
+          <p className="text-sm text-stone-500 dark:text-zinc-400">
+            {error ?? 'Laporan tidak tersedia'}
+          </p>
+          {error && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-4 border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800"
+              onClick={() => {
+                setLoading(true)
+                loadReport()
+              }}
+            >
+              Coba Lagi
+            </Button>
+          )}
+        </div>
       </AdminLayout>
     )
   }

@@ -32,11 +32,6 @@ export class ApiError extends Error {
 let accessToken: string | null = null
 
 // ── Cookie helpers for middleware auth detection ──
-// NOTE: access_token is intentionally NOT written to document.cookie to prevent
-// XSS exposure. The middleware uses the access_token cookie for route protection;
-// ideally the refresh token should be an HttpOnly cookie set by the backend so
-// the middleware can verify auth without any JS-accessible cookie.
-// TODO: migrate to HttpOnly cookies set server-side when backend supports it.
 function setCookie(name: string, value: string, maxAge: number) {
   if (typeof document === 'undefined') return
   const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? ';Secure' : ''
@@ -51,10 +46,7 @@ function removeCookie(name: string) {
 export function setAccessToken(token: string | null) {
   accessToken = token
   if (token) {
-    // Write to cookie so Next.js middleware can detect the session for route protection.
-    // The cookie is non-HttpOnly (JS-readable) which is required for middleware.
-    // XSS risk is mitigated by CSP (no unsafe-inline in script-src).
-    setCookie('access_token', token, 3600)
+    setCookie('access_token', token, 7200)
   } else {
     removeCookie('access_token')
     removeCookie('user_role')
@@ -63,11 +55,10 @@ export function setAccessToken(token: string | null) {
 
 /**
  * Hydrate the in-memory access token from the access_token cookie.
- * Called on page load to avoid an unnecessary refresh round-trip when the
- * access_token cookie (written by setAccessToken) is still valid.
+ * Called on page load to avoid an unnecessary refresh round-trip.
  */
 export function migrateOldCookieToken(): void {
-  if (accessToken) return // already hydrated
+  if (accessToken) return
   if (typeof document === 'undefined') return
   const match = document.cookie.match(/(?:^|;\s*)access_token=([^;]*)/)
   if (match) {
@@ -77,7 +68,7 @@ export function migrateOldCookieToken(): void {
 
 export function setUserRoleCookie(role: string | null) {
   if (role) {
-    setCookie('user_role', role, 3600)
+    setCookie('user_role', role, 7200)
   } else {
     removeCookie('user_role')
   }
@@ -88,14 +79,10 @@ export function getAccessToken(): string | null {
 }
 
 export function getStoredRefreshToken(): string | null {
-  // Refresh token is now stored as HttpOnly cookie set by the API.
-  // No longer accessible from JavaScript — return null.
   return null
 }
 
 export function setStoredRefreshToken(_token: string | null) {
-  // No-op: refresh token is now managed as an HttpOnly cookie by the API.
-  // Clean up any legacy localStorage entry.
   if (typeof window !== 'undefined') {
     localStorage.removeItem(RT_KEY)
   }
@@ -105,9 +92,7 @@ export function setStoredRefreshToken(_token: string | null) {
 let refreshPromise: Promise<boolean> | null = null
 
 export async function refreshSession(): Promise<boolean> {
-  // If already refreshing, wait for that result
   if (refreshPromise) return refreshPromise
-
   refreshPromise = doRefresh()
   const result = await refreshPromise
   refreshPromise = null
@@ -116,24 +101,17 @@ export async function refreshSession(): Promise<boolean> {
 
 async function doRefresh(): Promise<boolean> {
   try {
-    // Send request with credentials:include so the HttpOnly refresh_token
-    // cookie is automatically sent to the API. No need to read it from JS.
     const res = await fetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     })
-
-    if (!res.ok) {
-      return false
-    }
-
+    if (!res.ok) return false
     const body = await res.json()
     if (body.success && body.data?.access_token) {
       setAccessToken(body.data.access_token)
       return true
     }
-
     return false
   } catch {
     return false
@@ -147,38 +125,43 @@ function getCSRFToken(): string {
   return match ? decodeURIComponent(match[1]) : ''
 }
 
-// ── API request with auto-refresh ──
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_URL}${endpoint}`
+// ── In-flight GET deduplication ──
+// Prevents duplicate concurrent GET requests to the same endpoint.
+const inflightGets = new Map<string, Promise<unknown>>()
+
+// ── Shared fetch with timeout, auth, CSRF, and 401 auto-refresh ──
+async function fetchWithAuth(
+  url: string,
+  options: RequestInit & { timeout?: number } = {},
+): Promise<Response> {
+  const { timeout = 30000, ...fetchOpts } = options
 
   const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
-    (options.method || 'GET').toUpperCase()
+    (fetchOpts.method || 'GET').toUpperCase()
   )
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
+  const headers: Record<string, string> = {
+    ...(fetchOpts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
     ...(isMutation ? { 'X-CSRF-Token': getCSRFToken() } : {}),
-    ...options.headers,
+    ...(fetchOpts.headers as Record<string, string> ?? {}),
   }
 
   if (accessToken) {
-    ;(headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`
+    headers['Authorization'] = `Bearer ${accessToken}`
   }
 
   const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-  let res: Response
   try {
-    res = await fetch(url, {
-      ...options,
+    const res = await fetch(url, {
+      ...fetchOpts,
       headers,
       credentials: 'include',
       signal: controller.signal,
     })
+    clearTimeout(timeoutId)
+    return res
   } catch (err) {
     clearTimeout(timeoutId)
     if (err instanceof Error && err.name === 'AbortError') {
@@ -186,29 +169,36 @@ async function apiRequest<T>(
     }
     throw err
   }
-  clearTimeout(timeoutId)
+}
 
-  if (res.status === 204) {
-    return undefined as T
+// ── Handle 401 auto-refresh ──
+async function handle401(errCode: string): Promise<boolean> {
+  if (errCode === 'INVALID_CREDENTIALS' || errCode === 'ACCOUNT_LOCKED') return false
+  const refreshed = await refreshSession()
+  if (!refreshed && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('auth:session-expired'))
   }
+  return refreshed
+}
+
+// ── Core API request with auto-refresh ──
+async function apiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`
+  const res = await fetchWithAuth(url, options)
+
+  if (res.status === 204) return undefined as T
 
   const body: ApiResponse<T> = await res.json()
 
   if (!body.success) {
     const err = body.error as ApiErrorBody
-
-    // Auto-refresh on 401 (except login failures)
-    if (res.status === 401 && err.code !== 'INVALID_CREDENTIALS' && err.code !== 'ACCOUNT_LOCKED') {
-      const refreshed = await refreshSession()
-      if (refreshed) {
-        return apiRequest<T>(endpoint, options)
-      }
-      // Refresh failed mid-session — notify app to redirect to login
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('auth:session-expired'))
-      }
+    if (res.status === 401) {
+      const refreshed = await handle401(err.code)
+      if (refreshed) return apiRequest<T>(endpoint, options)
     }
-
     throw new ApiError(err.code, err.message, err.details)
   }
 
@@ -218,40 +208,30 @@ async function apiRequest<T>(
 // ── Typed API methods ──
 export const api = {
   get<T>(endpoint: string): Promise<T> {
-    return apiRequest<T>(endpoint, { method: 'GET' })
+    // Deduplicate concurrent identical GET requests
+    const existing = inflightGets.get(endpoint)
+    if (existing) return existing as Promise<T>
+
+    const promise = apiRequest<T>(endpoint, { method: 'GET' }).finally(() => {
+      inflightGets.delete(endpoint)
+    })
+    inflightGets.set(endpoint, promise)
+    return promise
   },
 
   async getPaginated<T>(endpoint: string): Promise<{ data: T; meta: { page: number; per_page: number; total: number; total_pages: number } | null }> {
     const url = `${API_URL}${endpoint}`
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
-    const pgController = new AbortController()
-    const pgTimeoutId = setTimeout(() => pgController.abort(), 30000)
-    let res: Response
-    try {
-      res = await fetch(url, { method: 'GET', headers, credentials: 'include', signal: pgController.signal })
-    } catch (err) {
-      clearTimeout(pgTimeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new Error('Request timeout - server tidak merespons')
-      }
-      throw err
-    }
-    clearTimeout(pgTimeoutId)
+    const res = await fetchWithAuth(url, { method: 'GET' })
+
     if (res.status === 401) {
-      const body401 = await res.json().catch(() => ({ error: { code: 'UNKNOWN' } }))
+      const body401 = await res.json().catch(() => ({ error: { code: 'UNKNOWN', message: 'Unknown error' } }))
       const errCode = body401?.error?.code
-      if (errCode !== 'INVALID_CREDENTIALS' && errCode !== 'ACCOUNT_LOCKED') {
-        const refreshed = await refreshSession()
-        if (refreshed) return api.getPaginated<T>(endpoint)
-        // Refresh failed — notify app to redirect to login
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:session-expired'))
-        }
-      }
+      const refreshed = await handle401(errCode)
+      if (refreshed) return api.getPaginated<T>(endpoint)
       const err = body401.error as ApiErrorBody
       throw new ApiError(err.code, err.message, err.details)
     }
+
     const body = await res.json()
     if (!body.success) {
       const err = body.error as ApiErrorBody
@@ -281,8 +261,11 @@ export const api = {
     })
   },
 
-  delete<T>(endpoint: string): Promise<T> {
-    return apiRequest<T>(endpoint, { method: 'DELETE' })
+  delete<T>(endpoint: string, data?: unknown): Promise<T> {
+    return apiRequest<T>(endpoint, {
+      method: 'DELETE',
+      body: data ? JSON.stringify(data) : undefined,
+    })
   },
 
   async upload<T>(endpoint: string, file: File): Promise<T> {
@@ -290,38 +273,29 @@ export const api = {
     formData.append('file', file)
 
     const url = `${API_URL}${endpoint}`
-    const headers: Record<string, string> = {
-      'X-CSRF-Token': getCSRFToken(),
-    }
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`
-    }
+    const res = await fetchWithAuth(url, {
+      method: 'POST',
+      body: formData,
+    })
 
-    const uploadController = new AbortController()
-    const uploadTimeoutId = setTimeout(() => uploadController.abort(), 30000)
-    let uploadRes: Response
-    try {
-      uploadRes = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: formData,
-        credentials: 'include',
-        signal: uploadController.signal,
-      })
-    } catch (err) {
-      clearTimeout(uploadTimeoutId)
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new Error('Request timeout - server tidak merespons')
-      }
-      throw err
-    }
-    clearTimeout(uploadTimeoutId)
-
-    const body: ApiResponse<T> = await uploadRes.json()
+    const body: ApiResponse<T> = await res.json()
     if (!body.success) {
       const err = body.error as ApiErrorBody
+      if (res.status === 401) {
+        const refreshed = await handle401(err.code)
+        if (refreshed) return api.upload<T>(endpoint, file)
+      }
       throw new ApiError(err.code, err.message, err.details)
     }
     return body.data
+  },
+
+  async getBlob(endpoint: string): Promise<Blob> {
+    const url = `${API_URL}${endpoint}`
+    const res = await fetchWithAuth(url, { method: 'GET' })
+    if (!res.ok) {
+      throw new Error(`Failed to download: ${res.status}`)
+    }
+    return res.blob()
   },
 }

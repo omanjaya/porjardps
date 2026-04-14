@@ -11,7 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Trophy, CheckCircle, XCircle } from '@phosphor-icons/react'
+import { Trophy, CheckCircle, XCircle, Users } from '@phosphor-icons/react'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { cn } from '@/lib/utils'
 import type { BRDailyStanding, TeamSummary } from '@/types'
 
@@ -61,9 +62,12 @@ export function DailyStandings({
 
   if (standings.length === 0) {
     return (
-      <div className="py-12 text-center text-stone-400">
-        Belum ada data klasemen untuk hari {dayNumber}.
-      </div>
+      <EmptyState
+        size="sm"
+        icon={Users}
+        title="Belum ada data klasemen"
+        description={`Klasemen untuk hari ${dayNumber} belum tersedia.`}
+      />
     )
   }
 
@@ -86,16 +90,16 @@ export function DailyStandings({
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden shadow-sm">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm">
       <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="border-stone-200 hover:bg-transparent">
-            <TableHead className="w-16 text-stone-500">#</TableHead>
-            <TableHead className="text-stone-500">Tim</TableHead>
-            <TableHead className="text-right text-stone-500">Total Poin</TableHead>
-            <TableHead className="text-right text-stone-500">Kills</TableHead>
-            <TableHead className="text-center text-stone-500">Status</TableHead>
+          <TableRow className="border-stone-200 dark:border-zinc-700 hover:bg-transparent">
+            <TableHead className="w-16 text-stone-500 dark:text-zinc-400">#</TableHead>
+            <TableHead className="text-stone-500 dark:text-zinc-400">Tim</TableHead>
+            <TableHead className="text-right text-stone-500 dark:text-zinc-400">Total Poin</TableHead>
+            <TableHead className="text-right text-stone-500 dark:text-zinc-400">Kills</TableHead>
+            <TableHead className="text-center text-stone-500 dark:text-zinc-400">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -111,12 +115,12 @@ export function DailyStandings({
                 <TableRow
                   key={s.id}
                   className={cn(
-                    'border-stone-100 hover:bg-stone-50',
+                    'border-stone-100 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50',
                     isAboveThreshold && 'bg-emerald-50/50',
-                    !isAboveThreshold && qualificationThreshold != null && 'bg-red-50/30'
+                    !isAboveThreshold && qualificationThreshold != null && 'bg-red-50 dark:bg-red-950/30'
                   )}
                 >
-                  <TableCell className="font-bold text-stone-700">
+                  <TableCell className="font-bold text-stone-700 dark:text-zinc-300">
                     <div className="flex items-center gap-1.5">
                       {rank <= 3 && (
                         <Trophy
@@ -124,7 +128,7 @@ export function DailyStandings({
                           weight="fill"
                           className={cn(
                             rank === 1 && 'text-amber-500',
-                            rank === 2 && 'text-stone-400',
+                            rank === 2 && 'text-stone-400 dark:text-zinc-500',
                             rank === 3 && 'text-amber-700'
                           )}
                         />
@@ -133,12 +137,12 @@ export function DailyStandings({
                     </div>
                   </TableCell>
                   <TableCell>
-                    <span className="font-medium text-stone-900">{teamName}</span>
+                    <span className="font-medium text-stone-900 dark:text-zinc-100">{teamName}</span>
                   </TableCell>
-                  <TableCell className="text-right font-bold text-porjar-red tabular-nums">
+                  <TableCell className="text-right font-bold text-esi-red tabular-nums">
                     {s.total_points}
                   </TableCell>
-                  <TableCell className="text-right text-stone-700 tabular-nums">
+                  <TableCell className="text-right text-stone-700 dark:text-zinc-300 tabular-nums">
                     {s.total_kills}
                   </TableCell>
                   <TableCell className="text-center">
@@ -149,7 +153,7 @@ export function DailyStandings({
                           Lolos
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-950/30 px-2 py-0.5 text-xs font-medium text-red-500">
                           <XCircle size={12} weight="fill" />
                           Tersingkir
                         </span>

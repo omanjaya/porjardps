@@ -14,9 +14,9 @@ import { Input } from '@/components/ui/input'
 import type { TeamDetail, TeamMemberRole } from '@/types'
 
 const roleLabels: Record<string, { label: string; color: string }> = {
-  captain: { label: 'Kapten', color: 'bg-amber-50 text-amber-600 border-amber-200' },
-  member: { label: 'Anggota', color: 'bg-blue-50 text-blue-600 border-blue-200' },
-  substitute: { label: 'Cadangan', color: 'bg-stone-100 text-stone-500 border-stone-200' },
+  captain: { label: 'Kapten', color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800' },
+  member: { label: 'Anggota', color: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800' },
+  substitute: { label: 'Cadangan', color: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700' },
 }
 
 const roleIcons: Record<string, typeof Crown> = {
@@ -57,9 +57,9 @@ export function TeamMembersSection({
   onRemoveMember,
 }: TeamMembersSectionProps) {
   return (
-    <div className="mb-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+    <div className="mb-6 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-stone-900 dark:text-zinc-100">
           <Users size={20} weight="bold" />
           Anggota Tim
         </h2>
@@ -67,7 +67,7 @@ export function TeamMembersSection({
           <Button
             size="sm"
             onClick={() => setShowAddMember(!showAddMember)}
-            className="gap-1 bg-porjar-red hover:bg-porjar-red-dark text-white"
+            className="gap-1 bg-esi-red hover:bg-esi-red-dark text-white"
           >
             <Plus size={14} />
             Tambah
@@ -77,32 +77,32 @@ export function TeamMembersSection({
 
       {/* Add Member Form */}
       {showAddMember && isCaptain && (
-        <div className="mb-4 rounded-xl border border-stone-200 bg-porjar-bg p-4">
-          <h3 className="mb-3 text-sm font-medium text-stone-700">Tambah Anggota Baru</h3>
+        <div className="mb-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-esi-bg p-4">
+          <h3 className="mb-3 text-sm font-medium text-stone-700 dark:text-zinc-300">Tambah Anggota Baru</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs text-stone-500">In-Game Name *</label>
+              <label className="mb-1 block text-xs text-stone-500 dark:text-zinc-400">In-Game Name *</label>
               <Input
                 value={newMemberName}
                 onChange={(e) => setNewMemberName(e.target.value)}
                 placeholder="Nama in-game"
-                className="border-stone-300 bg-white text-stone-900 focus:border-porjar-red"
+                className="border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-stone-900 dark:text-zinc-100 focus:border-esi-red"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-stone-500">In-Game ID</label>
+              <label className="mb-1 block text-xs text-stone-500 dark:text-zinc-400">In-Game ID</label>
               <Input
                 value={newMemberGameId}
                 onChange={(e) => setNewMemberGameId(e.target.value)}
                 placeholder="ID in-game (opsional)"
-                className="border-stone-300 bg-white text-stone-900 focus:border-porjar-red"
+                className="border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-stone-900 dark:text-zinc-100 focus:border-esi-red"
               />
             </div>
           </div>
 
           {/* Role selector */}
           <div className="mt-3">
-            <label className="mb-1 block text-xs text-stone-500">Role</label>
+            <label className="mb-1 block text-xs text-stone-500 dark:text-zinc-400">Role</label>
             <div className="flex gap-2">
               {(['member', 'substitute'] as TeamMemberRole[]).map((role) => (
                 <button
@@ -110,8 +110,8 @@ export function TeamMembersSection({
                   onClick={() => setNewMemberRole(role)}
                   className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                     newMemberRole === role
-                      ? 'bg-porjar-red/10 text-porjar-red border border-porjar-red/30'
-                      : 'bg-white text-stone-500 border border-stone-200 hover:text-stone-700'
+                      ? 'bg-esi-red/10 text-esi-red border border-esi-red/30'
+                      : 'bg-white dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border border-stone-200 dark:border-zinc-700 hover:text-stone-700 dark:hover:text-zinc-200'
                   }`}
                 >
                   {role === 'member' ? 'Anggota' : 'Cadangan'}
@@ -125,7 +125,7 @@ export function TeamMembersSection({
               size="sm"
               onClick={onAddMember}
               disabled={addingMember || !newMemberName.trim()}
-              className="bg-porjar-red hover:bg-porjar-red-dark text-white"
+              className="bg-esi-red hover:bg-esi-red-dark text-white"
             >
               {addingMember ? 'Menambahkan...' : 'Tambah Anggota'}
             </Button>
@@ -133,7 +133,7 @@ export function TeamMembersSection({
               size="sm"
               variant="ghost"
               onClick={() => setShowAddMember(false)}
-              className="text-stone-500 hover:text-stone-700"
+              className="text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:hover:text-zinc-200"
             >
               Batal
             </Button>
@@ -144,8 +144,8 @@ export function TeamMembersSection({
       {/* Members List */}
       {team.members.length === 0 ? (
         <div className="flex flex-col items-center py-8 text-center">
-          <Users size={36} weight="thin" className="mb-2 text-stone-300" />
-          <p className="text-sm text-stone-500">Belum ada anggota</p>
+          <Users size={36} weight="thin" className="mb-2 text-stone-300 dark:text-zinc-600" />
+          <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada anggota</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -161,20 +161,20 @@ export function TeamMembersSection({
               return (
                 <div
                   key={member.id}
-                  className="flex items-center gap-4 rounded-xl border border-stone-200 bg-porjar-bg p-3"
+                  className="flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-esi-bg p-3"
                 >
                   {/* Avatar */}
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white dark:bg-zinc-800">
                     <RoleIcon
                       size={20}
                       weight={member.role === 'captain' ? 'fill' : 'regular'}
-                      className={member.role === 'captain' ? 'text-amber-500' : 'text-stone-400'}
+                      className={member.role === 'captain' ? 'text-amber-500' : 'text-stone-400 dark:text-zinc-500'}
                     />
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-medium text-stone-900">
+                      <span className="truncate text-sm font-medium text-stone-900 dark:text-zinc-100">
                         {member.in_game_name}
                       </span>
                       <span
@@ -184,7 +184,7 @@ export function TeamMembersSection({
                       </span>
                     </div>
                     {member.in_game_id && (
-                      <p className="mt-0.5 text-xs text-stone-400">
+                      <p className="mt-0.5 text-xs text-stone-400 dark:text-zinc-500">
                         ID: {member.in_game_id}
                       </p>
                     )}
@@ -192,7 +192,7 @@ export function TeamMembersSection({
 
                   {/* Jersey */}
                   {member.jersey_number != null && (
-                    <span className="flex items-center gap-1 text-xs text-stone-400">
+                    <span className="flex items-center gap-1 text-xs text-stone-400 dark:text-zinc-500">
                       <TShirt size={12} />
                       #{member.jersey_number}
                     </span>
@@ -202,7 +202,7 @@ export function TeamMembersSection({
                   {isCaptain && member.role !== 'captain' && (
                     <button
                       onClick={() => onRemoveMember(member.id)}
-                      className="rounded-md p-1.5 text-stone-400 transition-colors hover:bg-red-50 hover:text-red-500"
+                      className="rounded-md p-1.5 text-stone-400 dark:text-zinc-500 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-500"
                       title="Hapus anggota"
                     >
                       <Trash size={16} />

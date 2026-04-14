@@ -16,12 +16,14 @@ const publicPatterns = [
   '/players',
   '/achievements',
   '/gallery',
+  '/events',
 ]
 
 // Role-based route rules
 const protectedRoutes: { prefix: string; roles: string[] }[] = [
   { prefix: '/admin', roles: ['admin', 'superadmin'] },
   { prefix: '/coach', roles: ['coach'] },
+  { prefix: '/referee', roles: ['referee', 'admin', 'superadmin'] },
   { prefix: '/dashboard', roles: ['player', 'admin', 'superadmin', 'coach'] },
 ]
 
@@ -29,6 +31,7 @@ const protectedRoutes: { prefix: string; roles: string[] }[] = [
 const roleHomePage: Record<string, string> = {
   admin: '/admin',
   superadmin: '/admin',
+  referee: '/referee',
   coach: '/coach',
   player: '/dashboard',
 }
@@ -77,8 +80,15 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // No token: redirect to login with return URL
+  // No token: check if refresh_token cookie exists (HttpOnly, set by API).
+  // If refresh cookie is present, allow through — client-side will auto-refresh.
+  // Only redirect to login if truly no session at all.
   if (!accessToken) {
+    const refreshToken = request.cookies.get('refresh_token')?.value
+    if (refreshToken) {
+      // Refresh token exists — let client-side handle the refresh
+      return NextResponse.next()
+    }
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirect', pathname)
     return NextResponse.redirect(loginUrl)

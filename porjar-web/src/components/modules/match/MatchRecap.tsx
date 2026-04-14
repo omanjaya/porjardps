@@ -24,17 +24,17 @@ export function MatchRecap({ match }: MatchRecapProps) {
       <div className="relative overflow-hidden rounded-xl border border-green-200 bg-gradient-to-br from-green-50 via-white to-white p-8 text-center shadow-sm">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-green-50/50 via-transparent to-transparent" />
         <div className="relative z-10">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-green-50 border border-green-200 px-4 py-1.5">
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-green-50 dark:bg-green-950/30 border border-green-200 px-4 py-1.5">
             <Crown size={16} weight="fill" className="text-amber-500" />
             <span className="text-sm font-bold uppercase tracking-wider text-green-600">
               MENANG
             </span>
           </div>
-          <h2 className="mt-3 text-3xl font-black text-stone-900">
+          <h2 className="mt-3 text-3xl font-black text-stone-900 dark:text-zinc-100">
             {winner?.name ?? 'TBD'}
           </h2>
           {loser && (
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">
               mengalahkan {loser.name}
             </p>
           )}
@@ -44,25 +44,25 @@ export function MatchRecap({ match }: MatchRecapProps) {
       {/* Score display */}
       <div className="flex items-center justify-center gap-6 py-4">
         <div className="flex flex-col items-center gap-1">
-          <span className="text-sm font-medium text-stone-500">{match.team_a?.name ?? 'TBD'}</span>
+          <span className="text-sm font-medium text-stone-500 dark:text-zinc-400">{match.team_a?.name ?? 'TBD'}</span>
           <span
             className={cn(
               'text-5xl font-black tabular-nums',
-              match.score_a > match.score_b ? 'text-green-500' : 'text-stone-400'
+              match.score_a > match.score_b ? 'text-green-500' : 'text-stone-400 dark:text-zinc-500'
             )}
           >
             {match.score_a}
           </span>
         </div>
 
-        <span className="text-2xl font-bold text-stone-300">-</span>
+        <span className="text-2xl font-bold text-stone-300 dark:text-zinc-600">-</span>
 
         <div className="flex flex-col items-center gap-1">
-          <span className="text-sm font-medium text-stone-500">{match.team_b?.name ?? 'TBD'}</span>
+          <span className="text-sm font-medium text-stone-500 dark:text-zinc-400">{match.team_b?.name ?? 'TBD'}</span>
           <span
             className={cn(
               'text-5xl font-black tabular-nums',
-              match.score_b > match.score_a ? 'text-green-500' : 'text-stone-400'
+              match.score_b > match.score_a ? 'text-green-500' : 'text-stone-400 dark:text-zinc-500'
             )}
           >
             {match.score_b}
@@ -73,7 +73,7 @@ export function MatchRecap({ match }: MatchRecapProps) {
       {/* Game-by-game timeline */}
       {match.games && match.games.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-400">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
             Rekap Per Game
           </h3>
           <div className="space-y-2">
@@ -86,23 +86,23 @@ export function MatchRecap({ match }: MatchRecapProps) {
               return (
                 <div
                   key={game.game_number}
-                  className="rounded-xl border border-stone-200 bg-white overflow-hidden shadow-sm"
+                  className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm"
                 >
                   {/* Game header */}
                   <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 text-xs font-bold text-stone-500">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800 text-xs font-bold text-stone-500 dark:text-zinc-400">
                         {game.game_number}
                       </span>
                       <div>
                         <div className="flex items-center gap-1.5">
                           <Trophy size={12} weight="fill" className="text-amber-500" />
-                          <span className="text-sm font-semibold text-stone-900">
+                          <span className="text-sm font-semibold text-stone-900 dark:text-zinc-100">
                             {gameWinnerName ?? 'TBD'}
                           </span>
                         </div>
                         {game.map_name && (
-                          <span className="text-[11px] text-stone-400">{game.map_name}</span>
+                          <span className="text-[11px] text-stone-400 dark:text-zinc-500">{game.map_name}</span>
                         )}
                       </div>
                     </div>
@@ -113,16 +113,16 @@ export function MatchRecap({ match }: MatchRecapProps) {
                         <span
                           className={cn(
                             'text-lg font-bold tabular-nums',
-                            game.score_a > game.score_b ? 'text-green-500' : 'text-stone-400'
+                            game.score_a > game.score_b ? 'text-green-500' : 'text-stone-400 dark:text-zinc-500'
                           )}
                         >
                           {game.score_a}
                         </span>
-                        <span className="text-xs text-stone-300">-</span>
+                        <span className="text-xs text-stone-300 dark:text-zinc-600">-</span>
                         <span
                           className={cn(
                             'text-lg font-bold tabular-nums',
-                            game.score_b > game.score_a ? 'text-green-500' : 'text-stone-400'
+                            game.score_b > game.score_a ? 'text-green-500' : 'text-stone-400 dark:text-zinc-500'
                           )}
                         >
                           {game.score_b}
@@ -130,7 +130,7 @@ export function MatchRecap({ match }: MatchRecapProps) {
                       </div>
 
                       {/* Meta */}
-                      <div className="flex items-center gap-3 text-xs text-stone-400">
+                      <div className="flex items-center gap-3 text-xs text-stone-400 dark:text-zinc-500">
                         {game.duration_minutes && (
                           <div className="flex items-center gap-1">
                             <Timer size={12} />
@@ -149,17 +149,17 @@ export function MatchRecap({ match }: MatchRecapProps) {
 
                   {/* Hero bans */}
                   {game.hero_bans && (
-                    <div className="border-t border-stone-100 px-4 py-2 flex items-center gap-4">
-                      <Sword size={12} className="text-stone-400 flex-shrink-0" />
+                    <div className="border-t border-stone-100 dark:border-zinc-700 px-4 py-2 flex items-center gap-4">
+                      <Sword size={12} className="text-stone-400 dark:text-zinc-500 flex-shrink-0" />
                       <div className="flex flex-1 items-center gap-6 text-[11px]">
                         <div>
-                          <span className="text-stone-400">{match.team_a?.name} bans: </span>
+                          <span className="text-stone-400 dark:text-zinc-500">{match.team_a?.name} bans: </span>
                           <span className="text-red-500/80">
                             {game.hero_bans.team_a.join(', ') || '-'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-stone-400">{match.team_b?.name} bans: </span>
+                          <span className="text-stone-400 dark:text-zinc-500">{match.team_b?.name} bans: </span>
                           <span className="text-red-500/80">
                             {game.hero_bans.team_b.join(', ') || '-'}
                           </span>
@@ -179,7 +179,7 @@ export function MatchRecap({ match }: MatchRecapProps) {
         <ShareButton
           url={matchUrl}
           title={`${match.team_a?.name ?? 'TBD'} vs ${match.team_b?.name ?? 'TBD'}`}
-          description={`Hasil: ${match.score_a}-${match.score_b}. ${winner?.name ?? ''} MENANG!`}
+          text={`Hasil: ${match.score_a}-${match.score_b}. ${winner?.name ?? ''} MENANG!`}
         />
       </div>
     </div>

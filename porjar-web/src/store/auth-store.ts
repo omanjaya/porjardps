@@ -10,6 +10,7 @@ import {
   setStoredRefreshToken,
   migrateOldCookieToken,
 } from '@/lib/api'
+import { resetWSClient } from '@/lib/ws'
 
 interface AuthState {
   user: User | null
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       setAccessToken(null) // also clears access_token & user_role cookies
       setStoredRefreshToken(null) // clean up any legacy localStorage entry
+      resetWSClient() // force fresh unauthenticated connection on next visit
       set({ user: null, isAuthenticated: false, isLoading: false })
     }
   },
@@ -73,15 +75,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     // Clear any legacy access_token that was stored in document.cookie
     migrateOldCookieToken()
 
-    // Ensure the CSRF cookie is set before any mutations happen
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/csrf-token`, {
-        credentials: 'include',
-        method: 'GET',
-      })
-    } catch {
-      // Non-critical — continue even if the CSRF endpoint is unreachable
-    }
+    // Fire CSRF prefetch in parallel — don't await it sequentially.
+    // It only needs to complete before the first mutation (POST/PUT/DELETE),
+    // not before GET requests like /auth/me.
+    const csrfReady = fetch(`${process.env.NEXT_PUBLIC_API_URL}/csrf-token`, {
+      credentials: 'include',
+      method: 'GET',
+    }).catch(() => {})
 
     try {
       // No access token in memory? Try refresh first.
@@ -96,8 +96,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       }
 
-      // Now we have a valid access token
-      const user = await api.get<User>('/auth/me')
+      // Now we have a valid access token — fetch user in parallel with CSRF
+      const [user] = await Promise.all([
+        api.get<User>('/auth/me'),
+        csrfReady,
+      ])
       setUserRoleCookie(user.role)
       set({ user, isAuthenticated: true, isLoading: false, sessionExpired: false })
     } catch {
@@ -111,6 +114,12 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user, isAuthenticated: !!user, isLoading: false })
   },
 }))
+
+// Granular selectors — prevent unnecessary re-renders
+export const useUser = () => useAuthStore((s) => s.user)
+export const useIsAuthenticated = () => useAuthStore((s) => s.isAuthenticated)
+export const useIsAuthLoading = () => useAuthStore((s) => s.isLoading)
+export const useSessionExpired = () => useAuthStore((s) => s.sessionExpired)
 
 // Re-export for debug page
 export const getRefreshToken = getStoredRefreshToken

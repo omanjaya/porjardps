@@ -5,11 +5,11 @@ export function registerServiceWorker() {
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/sw.js')
-        .then((registration) => {
-          console.log('SW registered:', registration.scope)
+        .then(() => {
+          // SW registered successfully
         })
-        .catch((error) => {
-          console.log('SW registration failed:', error)
+        .catch(() => {
+          // SW registration failed
         })
     })
   }

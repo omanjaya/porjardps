@@ -33,13 +33,32 @@ func (s *BracketService) UpdateMatchStatus(ctx context.Context, matchID uuid.UUI
 		return apperror.Wrap(err, "update match status")
 	}
 
-	// If transitioning to live, set started_at
+	// If transitioning to live, set started_at + notify team members
 	if status == "live" {
 		now := time.Now()
 		match.StartedAt = &now
 		match.Status = status
 		if err := s.bracketRepo.Update(ctx, match); err != nil {
 			slog.Error("failed to update started_at", "error", err)
+		}
+
+		if s.notifSvc != nil && s.memberRepo != nil && match.TeamAID != nil && match.TeamBID != nil {
+			matchLabel := fmt.Sprintf("R%d M%d", match.Round, match.MatchNumber)
+			teamIDs := []uuid.UUID{*match.TeamAID, *match.TeamBID}
+			go func() {
+				bgCtx := context.Background()
+				for _, teamID := range teamIDs {
+					members, err := s.memberRepo.FindByTeam(bgCtx, teamID)
+					if err != nil {
+						continue
+					}
+					for _, m := range members {
+						if m.UserID != nil {
+						s.notifSvc.NotifyMatchStarting(bgCtx, *m.UserID, matchLabel, matchID)
+					}
+					}
+				}
+			}()
 		}
 	}
 
@@ -187,6 +206,26 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		return apperror.NotFound("MATCH")
 	}
 
+	// Distributed lock to prevent concurrent completion of the same match (TOCTOU)
+	if s.rdb != nil {
+		lockKey := fmt.Sprintf("complete_match:lock:%s", matchID.String())
+		ok, err := s.rdb.SetNX(ctx, lockKey, "1", 30*time.Second).Result()
+		if err != nil {
+			slog.Error("CompleteMatch: failed to acquire lock", "match_id", matchID, "error", err)
+			return apperror.BusinessRule("MATCH_COMPLETING", "Gagal mengunci match, coba lagi")
+		}
+		if !ok {
+			return apperror.BusinessRule("MATCH_COMPLETING", "Match sedang diproses")
+		}
+		defer s.rdb.Del(ctx, lockKey)
+
+		// Re-fetch match after lock to prevent TOCTOU race
+		match, err = s.bracketRepo.FindByID(ctx, matchID)
+		if err != nil || match == nil {
+			return apperror.NotFound("MATCH")
+		}
+	}
+
 	if match.Status != "live" {
 		return apperror.BusinessRule("MATCH_NOT_LIVE", "Match harus berstatus live untuk diselesaikan")
 	}
@@ -254,7 +293,7 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 			standing.Losses++
 			standing.MatchesPlayed++
 			if err := s.standingsRepo.Update(ctx, standing); err != nil {
-				slog.Error("failed to update loser standing", "error", err)
+				slog.Error("CRITICAL: failed to update loser standing after match completion", "match_id", matchID, "team_id", loserID, "error", err)
 			}
 		}
 
@@ -264,7 +303,7 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 			winnerStanding.Wins++
 			winnerStanding.MatchesPlayed++
 			if err := s.standingsRepo.Update(ctx, winnerStanding); err != nil {
-				slog.Error("failed to update winner standing", "error", err)
+				slog.Error("CRITICAL: failed to update winner standing after match completion", "match_id", matchID, "team_id", winnerID, "error", err)
 			}
 		}
 	}
@@ -302,6 +341,25 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		go s.notifSvc.NotifyMatchResult(ctx, winnerID, loserID, winnerName, loserName, s.memberRepo)
 	}
 
+	// Notify admins that match completed
+	if s.notifSvc != nil && winnerName != "" {
+		gameName := ""
+		if tournament, err := s.tournamentRepo.FindByID(ctx, match.TournamentID); err == nil && tournament != nil {
+			if game, err := s.gameRepo.FindByID(ctx, tournament.GameID); err == nil && game != nil {
+				gameName = game.Name
+			}
+		}
+		go s.notifSvc.NotifyAdminMatchCompleted(context.Background(), winnerName, loserName, gameName, matchID)
+	}
+
+	// Auto-set tournament champion if this is the final match (no next match to advance to).
+	// Best-effort: log error but don't fail the submission flow.
+	if match.NextMatchID == nil && match.LoserNextMatchID == nil && s.tournamentSvc != nil {
+		if err := s.tournamentSvc.SetChampion(ctx, match.TournamentID, winnerID); err != nil {
+			slog.Error("failed to auto-set tournament champion", "tournament_id", match.TournamentID, "winner_id", winnerID, "error", err)
+		}
+	}
+
 	return nil
 }
 
@@ -325,6 +383,12 @@ func (s *BracketService) ScheduleMatch(ctx context.Context, matchID uuid.UUID, s
 		return apperror.Wrap(err, "update match schedule")
 	}
 
+	s.broadcastMatchUpdate(match.TournamentID, matchID, "bracket_update", map[string]interface{}{
+		"tournament_id": match.TournamentID.String(),
+		"match_id":      matchID.String(),
+		"action":        "scheduled",
+	})
+
 	return nil
 }
 
@@ -345,14 +409,148 @@ func (s *BracketService) ScheduleRound(ctx context.Context, tournamentID uuid.UU
 			}
 		}
 	}
+
+	if count > 0 {
+		s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+			"tournament_id": tournamentID.String(),
+			"action":        "round_scheduled",
+			"round":         round,
+		})
+	}
+
 	return count, nil
+}
+
+// SwapBracketTeams swaps two teams between their pending bracket match slots.
+// Both teams must currently be in a pending or scheduled match in this tournament.
+// Also swaps their seeds in tournament_teams for display consistency.
+func (s *BracketService) SwapBracketTeams(ctx context.Context, tournamentID, teamAID, teamBID uuid.UUID) error {
+	if teamAID == teamBID {
+		return apperror.BusinessRule("SAME_TEAM", "Tidak bisa menukar tim dengan dirinya sendiri")
+	}
+
+	matches, err := s.bracketRepo.ListByTournament(ctx, tournamentID)
+	if err != nil {
+		return apperror.Wrap(err, "list bracket matches")
+	}
+
+	var matchA, matchB *model.BracketMatch
+	var posA, posB string // "a" or "b"
+
+	for _, m := range matches {
+		if m.Status != "pending" && m.Status != "scheduled" {
+			continue
+		}
+		if m.TeamAID != nil && *m.TeamAID == teamAID {
+			matchA = m
+			posA = "a"
+		} else if m.TeamBID != nil && *m.TeamBID == teamAID {
+			matchA = m
+			posA = "b"
+		}
+		if m.TeamAID != nil && *m.TeamAID == teamBID {
+			matchB = m
+			posB = "a"
+		} else if m.TeamBID != nil && *m.TeamBID == teamBID {
+			matchB = m
+			posB = "b"
+		}
+	}
+
+	if matchA == nil {
+		return apperror.BusinessRule("TEAM_NOT_IN_BRACKET", "Tim A tidak ditemukan di bracket atau sudah bermain")
+	}
+	if matchB == nil {
+		return apperror.BusinessRule("TEAM_NOT_IN_BRACKET", "Tim B tidak ditemukan di bracket atau sudah bermain")
+	}
+
+	// Swap team slots
+	if posA == "a" {
+		matchA.TeamAID = &teamBID
+	} else {
+		matchA.TeamBID = &teamBID
+	}
+	if posB == "a" {
+		matchB.TeamAID = &teamAID
+	} else {
+		matchB.TeamBID = &teamAID
+	}
+
+	if matchA.ID == matchB.ID {
+		// Same match: just one update needed
+		if err := s.bracketRepo.Update(ctx, matchA); err != nil {
+			return apperror.Wrap(err, "update match")
+		}
+	} else {
+		if err := s.bracketRepo.Update(ctx, matchA); err != nil {
+			return apperror.Wrap(err, "update match A")
+		}
+		if err := s.bracketRepo.Update(ctx, matchB); err != nil {
+			return apperror.Wrap(err, "update match B")
+		}
+	}
+
+	// Swap seeds in tournament_teams for display consistency
+	ttA, err := s.ttRepo.FindByTournamentAndTeam(ctx, tournamentID, teamAID)
+	if err == nil && ttA != nil {
+		ttB, err := s.ttRepo.FindByTournamentAndTeam(ctx, tournamentID, teamBID)
+		if err == nil && ttB != nil {
+			_ = s.ttRepo.UpdateSeed(ctx, tournamentID, teamAID, ttB.Seed)
+			_ = s.ttRepo.UpdateSeed(ctx, tournamentID, teamBID, ttA.Seed)
+		}
+	}
+
+	s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"action":        "teams_swapped",
+	})
+
+	return nil
 }
 
 // UpdateMatchBestOf updates the best_of value for a single match.
 func (s *BracketService) UpdateMatchBestOf(ctx context.Context, matchID uuid.UUID, bestOf int) error {
-	_, err := s.bracketRepo.FindByID(ctx, matchID)
+	if bestOf < 1 {
+		return apperror.BusinessRule("INVALID_BEST_OF", "Best of harus minimal 1")
+	}
+	if bestOf%2 == 0 {
+		return apperror.BusinessRule("INVALID_BEST_OF", "Best of harus bilangan ganjil (1, 3, 5, 7)")
+	}
+
+	match, err := s.bracketRepo.FindByID(ctx, matchID)
 	if err != nil {
 		return apperror.Wrap(err, "find match")
 	}
-	return s.bracketRepo.UpdateBestOf(ctx, matchID, bestOf)
+	if err := s.bracketRepo.UpdateBestOf(ctx, matchID, bestOf); err != nil {
+		return apperror.Wrap(err, "update match best_of")
+	}
+
+	s.broadcastMatchUpdate(match.TournamentID, matchID, "bracket_update", map[string]interface{}{
+		"tournament_id": match.TournamentID.String(),
+		"match_id":      matchID.String(),
+		"action":        "best_of_changed",
+		"best_of":       bestOf,
+	})
+
+	return nil
+}
+
+// UpdateBestOfByRound batch-updates the best_of value for all matches in a given
+// tournament round. Returns the number of rows affected.
+func (s *BracketService) UpdateBestOfByRound(ctx context.Context, tournamentID uuid.UUID, round int, bestOf int) (int64, error) {
+	n, err := s.bracketRepo.UpdateBestOfByTournamentAndRound(ctx, tournamentID, round, bestOf)
+	if err != nil {
+		return n, apperror.Wrap(err, "update round best_of")
+	}
+
+	if n > 0 {
+		s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+			"tournament_id": tournamentID.String(),
+			"action":        "best_of_changed",
+			"round":         round,
+			"best_of":       bestOf,
+		})
+	}
+
+	return n, nil
 }

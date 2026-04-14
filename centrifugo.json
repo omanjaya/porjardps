@@ -1,0 +1,9 @@
+{
+  "port": 8000,
+  "address": "0.0.0.0",
+  "health": true,
+  "log_level": "info",
+  "allow_subscribe_for_anonymous": true,
+  "allow_user_limited_channels": true,
+  "allowed_origins": ["https://esidenpasar.com", "https://www.esidenpasar.com", "http://localhost:4200", "http://localhost:3000"]
+}

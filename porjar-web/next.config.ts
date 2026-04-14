@@ -2,6 +2,28 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  experimental: {
+    optimizePackageImports: ['@phosphor-icons/react', 'recharts'],
+    // optimizeCss: true, // disabled — incompatible with Next.js 16 data-precedence
+  },
+  async redirects() {
+    const activeSlug = 'porjar-2026';
+    return [
+      // Redirect legacy global routes to active event-scoped pages (302)
+      ...[
+        'tournaments', 'schedule', 'games', 'rules', 'teams',
+        'players', 'gallery', 'achievements', 'rundown',
+      ].map(path => ({
+        source: `/${path}`,
+        destination: `/events/${activeSlug}/${path}`,
+        permanent: false,
+      })),
+      { source: '/leaderboards', destination: `/events/${activeSlug}/leaderboard`, permanent: false },
+      { source: '/schools', destination: `/events/${activeSlug}/schools`, permanent: false },
+      { source: '/schools/standings', destination: `/events/${activeSlug}/schools/standings`, permanent: false },
+      { source: '/matches/live', destination: `/events/${activeSlug}/matches/live`, permanent: false },
+    ];
+  },
   async headers() {
     return [{
       source: '/(.*)',
@@ -36,7 +58,11 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "porjardenpasar.nouma.id",
+        hostname: "esidenpasar.com",
+      },
+      {
+        protocol: "https",
+        hostname: "www.esidenpasar.com",
       },
     ],
   },

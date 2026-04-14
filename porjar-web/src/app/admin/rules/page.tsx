@@ -185,8 +185,8 @@ export default function AdminRulesPage() {
   return (
     <AdminLayout>
       <div className="mb-4 sm:mb-6">
-        <h1 className="text-2xl font-bold text-stone-900">Aturan Turnamen</h1>
-        <p className="mt-1 text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100">Aturan Turnamen</h1>
+        <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">
           Kelola peraturan untuk setiap cabang e-sport
         </p>
       </div>
@@ -203,14 +203,14 @@ export default function AdminRulesPage() {
               className={cn(
                 'flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors',
                 isActive
-                  ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
-                  : 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                  ? 'border-esi-red bg-esi-red text-white shadow-sm'
+                  : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50'
               )}
             >
               <span
                 className={cn(
                   'flex h-6 w-6 shrink-0 items-center justify-center rounded-md',
-                  isActive ? 'bg-white/20' : 'bg-stone-100'
+                  isActive ? 'bg-white dark:bg-zinc-900/20' : 'bg-stone-100 dark:bg-zinc-800'
                 )}
               >
                 <img
@@ -231,8 +231,8 @@ export default function AdminRulesPage() {
           className={cn(
             'mb-4 rounded-lg border px-4 py-3 text-sm',
             message.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-red-200 bg-red-50 text-red-800'
+              ? 'border-green-200 bg-green-50 dark:bg-green-950/30 text-green-800'
+              : 'border-red-200 bg-red-50 dark:bg-red-950/30 text-red-800'
           )}
         >
           {message.text}
@@ -241,7 +241,7 @@ export default function AdminRulesPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <SpinnerGap size={32} className="animate-spin text-stone-400" />
+          <SpinnerGap size={32} className="animate-spin text-stone-400 dark:text-zinc-500" />
         </div>
       ) : (
         <>
@@ -250,7 +250,7 @@ export default function AdminRulesPage() {
             {sections.map((section, index) => (
               <div
                 key={index}
-                className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+                className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm"
               >
                 <div className="mb-3 flex items-center gap-2">
                   {/* Reorder buttons */}
@@ -258,14 +258,14 @@ export default function AdminRulesPage() {
                     <button
                       onClick={() => moveSection(index, 'up')}
                       disabled={index === 0}
-                      className="rounded p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 disabled:opacity-30"
+                      className="rounded p-1 text-stone-400 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-700 dark:bg-zinc-800 hover:text-stone-600 dark:text-zinc-400 disabled:opacity-30"
                     >
                       <ArrowUp size={14} />
                     </button>
                     <button
                       onClick={() => moveSection(index, 'down')}
                       disabled={index === sections.length - 1}
-                      className="rounded p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-600 disabled:opacity-30"
+                      className="rounded p-1 text-stone-400 dark:text-zinc-500 hover:bg-stone-100 dark:hover:bg-zinc-700 dark:bg-zinc-800 hover:text-stone-600 dark:text-zinc-400 disabled:opacity-30"
                     >
                       <ArrowDown size={14} />
                     </button>
@@ -277,7 +277,7 @@ export default function AdminRulesPage() {
                     value={section.section_name}
                     onChange={(e) => updateSection(index, 'section_name', e.target.value)}
                     placeholder="Nama Section"
-                    className="flex-1 rounded-lg border border-stone-200 px-3 py-2 text-sm font-semibold text-stone-800 placeholder:text-stone-400 focus:border-porjar-red focus:outline-none focus:ring-1 focus:ring-porjar-red"
+                    className="flex-1 rounded-lg border border-stone-200 dark:border-zinc-700 px-3 py-2 text-sm font-semibold text-stone-800 dark:text-zinc-200 placeholder:text-stone-400 dark:text-zinc-500 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red"
                   />
 
                   {/* Publish toggle */}
@@ -286,8 +286,8 @@ export default function AdminRulesPage() {
                     className={cn(
                       'flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors',
                       section.is_published
-                        ? 'border-green-200 bg-green-50 text-green-700'
-                        : 'border-stone-200 bg-stone-50 text-stone-500'
+                        ? 'border-green-200 bg-green-50 dark:bg-green-950/30 text-green-700'
+                        : 'border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 text-stone-500 dark:text-zinc-400'
                     )}
                     title={section.is_published ? 'Published' : 'Draft'}
                   >
@@ -298,7 +298,7 @@ export default function AdminRulesPage() {
                   {/* Delete button */}
                   <button
                     onClick={() => handleDeleteSection(index)}
-                    className="rounded-lg border border-stone-200 p-2 text-stone-400 hover:border-red-200 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    className="rounded-lg border border-stone-200 dark:border-zinc-700 p-2 text-stone-400 dark:text-zinc-500 hover:border-red-200 hover:bg-red-50 dark:bg-red-950/30 hover:text-red-500 transition-colors"
                   >
                     <Trash size={16} />
                   </button>
@@ -310,9 +310,9 @@ export default function AdminRulesPage() {
                   onChange={(e) => updateSection(index, 'content', e.target.value)}
                   placeholder="Tulis konten aturan di sini... (gunakan baris baru untuk setiap poin)"
                   rows={5}
-                  className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm text-stone-700 placeholder:text-stone-400 focus:border-porjar-red focus:outline-none focus:ring-1 focus:ring-porjar-red"
+                  className="w-full rounded-lg border border-stone-200 dark:border-zinc-700 px-3 py-2 text-sm text-stone-700 dark:text-zinc-300 placeholder:text-stone-400 dark:text-zinc-500 focus:border-esi-red focus:outline-none focus:ring-1 focus:ring-esi-red"
                 />
-                <p className="mt-1 text-xs text-stone-400">
+                <p className="mt-1 text-xs text-stone-400 dark:text-zinc-500">
                   Setiap baris akan ditampilkan sebagai poin terpisah di halaman publik.
                 </p>
               </div>
@@ -323,7 +323,7 @@ export default function AdminRulesPage() {
           <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3">
             <button
               onClick={handleAddSection}
-              className="flex items-center gap-2 rounded-xl border border-dashed border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-600 hover:border-stone-400 hover:bg-stone-50 transition-colors"
+              className="flex items-center gap-2 rounded-xl border border-dashed border-stone-300 dark:border-zinc-600 px-4 py-2.5 text-sm font-medium text-stone-600 dark:text-zinc-400 hover:border-stone-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 transition-colors"
             >
               <Plus size={16} />
               Tambah Section
@@ -332,7 +332,7 @@ export default function AdminRulesPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="ml-auto flex items-center gap-2 rounded-xl bg-porjar-red px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
+              className="ml-auto flex items-center gap-2 rounded-xl bg-esi-red px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               {saving ? (
                 <SpinnerGap size={16} className="animate-spin" />

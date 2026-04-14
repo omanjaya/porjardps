@@ -123,6 +123,67 @@ func (s *LobbyRotationService) GetLobbyTeams(ctx context.Context, lobbyID uuid.U
 	return teams, nil
 }
 
+// SwapLobbyTeams swaps teamA (from lobbyA) with teamB (from lobbyB) atomically.
+// Both lobbies must be pending or scheduled.
+func (s *LobbyRotationService) SwapLobbyTeams(
+	ctx context.Context,
+	teamAID, lobbyAID, teamBID, lobbyBID uuid.UUID,
+) error {
+	if teamAID == teamBID {
+		return apperror.BusinessRule("SAME_TEAM", "Tidak bisa menukar tim dengan dirinya sendiri")
+	}
+
+	lobbyA, err := s.lobbyRepo.FindByID(ctx, lobbyAID)
+	if err != nil || lobbyA == nil {
+		return apperror.NotFound("LOBBY_A")
+	}
+	lobbyB, err := s.lobbyRepo.FindByID(ctx, lobbyBID)
+	if err != nil || lobbyB == nil {
+		return apperror.NotFound("LOBBY_B")
+	}
+
+	allowed := map[string]bool{"pending": true, "scheduled": true}
+	if !allowed[lobbyA.Status] {
+		return apperror.BusinessRule("LOBBY_NOT_SWAPPABLE", "Lobby A harus berstatus pending atau scheduled")
+	}
+	if !allowed[lobbyB.Status] {
+		return apperror.BusinessRule("LOBBY_NOT_SWAPPABLE", "Lobby B harus berstatus pending atau scheduled")
+	}
+
+	teamsA, err := s.lobbyTeamRepo.FindByLobby(ctx, lobbyAID)
+	if err != nil {
+		return apperror.Wrap(err, "find lobby A teams")
+	}
+	teamsB, err := s.lobbyTeamRepo.FindByLobby(ctx, lobbyBID)
+	if err != nil {
+		return apperror.Wrap(err, "find lobby B teams")
+	}
+
+	teamAInLobbyA := false
+	for _, lt := range teamsA {
+		if lt.TeamID == teamAID {
+			teamAInLobbyA = true
+			break
+		}
+	}
+	teamBInLobbyB := false
+	for _, lt := range teamsB {
+		if lt.TeamID == teamBID {
+			teamBInLobbyB = true
+			break
+		}
+	}
+
+	if !teamAInLobbyA {
+		return apperror.BusinessRule("TEAM_NOT_IN_LOBBY", "Tim A tidak ditemukan di Lobby A")
+	}
+	if !teamBInLobbyB {
+		return apperror.BusinessRule("TEAM_NOT_IN_LOBBY", "Tim B tidak ditemukan di Lobby B")
+	}
+
+	return s.lobbyTeamRepo.SwapTeams(ctx, teamAID, lobbyAID, teamBID, lobbyBID)
+}
+
 // AutoAssignForDay auto-rotates teams for a new day based on round-robin rotation
 func (s *LobbyRotationService) AutoAssignForDay(ctx context.Context, tournamentID uuid.UUID, dayNumber int, numLobbies int) error {
 	// Get all approved teams

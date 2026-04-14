@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { FloppyDisk, Spinner } from '@phosphor-icons/react'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface EventSettings {
   id: string
@@ -138,92 +139,92 @@ export default function AdminSettingsPage() {
       {loading ? (
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 animate-pulse rounded-xl bg-stone-100" />
+            <Skeleton key={i} className="h-32 rounded-xl bg-stone-100 dark:bg-zinc-800" />
           ))}
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
           {/* Event Info */}
-          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-porjar-text">Informasi Event</h2>
+          <section className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-esi-text">Informasi Event</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Nama Event</label>
-                <Input name="event_name" value={form.event_name} onChange={handleChange} placeholder="PORJAR Denpasar Esport 2026" />
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Nama Event</label>
+                <Input name="event_name" value={form.event_name} onChange={handleChange} placeholder="ESI Kota Denpasar 2026" />
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Deskripsi</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Deskripsi</label>
                 <Textarea name="event_description" value={form.event_description} onChange={handleChange} placeholder="Pekan Olahraga Pelajar..." rows={3} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Venue</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Venue</label>
                 <Input name="venue" value={form.venue} onChange={handleChange} placeholder="Graha Yowana Suci" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Kota</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Kota</label>
                 <Input name="city" value={form.city} onChange={handleChange} placeholder="Denpasar, Bali" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Tanggal Mulai</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Tanggal Mulai</label>
                 <Input name="start_date" type="date" value={form.start_date} onChange={handleChange} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Tanggal Selesai</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Tanggal Selesai</label>
                 <Input name="end_date" type="date" value={form.end_date} onChange={handleChange} />
               </div>
             </div>
           </section>
 
           {/* Organizer & Contact */}
-          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-porjar-text">Penyelenggara & Kontak</h2>
+          <section className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-esi-text">Penyelenggara & Kontak</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Penyelenggara</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Penyelenggara</label>
                 <Input name="organizer" value={form.organizer} onChange={handleChange} placeholder="ESI Kota Denpasar" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Telepon</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Telepon</label>
                 <Input name="contact_phone" value={form.contact_phone} onChange={handleChange} placeholder="+62..." />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Email</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Email</label>
                 <Input name="contact_email" type="email" value={form.contact_email} onChange={handleChange} placeholder="info@example.com" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Instagram URL</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Instagram URL</label>
                 <Input name="instagram_url" value={form.instagram_url} onChange={handleChange} placeholder="https://instagram.com/..." />
               </div>
             </div>
           </section>
 
           {/* Branding */}
-          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-porjar-text">Logo & Banner</h2>
+          <section className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-esi-text">Logo & Banner</h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Logo URL</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Logo URL</label>
                 <Input name="event_logo_url" value={form.event_logo_url} onChange={handleChange} placeholder="https://..." />
                 {form.event_logo_url && (
-                  <img src={form.event_logo_url} alt="Logo preview" className="mt-2 h-16 w-16 rounded-lg border border-porjar-border object-contain" />
+                  <img src={form.event_logo_url} alt="Logo preview" className="mt-2 h-16 w-16 rounded-lg border border-esi-border object-contain" />
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Banner URL</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Banner URL</label>
                 <Input name="event_banner_url" value={form.event_banner_url} onChange={handleChange} placeholder="https://..." />
                 {form.event_banner_url && (
-                  <img src={form.event_banner_url} alt="Banner preview" className="mt-2 h-16 w-full max-w-xs rounded-lg border border-porjar-border object-cover" />
+                  <img src={form.event_banner_url} alt="Banner preview" className="mt-2 h-16 w-full max-w-xs rounded-lg border border-esi-border object-cover" />
                 )}
               </div>
             </div>
           </section>
 
           {/* Announcement */}
-          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-porjar-text">Pengumuman</h2>
+          <section className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-esi-text">Pengumuman</h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium text-porjar-muted">Teks Pengumuman</label>
+                <label className="mb-1 block text-sm font-medium text-esi-muted">Teks Pengumuman</label>
                 <Textarea name="announcement" value={form.announcement} onChange={handleChange} placeholder="Tulis pengumuman untuk ditampilkan di halaman utama..." rows={3} />
               </div>
               <ToggleRow
@@ -236,8 +237,8 @@ export default function AdminSettingsPage() {
           </section>
 
           {/* Feature Toggles */}
-          <section className="rounded-xl border border-porjar-border bg-white p-4 sm:p-6">
-            <h2 className="mb-4 text-base font-semibold text-porjar-text">Fitur</h2>
+          <section className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6">
+            <h2 className="mb-4 text-base font-semibold text-esi-text">Fitur</h2>
             <div className="space-y-4">
               <ToggleRow
                 label="Pendaftaran Dibuka"
@@ -259,7 +260,7 @@ export default function AdminSettingsPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-porjar-red text-white hover:bg-porjar-red/90"
+              className="bg-esi-red text-white hover:bg-esi-red/90"
             >
               {saving ? (
                 <Spinner size={18} className="mr-2 animate-spin" />
@@ -271,7 +272,7 @@ export default function AdminSettingsPage() {
           </div>
 
           {settings?.updated_at && (
-            <p className="text-right text-xs text-porjar-muted">
+            <p className="text-right text-xs text-esi-muted">
               Terakhir diperbarui: {new Date(settings.updated_at).toLocaleString('id-ID')}
             </p>
           )}
@@ -294,22 +295,22 @@ function ToggleRow({
   onToggle: () => void
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-porjar-border px-4 py-3">
+    <div className="flex items-center justify-between rounded-lg border border-esi-border px-4 py-3">
       <div>
-        <p className="text-sm font-medium text-porjar-text">{label}</p>
-        <p className="text-xs text-porjar-muted">{description}</p>
+        <p className="text-sm font-medium text-esi-text">{label}</p>
+        <p className="text-xs text-esi-muted">{description}</p>
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         onClick={onToggle}
-        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-porjar-red focus-visible:ring-offset-2 ${
-          checked ? 'bg-porjar-red' : 'bg-stone-200'
+        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-esi-red focus-visible:ring-offset-2 ${
+          checked ? 'bg-esi-red' : 'bg-stone-200'
         }`}
       >
         <span
-          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white dark:bg-zinc-900 shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
             checked ? 'translate-x-5' : 'translate-x-0'
           }`}
         />

@@ -13,8 +13,10 @@ import (
 // ── Player Dashboard DTOs ─────────────────────────────────────────────────────
 
 type PlayerTeamSummary struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	LogoURL       *string `json:"logo_url,omitempty"`
+	SchoolLogoURL *string `json:"school_logo_url,omitempty"`
 }
 
 type PlayerBracketMatch struct {
@@ -48,13 +50,14 @@ type PlayerTeamMember struct {
 }
 
 type PlayerTeamInfo struct {
-	ID         string             `json:"id"`
-	Name       string             `json:"name"`
-	GameName   string             `json:"game_name"`
-	GameSlug   string             `json:"game_slug"`
-	SchoolName string             `json:"school_name"`
-	LogoURL    *string            `json:"logo_url"`
-	Members    []PlayerTeamMember `json:"members"`
+	ID           string             `json:"id"`
+	Name         string             `json:"name"`
+	GameName     string             `json:"game_name"`
+	GameSlug     string             `json:"game_slug"`
+	SchoolName   string             `json:"school_name"`
+	LogoURL      *string            `json:"logo_url"`
+	TournamentID *string            `json:"tournament_id,omitempty"`
+	Members      []PlayerTeamMember `json:"members"`
 }
 
 type PlayerDashboardResponse struct {
@@ -210,21 +213,29 @@ func (s *PlayerDashboardService) enrichMatch(
 	ctx context.Context,
 	m *model.BracketMatch,
 	teamNameCache map[uuid.UUID]string,
+	teamLogoCache map[uuid.UUID][2]*string,
 	bestOfCache map[uuid.UUID]int,
 ) *PlayerBracketMatch {
 	teamSummary := func(id *uuid.UUID) *PlayerTeamSummary {
 		if id == nil {
 			return nil
 		}
-		name, ok := teamNameCache[*id]
-		if !ok {
+		name := teamNameCache[*id]
+		var logoURL, schoolLogoURL *string
+		if name == "" {
 			t, err := s.teamRepo.FindByID(ctx, *id)
 			if err == nil && t != nil {
 				name = t.Name
+				logoURL = t.LogoURL
+				schoolLogoURL = t.SchoolLogoURL
 				teamNameCache[*id] = name
+				teamLogoCache[*id] = [2]*string{t.LogoURL, t.SchoolLogoURL}
 			}
+		} else if logos, ok := teamLogoCache[*id]; ok {
+			logoURL = logos[0]
+			schoolLogoURL = logos[1]
 		}
-		return &PlayerTeamSummary{ID: id.String(), Name: name}
+		return &PlayerTeamSummary{ID: id.String(), Name: name, LogoURL: logoURL, SchoolLogoURL: schoolLogoURL}
 	}
 
 	bestOf := 1
@@ -291,6 +302,7 @@ func (s *PlayerDashboardService) GetDashboard(ctx context.Context, userID uuid.U
 	}
 
 	teamNameCache := map[uuid.UUID]string{}
+	teamLogoCache := map[uuid.UUID][2]*string{}
 	bestOfCache := map[uuid.UUID]int{}
 
 	// Find the earliest non-completed match (live > scheduled > pending)
@@ -321,9 +333,15 @@ func (s *PlayerDashboardService) GetDashboard(ctx context.Context, userID uuid.U
 		}
 	}
 
+	// Set tournament_id from the first match
+	if len(matches) > 0 {
+		tid := matches[0].TournamentID.String()
+		teamInfo.TournamentID = &tid
+	}
+
 	var nextMatchDTO *PlayerBracketMatch
 	if nextMatch != nil {
-		nextMatchDTO = s.enrichMatch(ctx, nextMatch, teamNameCache, bestOfCache)
+		nextMatchDTO = s.enrichMatch(ctx, nextMatch, teamNameCache, teamLogoCache, bestOfCache)
 	}
 
 	return &PlayerDashboardResponse{
@@ -382,6 +400,7 @@ func (s *PlayerDashboardService) GetMyMatches(ctx context.Context, userID uuid.U
 		}
 	}
 	teamNameCache := map[uuid.UUID]string{}
+	teamLogoCache := map[uuid.UUID][2]*string{}
 	if len(teamIDSet) > 0 {
 		allTeamIDs := make([]uuid.UUID, 0, len(teamIDSet))
 		for tid := range teamIDSet {
@@ -390,6 +409,7 @@ func (s *PlayerDashboardService) GetMyMatches(ctx context.Context, userID uuid.U
 		if teams, err := s.teamRepo.FindByIDs(ctx, allTeamIDs); err == nil {
 			for _, t := range teams {
 				teamNameCache[t.ID] = t.Name
+				teamLogoCache[t.ID] = [2]*string{t.LogoURL, t.SchoolLogoURL}
 			}
 		}
 	}
@@ -403,7 +423,7 @@ func (s *PlayerDashboardService) GetMyMatches(ctx context.Context, userID uuid.U
 	submissions := make([]PlayerSubmissionStatus, 0)
 
 	for _, m := range matches {
-		dto := s.enrichMatch(ctx, m, teamNameCache, bestOfCache)
+		dto := s.enrichMatch(ctx, m, teamNameCache, teamLogoCache, bestOfCache)
 
 		switch m.Status {
 		case "live":

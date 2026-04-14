@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 interface MatchResult {
   id: string
@@ -58,6 +59,14 @@ export default function CoachResultsPage() {
     loadResults()
   }, [])
 
+  useWebSocket({
+    channels: ['live-scores'],
+    messageTypes: ['match_complete', 'new_submission'],
+    onMessage: () => {
+      api.get<MatchResult[]>('/coach/results').then(d => setResults(d ?? [])).catch(() => {})
+    },
+  })
+
   const games = [...new Set(results.map(r => r.game_name))]
 
   const filtered = results.filter(r => {
@@ -86,10 +95,10 @@ export default function CoachResultsPage() {
       />
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
         <div className="flex items-center gap-2">
-          <Funnel size={16} className="text-porjar-muted" />
-          <span className="text-xs font-semibold uppercase text-porjar-muted">Filter</span>
+          <Funnel size={16} className="text-esi-muted" />
+          <span className="text-xs font-semibold uppercase text-esi-muted">Filter</span>
         </div>
 
         {/* Game filter */}
@@ -99,8 +108,8 @@ export default function CoachResultsPage() {
             className={cn(
               'rounded-lg px-3 py-1 text-xs font-medium transition-colors',
               gameFilter === 'all'
-                ? 'bg-porjar-red/10 text-porjar-red'
-                : 'text-porjar-muted hover:bg-porjar-bg'
+                ? 'bg-esi-red/10 text-esi-red'
+                : 'text-esi-muted hover:bg-esi-bg'
             )}
           >
             Semua Game
@@ -112,8 +121,8 @@ export default function CoachResultsPage() {
               className={cn(
                 'rounded-lg px-3 py-1 text-xs font-medium transition-colors',
                 gameFilter === g
-                  ? 'bg-porjar-red/10 text-porjar-red'
-                  : 'text-porjar-muted hover:bg-porjar-bg'
+                  ? 'bg-esi-red/10 text-esi-red'
+                  : 'text-esi-muted hover:bg-esi-bg'
               )}
             >
               {g}
@@ -122,19 +131,19 @@ export default function CoachResultsPage() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <CalendarBlank size={14} className="text-porjar-muted" />
+          <CalendarBlank size={14} className="text-esi-muted" />
           <Input
             type="date"
             value={dateFrom}
             onChange={e => setDateFrom(e.target.value)}
-            className="h-8 w-36 text-xs border-stone-200 focus:border-porjar-red focus:ring-porjar-red/20"
+            className="h-8 w-36 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20"
           />
-          <span className="text-xs text-porjar-muted">-</span>
+          <span className="text-xs text-esi-muted">-</span>
           <Input
             type="date"
             value={dateTo}
             onChange={e => setDateTo(e.target.value)}
-            className="h-8 w-36 text-xs border-stone-200 focus:border-porjar-red focus:ring-porjar-red/20"
+            className="h-8 w-36 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20"
           />
         </div>
       </div>
@@ -143,7 +152,7 @@ export default function CoachResultsPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl bg-porjar-border" />
+            <Skeleton key={i} className="h-24 rounded-xl bg-esi-border" />
           ))}
         </div>
       ) : filtered.length > 0 ? (
@@ -151,7 +160,7 @@ export default function CoachResultsPage() {
           {filtered.map(result => (
             <div
               key={result.id}
-              className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm"
+              className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm"
             >
               <div className="flex items-start gap-4">
                 {/* Win/Loss indicator */}
@@ -171,7 +180,7 @@ export default function CoachResultsPage() {
                 {/* Match info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-porjar-muted">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-esi-muted">
                       {result.game_name}
                     </span>
                     <span
@@ -187,24 +196,24 @@ export default function CoachResultsPage() {
                   </div>
 
                   {result.match_type === 'bracket' ? (
-                    <p className="text-sm font-bold text-porjar-text">
+                    <p className="text-sm font-bold text-esi-text">
                       {result.team_name}{' '}
-                      <span className="text-porjar-red">{result.score_a} - {result.score_b}</span>{' '}
+                      <span className="text-esi-red">{result.score_a} - {result.score_b}</span>{' '}
                       {result.opponent_name}
                     </p>
                   ) : (
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="font-bold text-porjar-text">{result.team_name}</span>
-                      <span className="text-xs text-porjar-muted">
-                        Placement <span className="font-bold text-porjar-red">#{result.placement}</span>
+                      <span className="font-bold text-esi-text">{result.team_name}</span>
+                      <span className="text-xs text-esi-muted">
+                        Placement <span className="font-bold text-esi-red">#{result.placement}</span>
                       </span>
-                      <span className="text-xs text-porjar-muted">
-                        Kills <span className="font-bold text-porjar-text">{result.kills}</span>
+                      <span className="text-xs text-esi-muted">
+                        Kills <span className="font-bold text-esi-text">{result.kills}</span>
                       </span>
                     </div>
                   )}
 
-                  <p className="mt-1 text-xs text-porjar-muted">
+                  <p className="mt-1 text-xs text-esi-muted">
                     {new Date(result.played_at).toLocaleDateString('id-ID', {
                       weekday: 'short',
                       day: 'numeric',
@@ -219,9 +228,9 @@ export default function CoachResultsPage() {
                   <span
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
-                      result.verification_status === 'verified' && 'bg-green-50 text-green-700 border-green-200',
-                      result.verification_status === 'pending' && 'bg-amber-50 text-amber-700 border-amber-200',
-                      result.verification_status === 'rejected' && 'bg-red-50 text-red-700 border-red-200',
+                      result.verification_status === 'verified' && 'bg-green-50 dark:bg-green-950 text-green-700 border-green-200 dark:border-green-800',
+                      result.verification_status === 'pending' && 'bg-amber-50 dark:bg-amber-950 text-amber-700 border-amber-200 dark:border-amber-800',
+                      result.verification_status === 'rejected' && 'bg-red-50 dark:bg-red-950 text-red-700 border-red-200 dark:border-red-800',
                     )}
                   >
                     {result.verification_status === 'verified' && <CheckCircle size={12} weight="fill" />}
@@ -230,7 +239,7 @@ export default function CoachResultsPage() {
                     {result.verification_status === 'verified' ? 'Terverifikasi' : result.verification_status === 'pending' ? 'Pending' : 'Ditolak'}
                   </span>
                   {result.screenshots_count > 0 && (
-                    <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-porjar-muted">
+                    <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-esi-muted">
                       <ImageIcon size={10} />
                       {result.screenshots_count} bukti
                     </p>
@@ -241,9 +250,9 @@ export default function CoachResultsPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-xl border border-stone-200 bg-white p-10 text-center shadow-sm">
-          <Trophy size={40} weight="duotone" className="mx-auto mb-3 text-porjar-border" />
-          <p className="text-sm text-porjar-muted">
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-10 text-center shadow-sm">
+          <Trophy size={40} weight="duotone" className="mx-auto mb-3 text-esi-border" />
+          <p className="text-sm text-esi-muted">
             {gameFilter !== 'all' || dateFrom || dateTo
               ? 'Tidak ada hasil yang cocok dengan filter'
               : 'Belum ada hasil pertandingan'}

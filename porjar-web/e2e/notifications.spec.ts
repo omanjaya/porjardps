@@ -135,7 +135,7 @@ test.describe('Notifications UI', () => {
     await page.waitForLoadState('networkidle')
 
     // Look for unread items (they have bg-red-50/30 class and the red dot span)
-    const unreadDot = page.locator('span.rounded-full.bg-porjar-red').first()
+    const unreadDot = page.locator('span.rounded-full.bg-esi-red').first()
     const hasUnread = await unreadDot.isVisible().catch(() => false)
 
     if (!hasUnread) {
@@ -146,7 +146,7 @@ test.describe('Notifications UI', () => {
 
     // Click the parent button to trigger mark-as-read
     const unreadBtn = page.locator('[class*="divide-y"] button').filter({
-      has: page.locator('span.rounded-full.bg-porjar-red'),
+      has: page.locator('span.rounded-full.bg-esi-red'),
     }).first()
 
     await unreadBtn.click()

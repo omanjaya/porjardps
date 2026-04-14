@@ -38,6 +38,7 @@ export interface TeamSummary {
   logo_url?: string | null
   school_logo_url?: string | null
   school_name?: string | null
+  status?: string | null
 }
 
 export interface GameSummary {
@@ -62,6 +63,52 @@ export interface TournamentSummary {
   id: string
   name: string
   status: TournamentStatus
+}
+
+// === School Standings (Juara Umum) ===
+export interface SchoolStanding {
+  id: string
+  name: string
+  level: SchoolLevel
+  logo_url: string | null
+  city: string
+  gold: number
+  silver: number
+  bronze: number
+  total_tournaments: number
+  rank: number
+}
+
+// === School Requests ===
+export interface SchoolRequest {
+  id: string
+  name: string
+  level: SchoolLevel
+  requested_by: string
+  requester_name?: string
+  status: 'pending' | 'approved' | 'rejected'
+  reject_reason: string | null
+  school_id: string | null
+  created_at: string
+  reviewed_at: string | null
+}
+
+// === Medal Standings (Per Tournament) ===
+export interface MedalEntry {
+  rank: number
+  team_name: string
+  school_id: string
+  school_name: string
+  school_logo_url: string | null
+}
+
+export interface TournamentMedals {
+  tournament_id: string
+  tournament_name: string
+  game_name: string
+  game_slug: string
+  school_level: string
+  medals: MedalEntry[]
 }
 
 // === API Response ===
@@ -201,8 +248,136 @@ export type WSMessageType =
   | 'match_status'
   | 'match_complete'
   | 'bracket_advance'
+  | 'bracket_update'
   | 'br_result_update'
   | 'standings_update'
   | 'notification'
   | 'spectator_count'
   | 'prediction_update'
+  | 'new_submission'
+  | 'tournament_update'
+  | 'team_update'
+  | 'lobby_update'
+  | 'game_score'
+  | 'ping'
+
+// === Events ===
+export interface Event {
+  id: string
+  slug: string
+  name: string
+  short_name: string
+  description: string | null
+  logo_url: string | null
+  banner_url: string | null
+  primary_color: string
+  secondary_color: string | null
+  venue: string | null
+  city: string | null
+  organizer: string | null
+  start_date: string | null
+  end_date: string | null
+  registration_start: string | null
+  registration_end: string | null
+  status: 'draft' | 'published' | 'ongoing' | 'completed' | 'archived'
+  contact_phone: string | null
+  contact_email: string | null
+  instagram_url: string | null
+  website_url: string | null
+  announcement: string | null
+  announcement_active: boolean
+  registration_open: boolean
+  rules_published: boolean
+  requires_school: boolean
+  sort_order: number
+  champion_team_id?: string | null
+  champion_team_name?: string | null
+  champion_team_logo?: string | null
+}
+
+// === Event Points System ===
+export interface EventPointRule {
+  id: string
+  event_id: string
+  rank_position: number
+  points: number
+}
+
+export interface EventRegistration {
+  id: string
+  event_id: string
+  team: TeamSummary
+  registered_at: string
+}
+
+export interface EventTeamPoints {
+  id: string
+  event_id: string
+  tournament_id: string
+  team_id: string
+  rank_position: number
+  points: number
+  awarded_at: string
+}
+
+export interface EventUserPoints {
+  id: string
+  event_id: string
+  tournament_id: string
+  user_id: string
+  team_id: string
+  rank_position: number
+  points: number
+  awarded_at: string
+}
+
+export interface TeamLeaderboardEntry {
+  team_id: string
+  team_name: string
+  team_logo_url: string | null
+  school_name: string | null
+  total_points: number
+  rank: number
+}
+
+export interface UserLeaderboardEntry {
+  user_id: string
+  full_name: string
+  avatar_url: string | null
+  total_points: number
+  rank: number
+}
+
+export interface SchoolLeaderboardEntry {
+  school_id: string
+  school_name: string
+  school_logo: string | null
+  total_points: number
+  team_count: number
+  rank: number
+}
+
+export interface MyEventRegistration {
+  id: string
+  event_id: string
+  event_name: string
+  event_slug: string
+  event_status: string
+  event_start_date: string | null
+  team_id: string
+  team_name: string
+  registered_at: string
+}
+
+export interface EnrichedUserPoints {
+  id: string
+  event_id: string
+  event_name: string
+  tournament_id: string
+  tournament_name: string
+  team_id: string
+  team_name: string
+  rank_position: number
+  points: number
+  awarded_at: string
+}

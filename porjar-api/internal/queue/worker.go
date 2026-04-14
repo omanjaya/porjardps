@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -12,6 +13,7 @@ import (
 type JobProcessor interface {
 	ProcessBracketSubmission(ctx context.Context, job SubmissionJob) error
 	ProcessBRSubmission(ctx context.Context, job SubmissionJob) error
+	ProcessGroupSubmission(ctx context.Context, job SubmissionJob) error
 }
 
 // SubmissionWorker runs a pool of goroutines that consume from SubmissionQueue and
@@ -108,14 +110,25 @@ func (w *SubmissionWorker) processWithRetry(ctx context.Context, job SubmissionJ
 			)
 
 			if attempt < maxRetries {
-				// Exponential back-off: 1s, 2s, 4s …
+				// Exponential back-off: 1s, 2s, 4s … with ±20% jitter to prevent thundering herd.
 				backoff := time.Duration(math.Pow(2, float64(attempt-1))) * time.Second
+				jitter := time.Duration(rand.Int63n(int64(backoff) / 5))
 				select {
 				case <-ctx.Done():
-					// Context cancelled during back-off — give up without NACKing so the
-					// message stays pending and is re-delivered after restart.
+					// Context cancelled during back-off — NACK the job so it gets
+					// re-delivered properly on next startup instead of becoming a zombie.
+					nackCtx, nackCancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer nackCancel()
+					if nackErr := w.queue.Nack(nackCtx, job, fmt.Sprintf("shutdown during retry backoff: %v", lastErr)); nackErr != nil {
+						slog.Error("submission worker: NACK failed, job may be lost",
+							"job_id", job.JobID,
+							"error", nackErr,
+						)
+					} else {
+						slog.Info("submission worker: job NACKed for retry", "job_id", job.JobID)
+					}
 					return
-				case <-time.After(backoff):
+				case <-time.After(backoff + jitter):
 				}
 			}
 			continue
@@ -144,13 +157,15 @@ func (w *SubmissionWorker) processWithRetry(ctx context.Context, job SubmissionJ
 		"match_id", job.MatchID,
 		"error", lastErr,
 	)
-	nackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	nackCtx, nackCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer nackCancel()
 	if nackErr := w.queue.Nack(nackCtx, job, lastErr.Error()); nackErr != nil {
-		slog.Error("submission worker: nack failed",
+		slog.Error("submission worker: NACK failed, job may be lost",
 			"job_id", job.JobID,
 			"error", nackErr,
 		)
+	} else {
+		slog.Info("submission worker: job NACKed for retry", "job_id", job.JobID)
 	}
 }
 
@@ -161,6 +176,8 @@ func (w *SubmissionWorker) dispatch(ctx context.Context, job SubmissionJob) erro
 		return w.processor.ProcessBracketSubmission(ctx, job)
 	case "br_lobby":
 		return w.processor.ProcessBRSubmission(ctx, job)
+	case "group":
+		return w.processor.ProcessGroupSubmission(ctx, job)
 	default:
 		return fmt.Errorf("unknown job type: %q", job.Type)
 	}

@@ -52,10 +52,10 @@ export function WebhookLogSheet({
 }: WebhookLogSheetProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto border-stone-200 bg-white text-stone-900 sm:max-w-3xl">
+      <DialogContent className="max-h-[80vh] overflow-y-auto border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Delivery Logs: {webhookName}</DialogTitle>
-          <DialogDescription className="text-stone-500">
+          <DialogDescription className="text-stone-500 dark:text-zinc-400">
             Riwayat pengiriman webhook (50 terbaru)
           </DialogDescription>
         </DialogHeader>
@@ -66,13 +66,13 @@ export function WebhookLogSheet({
             ))}
           </div>
         ) : logs.length === 0 ? (
-          <p className="py-8 text-center text-stone-400">Belum ada log delivery</p>
+          <p className="py-8 text-center text-stone-400 dark:text-zinc-500">Belum ada log delivery</p>
         ) : (
           <div className="space-y-2">
             {logs.map((log) => (
               <div
                 key={log.id}
-                className="rounded-lg border border-stone-200 p-3"
+                className="rounded-lg border border-stone-200 dark:border-zinc-700 p-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export function WebhookLogSheet({
                     )}
                     <Badge
                       variant="outline"
-                      className="border-stone-300 text-xs text-stone-500"
+                      className="border-stone-300 dark:border-zinc-600 text-xs text-stone-500 dark:text-zinc-400"
                     >
                       {EVENT_LABELS[log.event] || log.event}
                     </Badge>
@@ -99,13 +99,13 @@ export function WebhookLogSheet({
                       </span>
                     )}
                     {log.duration_ms != null && (
-                      <span className="text-xs text-stone-400">{log.duration_ms}ms</span>
+                      <span className="text-xs text-stone-400 dark:text-zinc-500">{log.duration_ms}ms</span>
                     )}
                   </div>
-                  <span className="text-xs text-stone-400">{formatDate(log.created_at)}</span>
+                  <span className="text-xs text-stone-400 dark:text-zinc-500">{formatDate(log.created_at)}</span>
                 </div>
                 {log.response_body && (
-                  <pre className="mt-2 max-h-24 overflow-auto rounded bg-stone-50 border border-stone-200 p-2 text-xs text-stone-600">
+                  <pre className="mt-2 max-h-24 overflow-auto rounded bg-stone-50 dark:bg-zinc-800/50 border border-stone-200 dark:border-zinc-700 p-2 text-xs text-stone-600 dark:text-zinc-400">
                     {log.response_body}
                   </pre>
                 )}

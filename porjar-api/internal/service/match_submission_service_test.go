@@ -186,10 +186,12 @@ func newTestMatchSubmissionService(
 		teamMemberRepo,
 		nil,  // brLobbyTeamRepo
 		nil,  // gameRepo
+		nil,  // userRepo
 		nil,  // bracketService
 		nil,  // brService
 		nil,  // notificationSvc
 		nil,  // hub
+		nil,  // rdb
 	)
 }
 

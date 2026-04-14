@@ -42,9 +42,19 @@ type UpdateScheduleInput struct {
 }
 
 func (s *ScheduleService) Create(ctx context.Context, input CreateScheduleInput) (*model.Schedule, error) {
+	// TODO BUG 20: Validate that tournament exists, BracketMatchID belongs to tournament,
+	// and BRLobbyID belongs to tournament. tournamentRepo/bracketRepo/brLobbyRepo are not
+	// currently available in ScheduleService; add them when needed.
+
 	status := input.Status
 	if status == "" {
 		status = "upcoming"
+	}
+
+	// Validate status value
+	allowed := map[string]bool{"upcoming": true, "ongoing": true, "completed": true, "cancelled": true}
+	if status != "" && !allowed[status] {
+		return nil, apperror.New("INVALID_STATUS", "Status tidak valid", 400)
 	}
 
 	schedule := &model.Schedule{
@@ -106,6 +116,10 @@ func (s *ScheduleService) Update(ctx context.Context, id uuid.UUID, input Update
 		schedule.EndAt = input.EndAt
 	}
 	if input.Status != nil {
+		allowed := map[string]bool{"upcoming": true, "ongoing": true, "completed": true, "cancelled": true}
+		if *input.Status != "" && !allowed[*input.Status] {
+			return nil, apperror.New("INVALID_STATUS", "Status tidak valid", 400)
+		}
 		schedule.Status = *input.Status
 	}
 

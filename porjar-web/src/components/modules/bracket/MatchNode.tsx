@@ -23,7 +23,7 @@ function TeamLogo({
       <img
         src={src}
         alt={team!.name}
-        className="h-5 w-5 rounded object-contain flex-shrink-0 bg-white"
+        className="h-5 w-5 rounded object-contain flex-shrink-0 bg-white dark:bg-zinc-800"
         onError={() => setImgError(true)}
       />
     )
@@ -33,7 +33,7 @@ function TeamLogo({
     <div
       className={cn(
         'h-5 w-5 rounded flex-shrink-0 flex items-center justify-center text-[8px] font-bold',
-        isEmpty || isByeSlot ? 'bg-stone-100 text-stone-300' : 'bg-stone-200 text-stone-500'
+        isEmpty || isByeSlot ? 'bg-stone-100 dark:bg-zinc-800 text-stone-300 dark:text-zinc-600' : 'bg-stone-200 dark:bg-zinc-700 text-stone-500 dark:text-zinc-400'
       )}
     >
       {team ? team.name.charAt(0).toUpperCase() : ''}
@@ -49,6 +49,10 @@ interface MatchNodeProps {
   roundLabel?: string
   loserFromNumbers?: number[]
   onClick?: (matchId: string) => void
+  // Swap mode
+  swapMode?: boolean
+  swapSelectedTeamId?: string | null
+  onTeamClick?: (teamId: string, teamName: string, matchId: string) => void
 }
 
 const TeamRow = React.memo(function TeamRow({
@@ -78,11 +82,11 @@ const TeamRow = React.memo(function TeamRow({
       className={cn(
         'flex items-center justify-between gap-1 px-2 py-1 transition-colors duration-150',
         position === 'top' ? 'rounded-t' : '',
-        position === 'bottom' ? '' : 'border-b border-stone-200/60',
-        isWinner && 'bg-emerald-50/80',
-        isLive && !isWinner && 'bg-white',
-        isHighlighted && 'bg-sky-50/80',
-        isByeSlot && 'bg-stone-50/60',
+        position === 'bottom' ? '' : 'border-b border-stone-200/60 dark:border-zinc-700/60',
+        isWinner && 'bg-emerald-50/80 dark:bg-emerald-950/30',
+        isLive && !isWinner && 'bg-white dark:bg-zinc-900',
+        isHighlighted && 'bg-sky-50/80 dark:bg-sky-950/30',
+        isByeSlot && 'bg-stone-50/60 dark:bg-zinc-800/60',
         isEmpty && !isByeSlot && 'opacity-50'
       )}
       style={{
@@ -97,7 +101,7 @@ const TeamRow = React.memo(function TeamRow({
       <div className="flex items-center gap-1.5 min-w-0 flex-1">
         {/* Seed badge */}
         {team?.seed != null && (
-          <span className="shrink-0 text-[9px] font-bold text-stone-400 tabular-nums w-4 text-right">
+          <span className="shrink-0 text-[9px] font-bold text-stone-400 dark:text-zinc-500 tabular-nums w-4 text-right">
             {team.seed}
           </span>
         )}
@@ -107,9 +111,9 @@ const TeamRow = React.memo(function TeamRow({
           title={team?.name ?? (isByeSlot ? 'BYE' : 'TBD')}
           className={cn(
             'truncate text-[11px] font-medium leading-tight',
-            isWinner ? 'text-stone-900 font-semibold' : 'text-stone-700',
-            isEmpty && !isByeSlot && 'text-stone-400 italic',
-            isByeSlot && 'text-stone-300 italic'
+            isWinner ? 'text-stone-900 dark:text-zinc-100 font-semibold' : 'text-stone-700 dark:text-zinc-300',
+            isEmpty && !isByeSlot && 'text-stone-400 dark:text-zinc-500 italic',
+            isByeSlot && 'text-stone-300 dark:text-zinc-600 italic'
           )}
         >
           {team?.name ?? (isByeSlot ? 'BYE' : 'TBD')}
@@ -121,8 +125,8 @@ const TeamRow = React.memo(function TeamRow({
         <span
           className={cn(
             'text-sm font-bold tabular-nums min-w-[16px] text-right',
-            isWinner ? 'text-emerald-700' : 'text-stone-500',
-            isPending && 'text-stone-300'
+            isWinner ? 'text-emerald-700' : 'text-stone-500 dark:text-zinc-400',
+            isPending && 'text-stone-300 dark:text-zinc-600'
           )}
         >
           {isPending ? '-' : score}
@@ -144,6 +148,9 @@ export const MatchNode = React.memo(function MatchNode({
   roundLabel,
   loserFromNumbers,
   onClick,
+  swapMode = false,
+  swapSelectedTeamId,
+  onTeamClick,
 }: MatchNodeProps) {
   const isPending = match.status === 'pending' || match.status === 'scheduled'
   const isCompleted = match.status === 'completed'
@@ -151,6 +158,9 @@ export const MatchNode = React.memo(function MatchNode({
 
   const teamAHighlighted = highlightTeamId != null && match.team_a?.id === highlightTeamId
   const teamBHighlighted = highlightTeamId != null && match.team_b?.id === highlightTeamId
+
+  const teamASwapSelected = swapMode && swapSelectedTeamId != null && match.team_a?.id === swapSelectedTeamId
+  const teamBSwapSelected = swapMode && swapSelectedTeamId != null && match.team_b?.id === swapSelectedTeamId
 
   const scheduledTime = match.scheduled_at
     ? new Date(match.scheduled_at).toLocaleTimeString('id-ID', {
@@ -176,53 +186,74 @@ export const MatchNode = React.memo(function MatchNode({
       )}
 
     <button
-      onClick={() => onClick?.(match.id)}
+      onClick={() => !swapMode && onClick?.(match.id)}
       className={cn(
-        'group relative w-[200px] rounded-md border text-left transition-all duration-200',
-        'bg-white shadow-sm',
-        'hover:scale-[1.02] hover:shadow-md hover:z-10',
-        isPending && 'border-stone-200 border-dashed',
+        'group relative w-[240px] rounded-md border text-left transition-all duration-200',
+        'bg-white dark:bg-zinc-900 shadow-sm',
+        !swapMode && 'hover:scale-[1.02] hover:shadow-md hover:z-10',
+        swapMode && 'cursor-default',
+        isPending && 'border-stone-200 dark:border-zinc-700 border-dashed',
         isLive && 'border-red-600/50 shadow-[0_0_12px_rgba(196,30,42,0.10)]',
         isCompleted && 'border-emerald-400/40',
-        isBye && 'border-stone-200/40 opacity-50 bg-stone-50',
+        isBye && 'border-stone-200/40 dark:border-zinc-700/40 opacity-50 bg-stone-50 dark:bg-zinc-800',
         isHighlighted && 'ring-2 ring-sky-400/40 shadow-[0_0_12px_rgba(56,189,248,0.12)]'
       )}
       style={isLive ? { animation: 'live-glow 2s ease-in-out infinite' } : undefined}
     >
       {/* Match number badge */}
-      <div className="absolute -top-2 -right-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-stone-100 px-1.5 text-[9px] font-bold text-stone-500 border border-stone-200">
+      <div className="absolute -top-2 -right-2 z-10 flex h-5 min-w-5 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800 px-1.5 text-[9px] font-bold text-stone-500 dark:text-zinc-400 border border-stone-200 dark:border-zinc-700">
         #{match.match_number}
       </div>
 
       {/* Team rows */}
       <div className="overflow-hidden rounded-t-lg">
-        <TeamRow
-          team={match.team_a}
-          score={match.score_a}
-          isWinner={isCompleted && match.winner?.id === match.team_a?.id}
-          isLive={isLive}
-          isHighlighted={teamAHighlighted}
-          isPending={isPending}
-          isBye={isBye}
-          position="top"
-        />
-        <TeamRow
-          team={match.team_b}
-          score={match.score_b}
-          isWinner={isCompleted && match.winner?.id === match.team_b?.id}
-          isLive={isLive}
-          isHighlighted={teamBHighlighted}
-          isPending={isPending}
-          isBye={isBye && !match.team_b}
-          position="bottom"
-        />
+        <div
+          onClick={(e) => {
+            if (swapMode && match.team_a?.id) {
+              e.stopPropagation()
+              onTeamClick?.(match.team_a.id, match.team_a.name, match.id)
+            }
+          }}
+          className={cn(swapMode && match.team_a?.id && isPending && 'cursor-pointer hover:brightness-95')}
+        >
+          <TeamRow
+            team={match.team_a}
+            score={match.score_a}
+            isWinner={isCompleted && match.winner?.id === match.team_a?.id}
+            isLive={isLive}
+            isHighlighted={teamAHighlighted || teamASwapSelected}
+            isPending={isPending}
+            isBye={isBye}
+            position="top"
+          />
+        </div>
+        <div
+          onClick={(e) => {
+            if (swapMode && match.team_b?.id) {
+              e.stopPropagation()
+              onTeamClick?.(match.team_b.id, match.team_b.name, match.id)
+            }
+          }}
+          className={cn(swapMode && match.team_b?.id && isPending && 'cursor-pointer hover:brightness-95')}
+        >
+          <TeamRow
+            team={match.team_b}
+            score={match.score_b}
+            isWinner={isCompleted && match.winner?.id === match.team_b?.id}
+            isLive={isLive}
+            isHighlighted={teamBHighlighted || teamBSwapSelected}
+            isPending={isPending}
+            isBye={isBye && !match.team_b}
+            position="bottom"
+          />
+        </div>
       </div>
 
       {/* Info bar */}
       {infoSegments.length > 0 && (
-        <div className="flex items-center justify-center gap-1.5 border-t border-stone-100 px-2.5 py-1 rounded-b-lg bg-stone-50/60">
-          {scheduledTime && <Clock size={10} className="text-stone-400" />}
-          <span className="text-[10px] text-stone-400 tracking-wide">
+        <div className="flex items-center justify-center gap-1.5 border-t border-stone-100 dark:border-zinc-700 px-2.5 py-1 rounded-b-lg bg-stone-50/60 dark:bg-zinc-800/60">
+          {scheduledTime && <Clock size={10} className="text-stone-400 dark:text-zinc-500" />}
+          <span className="text-[10px] text-stone-400 dark:text-zinc-500 tracking-wide">
             {infoSegments.join(' \u00B7 ')}
           </span>
         </div>

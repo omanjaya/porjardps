@@ -47,9 +47,20 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 		teamIDs[i] = t.ID
 	}
 
-	// Apply seeding
+	// Apply seeding — merge stored seeds from tournament_teams with explicit manual seeds.
+	// Explicit manualSeeds (from API request) take priority over stored seeds.
 	if manualSeeds == nil {
 		manualSeeds = make(map[uuid.UUID]int)
+	}
+	ttList, ttErr := s.ttRepo.ListByTournament(ctx, tournamentID)
+	if ttErr == nil {
+		for _, tt := range ttList {
+			if tt.Seed != nil {
+				if _, exists := manualSeeds[tt.TeamID]; !exists {
+					manualSeeds[tt.TeamID] = *tt.Seed
+				}
+			}
+		}
 	}
 	entries := bracket.ApplySeeding(teamIDs, manualSeeds)
 
@@ -82,6 +93,9 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 
 	// Bulk create: first pass — insert all matches without next_match references
 	for _, m := range matches {
+		if m.BestOf <= 0 && tournament.BestOf > 0 {
+			m.BestOf = tournament.BestOf
+		}
 		savedNext := m.NextMatchID
 		savedLoserNext := m.LoserNextMatchID
 		m.NextMatchID = nil
@@ -141,19 +155,21 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 	//   (c) no real (non-BYE) LB match will ever advance a winner into it.
 	// Any LB match with at least one real feeder is left alone — teams arrive when those matches complete.
 	if tournament.Format == "double_elimination" {
-		// Build: LB match ID → will eventually receive a team from a real source?
-		hasRealFeeder := make(map[uuid.UUID]bool)
+		// Build: LB match ID → count of real feeders that will eventually deliver a team.
+		// Use a counter (not bool) so we can decrement when an LB match turns into an
+		// empty bye and will never produce a winner for its downstream match.
+		realFeederCount := make(map[uuid.UUID]int)
 		for _, m := range matches {
 			if m.Status == "bye" {
 				continue
 			}
 			// WR match → LB via loser_next_match_id
 			if m.LoserNextMatchID != nil {
-				hasRealFeeder[*m.LoserNextMatchID] = true
+				realFeederCount[*m.LoserNextMatchID]++
 			}
 			// LB match → next LB via next_match_id (non-BYE LB produces a winner)
 			if m.BracketPosition != nil && *m.BracketPosition == "losers" && m.NextMatchID != nil {
-				hasRealFeeder[*m.NextMatchID] = true
+				realFeederCount[*m.NextMatchID]++
 			}
 		}
 
@@ -172,7 +188,7 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 
 		now := time.Now()
 		for _, m := range lbMatches {
-			if hasRealFeeder[m.ID] {
+			if realFeederCount[m.ID] > 0 {
 				continue // a real match will feed this slot eventually — leave it alone
 			}
 			// Re-fetch to confirm current state
@@ -197,11 +213,23 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 				slog.Error("failed to mark empty LB match as bye", "id", cur.ID, "error", err)
 				continue
 			}
+
+			// This match won't produce a winner → decrement its downstream match's
+			// feeder count so cascading empty BYEs propagate correctly.
+			if cur.WinnerID == nil && cur.NextMatchID != nil {
+				realFeederCount[*cur.NextMatchID]--
+			}
+
 			if cur.WinnerID != nil && cur.NextMatchID != nil {
 				s.advanceWinner(ctx, cur, *cur.WinnerID)
 			}
 		}
 	}
+
+	s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"action":        "generated",
+	})
 
 	return len(matches), rounds, nil
 }
@@ -217,6 +245,39 @@ func (s *BracketService) ResetBracket(ctx context.Context, tournamentID uuid.UUI
 			return apperror.Wrap(err, "delete match")
 		}
 	}
+
+	s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"action":        "reset",
+	})
+
+	return nil
+}
+
+// ResetResults clears all match results, submissions, and standings for a tournament
+// while preserving the bracket structure and round-1 seeding.
+// Bye matches are re-advanced after the reset so round-2 slots are correctly pre-filled.
+func (s *BracketService) ResetResults(ctx context.Context, tournamentID uuid.UUID) error {
+	if err := s.bracketRepo.ResetResultsByTournament(ctx, tournamentID); err != nil {
+		return apperror.Wrap(err, "reset bracket results")
+	}
+
+	// Re-advance bye match winners so round-2+ slots are filled again.
+	matches, err := s.bracketRepo.ListByTournament(ctx, tournamentID)
+	if err != nil {
+		return apperror.Wrap(err, "list matches after reset")
+	}
+	for _, m := range matches {
+		if m.Status == "bye" && m.WinnerID != nil && m.NextMatchID != nil {
+			s.advanceWinner(ctx, m, *m.WinnerID)
+		}
+	}
+
+	s.broadcastMatchUpdate(tournamentID, tournamentID, "bracket_update", map[string]interface{}{
+		"tournament_id": tournamentID.String(),
+		"action":        "results_reset",
+	})
+
 	return nil
 }
 
@@ -229,7 +290,17 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 
 	nextMatch, err := s.bracketRepo.FindByID(ctx, *match.LoserNextMatchID)
 	if err != nil || nextMatch == nil {
-		slog.Error("failed to find losers bracket match for loser advancement", "loser_next_match_id", match.LoserNextMatchID, "error", err)
+		slog.Error("CRITICAL: failed to find losers bracket match for loser advancement", "loser_next_match_id", match.LoserNextMatchID, "match_id", match.ID, "error", err)
+		return
+	}
+
+	// Idempotency check: skip if team is already assigned to either slot (prevents self-match)
+	if nextMatch.TeamAID != nil && *nextMatch.TeamAID == loserID {
+		slog.Warn("advanceToLosers: team already assigned to TeamA, skipping", "match_id", nextMatch.ID, "team_id", loserID)
+		return
+	}
+	if nextMatch.TeamBID != nil && *nextMatch.TeamBID == loserID {
+		slog.Warn("advanceToLosers: team already assigned to TeamB, skipping", "match_id", nextMatch.ID, "team_id", loserID)
 		return
 	}
 
@@ -240,7 +311,7 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 	}
 
 	if err := s.bracketRepo.Update(ctx, nextMatch); err != nil {
-		slog.Error("failed to advance loser to losers bracket match", "error", err)
+		slog.Error("CRITICAL: failed to advance loser to losers bracket match", "match_id", nextMatch.ID, "team_id", loserID, "error", err)
 		return
 	}
 
@@ -262,15 +333,25 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 		return
 	}
 
-	// Guard: check for any pending LB match whose winner will feed into this slot.
+	// Guard: check for any non-completed match whose winner will feed into this slot.
+	// We check:
+	// (a) LB matches whose NextMatchID points here (winner advances from losers bracket)
+	// (b) WR/LB matches whose LoserNextMatchID points here (loser drops in, but only if
+	//     the match is different from the one currently being processed)
+	// Any non-completed/non-bye feeder means a team may still arrive — don't auto-advance.
 	allMatches, listErr := s.bracketRepo.ListByTournament(ctx, match.TournamentID)
 	if listErr == nil {
 		for _, m := range allMatches {
-			if m.BracketPosition == nil || *m.BracketPosition != "losers" {
+			if m.Status == "completed" || m.Status == "bye" {
 				continue
 			}
-			if m.NextMatchID != nil && *m.NextMatchID == nextMatch.ID && m.Status == "pending" {
-				// A real LB match will advance a winner here — leave it alone.
+			// LB match whose winner will advance here
+			if m.BracketPosition != nil && *m.BracketPosition == "losers" &&
+				m.NextMatchID != nil && *m.NextMatchID == nextMatch.ID {
+				return
+			}
+			// Any match whose loser will drop here (skip the current match itself)
+			if m.LoserNextMatchID != nil && *m.LoserNextMatchID == nextMatch.ID && m.ID != match.ID {
 				return
 			}
 		}
@@ -281,7 +362,7 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 	nextMatch.WinnerID = singleTeam
 	nextMatch.CompletedAt = &now
 	if err := s.bracketRepo.Update(ctx, nextMatch); err != nil {
-		slog.Error("failed to auto-advance single-team LB match", "error", err)
+		slog.Error("CRITICAL: failed to auto-advance single-team LB match", "match_id", nextMatch.ID, "team_id", *singleTeam, "error", err)
 		return
 	}
 	if nextMatch.NextMatchID != nil {
@@ -297,7 +378,17 @@ func (s *BracketService) advanceWinner(ctx context.Context, match *model.Bracket
 
 	nextMatch, err := s.bracketRepo.FindByID(ctx, *match.NextMatchID)
 	if err != nil || nextMatch == nil {
-		slog.Error("failed to find next match for advancement", "next_match_id", match.NextMatchID, "error", err)
+		slog.Error("CRITICAL: failed to find next match for advancement", "next_match_id", match.NextMatchID, "match_id", match.ID, "error", err)
+		return
+	}
+
+	// Idempotency check: skip if team is already assigned to either slot (prevents self-match)
+	if nextMatch.TeamAID != nil && *nextMatch.TeamAID == winnerID {
+		slog.Warn("advanceWinner: team already assigned to TeamA, skipping", "match_id", nextMatch.ID, "team_id", winnerID)
+		return
+	}
+	if nextMatch.TeamBID != nil && *nextMatch.TeamBID == winnerID {
+		slog.Warn("advanceWinner: team already assigned to TeamB, skipping", "match_id", nextMatch.ID, "team_id", winnerID)
 		return
 	}
 
@@ -310,6 +401,6 @@ func (s *BracketService) advanceWinner(ctx context.Context, match *model.Bracket
 	}
 
 	if err := s.bracketRepo.Update(ctx, nextMatch); err != nil {
-		slog.Error("failed to advance winner to next match", "error", err)
+		slog.Error("CRITICAL: failed to advance winner to next match", "match_id", nextMatch.ID, "team_id", winnerID, "error", err)
 	}
 }

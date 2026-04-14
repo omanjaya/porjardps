@@ -24,18 +24,18 @@ function Accordion({
 }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
-    <div className="border border-stone-200 rounded-xl overflow-hidden">
+    <div className="border border-stone-200 dark:border-zinc-700 rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left font-semibold text-stone-800 bg-white hover:bg-stone-50 transition-colors"
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left font-semibold text-stone-800 dark:text-zinc-200 bg-white dark:bg-zinc-900 hover:bg-stone-50 dark:bg-zinc-800/50 transition-colors"
       >
         <span>{title}</span>
         <CaretDown
           size={18}
-          className={cn('shrink-0 text-stone-400 transition-transform', open && 'rotate-180')}
+          className={cn('shrink-0 text-stone-400 dark:text-zinc-500 transition-transform', open && 'rotate-180')}
         />
       </button>
-      {open && <div className="border-t border-stone-200 bg-white px-4 py-4">{children}</div>}
+      {open && <div className="border-t border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-4">{children}</div>}
     </div>
   )
 }
@@ -45,7 +45,7 @@ function Accordion({
 /* ------------------------------------------------------------------ */
 function RuleList({ items }: { items: string[] }) {
   return (
-    <ul className="list-disc list-outside ml-5 space-y-1.5 text-sm text-stone-700 leading-relaxed">
+    <ul className="list-disc list-outside ml-5 space-y-1.5 text-sm text-stone-700 dark:text-zinc-300 leading-relaxed">
       {items.map((item, i) => (
         <li key={i}>{item}</li>
       ))}
@@ -118,39 +118,43 @@ export default function RulesPage() {
     <PublicLayout>
       <div ref={containerRef}>
       <PageHeader
-        title="Peraturan Turnamen"
-        description="Peraturan resmi setiap cabang e-sport PORJAR Denpasar 2026"
+        title="Peraturan Per-Game"
+        description="Aturan teknis setiap cabang esport (bracket format, scoring, sistem match)"
       />
 
+      <div className="anim-section mb-6 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+        Mencari aturan pendaftaran & code of conduct event? Lihat halaman event.
+      </div>
+
       {/* Info Umum Card */}
-      <section className="anim-section mb-8 rounded-xl border border-porjar-border bg-white p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-bold text-stone-900">Info Umum</h2>
+      <section className="anim-section mb-8 rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-5 shadow-sm">
+        <h2 className="mb-4 text-lg font-bold text-stone-900 dark:text-zinc-100">Info Umum</h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-porjar-red/10">
-              <MapPin size={20} className="text-porjar-red" weight="fill" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-esi-red/10">
+              <MapPin size={20} className="text-esi-red" weight="fill" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Lokasi</p>
-              <p className="text-sm font-semibold text-stone-800">Graha Yowana Suci</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-zinc-400">Lokasi</p>
+              <p className="text-sm font-semibold text-stone-800 dark:text-zinc-200">Graha Yowana Suci</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-porjar-red/10">
-              <CalendarBlank size={20} className="text-porjar-red" weight="fill" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-esi-red/10">
+              <CalendarBlank size={20} className="text-esi-red" weight="fill" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Tanggal</p>
-              <p className="text-sm font-semibold text-stone-800">29 - 31 Maret 2026</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-zinc-400">Tanggal</p>
+              <p className="text-sm font-semibold text-stone-800 dark:text-zinc-200">29 - 31 Maret 2026</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-porjar-red/10">
-              <GraduationCap size={20} className="text-porjar-red" weight="fill" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-esi-red/10">
+              <GraduationCap size={20} className="text-esi-red" weight="fill" />
             </div>
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Tingkat</p>
-              <p className="text-sm font-semibold text-stone-800">SMA / SMK</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-stone-500 dark:text-zinc-400">Tingkat</p>
+              <p className="text-sm font-semibold text-stone-800 dark:text-zinc-200">SMA / SMK</p>
             </div>
           </div>
         </div>
@@ -168,14 +172,14 @@ export default function RulesPage() {
               className={cn(
                 'shrink-0 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-base font-semibold transition-colors',
                 isActive
-                  ? 'border-porjar-red bg-porjar-red text-white shadow-sm'
-                  : 'border-stone-200 text-stone-600 hover:text-stone-900 hover:bg-stone-50'
+                  ? 'border-esi-red bg-esi-red text-white shadow-sm'
+                  : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:text-stone-900 dark:text-zinc-100 hover:bg-stone-50 dark:bg-zinc-800/50'
               )}
             >
               <span
                 className={cn(
                   'flex h-7 w-7 shrink-0 items-center justify-center rounded-md',
-                  isActive ? 'bg-white/20' : 'bg-stone-100'
+                  isActive ? 'bg-white/20' : 'bg-stone-100 dark:bg-zinc-800'
                 )}
               >
                 <img
@@ -192,8 +196,8 @@ export default function RulesPage() {
 
       {/* Game title + date badge */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="text-xl font-bold text-stone-900">{config.name}</h2>
-        <span className="rounded-full bg-stone-100 border border-stone-200 px-3 py-1 text-xs font-medium text-stone-600">
+        <h2 className="text-xl font-bold text-stone-900 dark:text-zinc-100">{config.name}</h2>
+        <span className="rounded-full bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 px-3 py-1 text-xs font-medium text-stone-600 dark:text-zinc-400">
           {GAME_DATES[activeGame]}
         </span>
       </div>
@@ -201,11 +205,11 @@ export default function RulesPage() {
       {/* Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <SpinnerGap size={32} className="animate-spin text-stone-400" />
+          <SpinnerGap size={32} className="animate-spin text-stone-400 dark:text-zinc-500" />
         </div>
       ) : rules.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-white px-6 py-12 text-center">
-          <p className="text-sm text-stone-500">Aturan belum dipublikasi</p>
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-6 py-12 text-center">
+          <p className="text-sm text-stone-500 dark:text-zinc-400">Aturan belum dipublikasi</p>
         </div>
       ) : (
         <div className="space-y-3 pb-8">

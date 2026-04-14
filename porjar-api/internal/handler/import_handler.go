@@ -2,35 +2,20 @@ package handler
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/csv"
 	"fmt"
 	"io"
-	"math/big"
 	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/credcrypto"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 )
-
-// generateRandomPassword creates a cryptographically random 8-character
-// alphanumeric password using crypto/rand.
-func generateRandomPassword() (string, error) {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	result := make([]byte, 8)
-	for i := range result {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
-		if err != nil {
-			return "", err
-		}
-		result[i] = charset[idx.Int64()]
-	}
-	return string(result), nil
-}
 
 func (h *ImportHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
 	app.Post("/admin/import/schools", authMw, adminMw, h.ImportSchools)
@@ -38,10 +23,14 @@ func (h *ImportHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.H
 	app.Post("/admin/import/participants", authMw, adminMw, h.ImportParticipants)
 	app.Get("/admin/import/credentials", authMw, adminMw, h.ExportCredentials)
 	app.Get("/admin/import/credentials/pdf", authMw, adminMw, h.ExportCredentialsPDF)
+	app.Get("/admin/import/credentials/pdf/all", authMw, adminMw, h.ExportAllCredentialsPDFZip)
 	app.Post("/admin/import/credentials/link", authMw, adminMw, h.GenerateCredentialLink)
+	app.Post("/admin/import/credentials/reset-school", authMw, adminMw, h.ResetSchoolPasswords)
 
-	// Public credential download — no auth required (token is the auth)
+	// Public credential download — no auth required (token + PIN is the auth)
+	credRL := middleware.EndpointRateLimiter(h.rdb, "credential_download", 10, 15*time.Minute)
 	app.Get("/public/credentials/:token", h.PublicCredentialDownload)
+	app.Post("/public/credentials/:token", credRL, h.PublicCredentialDownload)
 }
 
 // ImportParticipants handles bulk CSV import of participants with NISN-based login.
@@ -52,6 +41,18 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 		return response.BadRequest(c, "File CSV wajib diunggah")
 	}
 
+	// Limit CSV file size to 5MB
+	const maxCSVSize = 5 * 1024 * 1024
+	if file.Size > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
+	}
+
+	// Validate MIME type
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "text/csv" && contentType != "application/vnd.ms-excel" && contentType != "application/octet-stream" {
+		return response.BadRequest(c, "Hanya file CSV yang diperbolehkan")
+	}
+
 	f, err := file.Open()
 	if err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
@@ -59,8 +60,11 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 	defer f.Close()
 
 	buf := new(bytes.Buffer)
-	if _, err := io.Copy(buf, f); err != nil {
+	if _, err := io.Copy(buf, io.LimitReader(f, maxCSVSize+1)); err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
+	}
+	if int64(buf.Len()) > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
 	}
 
 	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
@@ -235,10 +239,11 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 				continue
 			}
 			generatedPasswords[nisn] = plainPassword
+			newUserID := uuid.New()
 
 			email := fmt.Sprintf("%s@porjar.local", nisn)
 			user = &model.User{
-				ID:                  uuid.New(),
+				ID:                  newUserID,
 				Email:               email,
 				PasswordHash:        string(hash),
 				FullName:            nama,
@@ -256,6 +261,8 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 				result.Skipped++
 				continue
 			}
+			// Store encrypted password in Redis for credential card display (90 days)
+			credcrypto.StoreCredPassword(c.Context(), h.rdb, h.encKey, newUserID, plainPassword)
 
 			if !createdUsers[nisn] {
 				createdUsers[nisn] = true
@@ -335,7 +342,9 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 			}
 		}
 
-		// Add to credentials list — password is only available for newly created users
+		// Add to credentials list — password is only available for newly created users.
+		// WARNING: plaintext credentials returned in response — ensure HTTPS is enforced at proxy layer.
+		// Passwords must never appear in server logs; no slog/fmt calls log password values here.
 		pwd := ""
 		if p, ok := generatedPasswords[nisn]; ok {
 			pwd = p
@@ -360,6 +369,18 @@ func (h *ImportHandler) ImportSchools(c *fiber.Ctx) error {
 		return response.BadRequest(c, "File CSV wajib diunggah")
 	}
 
+	// Limit CSV file size to 5MB
+	const maxCSVSize = 5 * 1024 * 1024
+	if file.Size > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
+	}
+
+	// Validate MIME type
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "text/csv" && contentType != "application/vnd.ms-excel" && contentType != "application/octet-stream" {
+		return response.BadRequest(c, "Hanya file CSV yang diperbolehkan")
+	}
+
 	f, err := file.Open()
 	if err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
@@ -367,8 +388,11 @@ func (h *ImportHandler) ImportSchools(c *fiber.Ctx) error {
 	defer f.Close()
 
 	buf := new(bytes.Buffer)
-	if _, err := io.Copy(buf, f); err != nil {
+	if _, err := io.Copy(buf, io.LimitReader(f, maxCSVSize+1)); err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
+	}
+	if int64(buf.Len()) > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
 	}
 
 	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))
@@ -472,6 +496,18 @@ func (h *ImportHandler) ImportTeams(c *fiber.Ctx) error {
 		return response.BadRequest(c, "File CSV wajib diunggah")
 	}
 
+	// Limit CSV file size to 5MB
+	const maxCSVSize = 5 * 1024 * 1024
+	if file.Size > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
+	}
+
+	// Validate MIME type
+	contentType := file.Header.Get("Content-Type")
+	if contentType != "text/csv" && contentType != "application/vnd.ms-excel" && contentType != "application/octet-stream" {
+		return response.BadRequest(c, "Hanya file CSV yang diperbolehkan")
+	}
+
 	f, err := file.Open()
 	if err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
@@ -479,8 +515,11 @@ func (h *ImportHandler) ImportTeams(c *fiber.Ctx) error {
 	defer f.Close()
 
 	buf := new(bytes.Buffer)
-	if _, err := io.Copy(buf, f); err != nil {
+	if _, err := io.Copy(buf, io.LimitReader(f, maxCSVSize+1)); err != nil {
 		return response.BadRequest(c, "Gagal membaca file")
+	}
+	if int64(buf.Len()) > maxCSVSize {
+		return response.BadRequest(c, "Ukuran file CSV maksimal 5MB")
 	}
 
 	reader := csv.NewReader(bytes.NewReader(buf.Bytes()))

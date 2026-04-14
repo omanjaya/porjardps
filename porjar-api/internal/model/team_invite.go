@@ -20,6 +20,7 @@ type TeamInvite struct {
 }
 
 type TeamInviteRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*TeamInvite, error)
 	FindByCode(ctx context.Context, code string) (*TeamInvite, error)
 	Create(ctx context.Context, invite *TeamInvite) error
 	IncrementUsed(ctx context.Context, id uuid.UUID) error

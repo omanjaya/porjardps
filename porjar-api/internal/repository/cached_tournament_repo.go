@@ -97,6 +97,10 @@ func (r *CachedTournamentRepo) List(ctx context.Context, filter model.Tournament
 	return tournaments, total, nil
 }
 
+func (r *CachedTournamentRepo) CountActive(ctx context.Context) (int, error) {
+	return r.inner.CountActive(ctx)
+}
+
 func (r *CachedTournamentRepo) CountTeams(ctx context.Context, tournamentID uuid.UUID) (int, error) {
 	return r.inner.CountTeams(ctx, tournamentID)
 }

@@ -9,6 +9,7 @@ import type { TeamSummary } from '@/types'
 
 export interface BRGridInputProps {
   lobbyId: string
+  mapNumber?: number  // 1-based; defaults to 1
   teams: { id: string; name: string }[]
   pointRules: { placement: number; points: number }[]
   killPointValue: number
@@ -41,6 +42,7 @@ type CellId = `${number}-${'placement' | 'kills' | 'booyah'}`
 
 export function BRGridInput({
   lobbyId,
+  mapNumber = 1,
   teams,
   pointRules,
   killPointValue,
@@ -57,7 +59,7 @@ export function BRGridInput({
     return m
   }, [pointRules])
 
-  const DRAFT_KEY = `br-draft-${lobbyId}`
+  const DRAFT_KEY = `br-draft-${lobbyId}-map${mapNumber}`
 
   // Initialize rows: draft → existing results → blank
   const [rows, setRows] = useState<RowData[]>(() => {
@@ -102,7 +104,9 @@ export function BRGridInput({
         rows.forEach((r) => { draft[r.teamId] = { placement: r.placement, kills: r.kills, booyah: r.booyah } })
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
         setLastSaved(new Date())
-      } catch {}
+      } catch (e) {
+        console.warn('Draft save failed:', e)
+      }
     }, 800)
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current) }
   }, [rows, DRAFT_KEY])
@@ -137,8 +141,8 @@ export function BRGridInput({
     setRows((prev) => {
       const next = [...prev]
       next[index] = { ...next[index], [field]: value }
-      // Auto-set booyah if placement is 1
-      if (field === 'placement' && value === 1) {
+      // Auto-set booyah when changing placement TO 1, but don't override manual un-check
+      if (field === 'placement' && value === 1 && !next[index].booyah) {
         next[index].booyah = true
       }
       return next
@@ -246,24 +250,24 @@ export function BRGridInput({
       <div className="flex items-center gap-2">
         {/* Search */}
         <div className="relative flex-1">
-          <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
+          <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Cari tim atau sekolah..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-8 w-full rounded-md border border-stone-200 bg-white pl-8 pr-3 text-xs text-stone-700 placeholder:text-stone-400 outline-none focus:border-porjar-red focus:ring-1 focus:ring-porjar-red/20"
+            className="h-8 w-full rounded-md border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 pl-8 pr-3 text-xs text-stone-700 dark:text-zinc-300 placeholder:text-stone-400 dark:text-zinc-500 outline-none focus:border-esi-red focus:ring-1 focus:ring-esi-red/20"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500 text-xs"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-300 dark:text-zinc-600 hover:text-stone-500 dark:text-zinc-400 text-xs"
             >
               ✕
             </button>
           )}
         </div>
-        <div className="shrink-0 text-xs text-stone-400 whitespace-nowrap">
+        <div className="shrink-0 text-xs text-stone-400 dark:text-zinc-500 whitespace-nowrap">
           {filteredRows.length !== rows.length
             ? `${filteredRows.length}/${rows.length} tim`
             : `${rows.length} tim`}
@@ -273,7 +277,7 @@ export function BRGridInput({
         <Button
           variant="outline"
           onClick={sortByPlacement}
-          className="h-8 shrink-0 border-stone-300 text-stone-600 text-xs px-2"
+          className="h-8 shrink-0 border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400 text-xs px-2"
         >
           <SortAscending size={12} className="mr-1" />
           Sort
@@ -282,7 +286,7 @@ export function BRGridInput({
 
       {/* Validation */}
       {validationErrors.length > 0 && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/30 px-3 py-2">
           {validationErrors.map((err, i) => (
             <p key={i} className="flex items-center gap-1.5 text-xs text-red-600">
               <Warning size={12} weight="fill" />
@@ -295,29 +299,29 @@ export function BRGridInput({
       {/* Grid */}
       <div
         ref={gridRef}
-        className="rounded-lg border border-stone-300 bg-white overflow-hidden shadow-sm"
+        className="rounded-lg border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 overflow-hidden shadow-sm"
       >
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             {/* Sticky header */}
             <thead className="sticky top-0 z-10">
-              <tr className="bg-stone-100 text-xs font-semibold text-stone-500 uppercase tracking-wider">
-                <th className="w-10 border-b border-r border-stone-300 px-2 py-2 text-center">
+              <tr className="bg-stone-100 dark:bg-zinc-800 text-xs font-semibold text-stone-500 dark:text-zinc-400 uppercase tracking-wider">
+                <th className="w-10 border-b border-r border-stone-300 dark:border-zinc-600 px-2 py-2 text-center">
                   #
                 </th>
-                <th className="min-w-[140px] border-b border-r border-stone-300 px-3 py-2 text-left">
+                <th className="min-w-[140px] border-b border-r border-stone-300 dark:border-zinc-600 px-3 py-2 text-left">
                   Tim
                 </th>
-                <th className="w-24 border-b border-r border-stone-300 px-2 py-2 text-center">
+                <th className="w-24 border-b border-r border-stone-300 dark:border-zinc-600 px-2 py-2 text-center">
                   Placement
                 </th>
-                <th className="w-20 border-b border-r border-stone-300 px-2 py-2 text-center">
+                <th className="w-20 border-b border-r border-stone-300 dark:border-zinc-600 px-2 py-2 text-center">
                   Kills
                 </th>
-                <th className="w-20 border-b border-r border-stone-300 px-2 py-2 text-center">
+                <th className="w-20 border-b border-r border-stone-300 dark:border-zinc-600 px-2 py-2 text-center">
                   Booyah
                 </th>
-                <th className="w-24 border-b border-stone-300 px-2 py-2 text-center">
+                <th className="w-24 border-b border-stone-300 dark:border-zinc-600 px-2 py-2 text-center">
                   Total Poin
                 </th>
               </tr>
@@ -334,19 +338,19 @@ export function BRGridInput({
                     key={row.teamId}
                     className={cn(
                       'h-10 sm:h-8 text-sm transition-colors',
-                      isFirst && 'bg-amber-50',
+                      isFirst && 'bg-amber-50 dark:bg-amber-950/30',
                       isTop3 && !isFirst && 'bg-yellow-50/40',
-                      !isTop3 && displayIdx % 2 === 0 && 'bg-white',
-                      !isTop3 && displayIdx % 2 !== 0 && 'bg-stone-50/50'
+                      !isTop3 && displayIdx % 2 === 0 && 'bg-white dark:bg-zinc-900',
+                      !isTop3 && displayIdx % 2 !== 0 && 'bg-stone-50 dark:bg-zinc-800/50'
                     )}
                   >
                     {/* Row number */}
-                    <td className="border-b border-r border-stone-200 px-2 text-center text-xs text-stone-400 tabular-nums">
+                    <td className="border-b border-r border-stone-200 dark:border-zinc-700 px-2 text-center text-xs text-stone-400 dark:text-zinc-500 tabular-nums">
                       {idx + 1}
                     </td>
 
                     {/* Team name (read-only) */}
-                    <td className="border-b border-r border-stone-200 px-3">
+                    <td className="border-b border-r border-stone-200 dark:border-zinc-700 px-3">
                       <div className="flex items-center gap-1.5 truncate">
                         {isFirst && (
                           <Trophy
@@ -361,8 +365,8 @@ export function BRGridInput({
                             isFirst
                               ? 'font-bold text-amber-700'
                               : isTop3
-                                ? 'font-semibold text-stone-800'
-                                : 'text-stone-700'
+                                ? 'font-semibold text-stone-800 dark:text-zinc-200'
+                                : 'text-stone-700 dark:text-zinc-300'
                           )}
                         >
                           {row.teamName}
@@ -373,22 +377,22 @@ export function BRGridInput({
                     {/* Placement */}
                     <td
                       className={cn(
-                        'border-b border-r border-stone-200 p-0',
-                        activeCell === `${idx}-placement` && 'ring-2 ring-inset ring-porjar-red'
+                        'border-b border-r border-stone-200 dark:border-zinc-700 p-0',
+                        activeCell === `${idx}-placement` && 'ring-2 ring-inset ring-esi-red'
                       )}
                     >
                       <select
                         data-cell={`${idx}-placement`}
                         value={row.placement}
                         onChange={(e) =>
-                          updateRow(idx, 'placement', parseInt(e.target.value) || 0)
+                          updateRow(idx, 'placement', e.target.value === '' ? 0 : parseInt(e.target.value))
                         }
                         onFocus={() => setActiveCell(`${idx}-placement`)}
                         onKeyDown={(e) => handleKeyDown(e, idx, 'placement')}
                         className={cn(
                           'h-10 sm:h-8 w-full border-0 bg-transparent text-center text-sm outline-none cursor-pointer',
-                          'focus:bg-porjar-red/5',
-                          row.placement === 0 ? 'text-stone-400' : 'text-stone-900 font-medium'
+                          'focus:bg-esi-red/5',
+                          row.placement === 0 ? 'text-stone-400 dark:text-zinc-500' : 'text-stone-900 dark:text-zinc-100 font-medium'
                         )}
                       >
                         <option value={0}>-</option>
@@ -403,8 +407,8 @@ export function BRGridInput({
                     {/* Kills */}
                     <td
                       className={cn(
-                        'border-b border-r border-stone-200 p-0',
-                        activeCell === `${idx}-kills` && 'ring-2 ring-inset ring-porjar-red'
+                        'border-b border-r border-stone-200 dark:border-zinc-700 p-0',
+                        activeCell === `${idx}-kills` && 'ring-2 ring-inset ring-esi-red'
                       )}
                     >
                       <input
@@ -414,15 +418,15 @@ export function BRGridInput({
                         value={row.kills || ''}
                         placeholder="0"
                         onChange={(e) =>
-                          updateRow(idx, 'kills', parseInt(e.target.value) || 0)
+                          updateRow(idx, 'kills', e.target.value === '' ? 0 : parseInt(e.target.value))
                         }
                         onFocus={() => setActiveCell(`${idx}-kills`)}
                         onKeyDown={(e) => handleKeyDown(e, idx, 'kills')}
                         className={cn(
                           'h-10 sm:h-8 w-full border-0 bg-transparent text-center text-sm outline-none tabular-nums',
-                          'focus:bg-porjar-red/5',
+                          'focus:bg-esi-red/5',
                           '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-                          row.kills > 0 ? 'text-stone-900 font-medium' : 'text-stone-400'
+                          row.kills > 0 ? 'text-stone-900 dark:text-zinc-100 font-medium' : 'text-stone-400 dark:text-zinc-500'
                         )}
                       />
                     </td>
@@ -430,8 +434,8 @@ export function BRGridInput({
                     {/* Booyah toggle */}
                     <td
                       className={cn(
-                        'border-b border-r border-stone-200 p-0',
-                        activeCell === `${idx}-booyah` && 'ring-2 ring-inset ring-porjar-red'
+                        'border-b border-r border-stone-200 dark:border-zinc-700 p-0',
+                        activeCell === `${idx}-booyah` && 'ring-2 ring-inset ring-esi-red'
                       )}
                     >
                       <button
@@ -449,7 +453,7 @@ export function BRGridInput({
                         }}
                         className={cn(
                           'flex h-10 sm:h-8 w-full items-center justify-center outline-none transition-colors',
-                          'focus:bg-porjar-red/5'
+                          'focus:bg-esi-red/5'
                         )}
                         title={row.booyah ? 'Booyah aktif' : 'Klik untuk toggle Booyah'}
                       >
@@ -458,18 +462,18 @@ export function BRGridInput({
                           weight={row.booyah ? 'fill' : 'regular'}
                           className={cn(
                             'transition-colors',
-                            row.booyah ? 'text-amber-500' : 'text-stone-300'
+                            row.booyah ? 'text-amber-500' : 'text-stone-300 dark:text-zinc-600'
                           )}
                         />
                       </button>
                     </td>
 
                     {/* Total points (read-only) */}
-                    <td className="border-b border-stone-200 px-2 text-center">
+                    <td className="border-b border-stone-200 dark:border-zinc-700 px-2 text-center">
                       <span
                         className={cn(
                           'text-sm font-bold tabular-nums',
-                          total > 0 ? 'text-porjar-red' : 'text-stone-300'
+                          total > 0 ? 'text-esi-red' : 'text-stone-300 dark:text-zinc-600'
                         )}
                       >
                         {total}
@@ -480,7 +484,7 @@ export function BRGridInput({
               })}
               {filteredRows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-xs text-stone-400">
+                  <td colSpan={6} className="py-6 text-center text-xs text-stone-400 dark:text-zinc-500">
                     Tidak ada tim yang cocok dengan &ldquo;{search}&rdquo;
                   </td>
                 </tr>
@@ -489,22 +493,22 @@ export function BRGridInput({
 
             {/* Footer: totals */}
             <tfoot>
-              <tr className="bg-stone-100 text-xs font-semibold text-stone-600">
+              <tr className="bg-stone-100 dark:bg-zinc-800 text-xs font-semibold text-stone-600 dark:text-zinc-400">
                 <td
                   colSpan={3}
-                  className="border-t border-stone-300 px-3 py-2 text-right"
+                  className="border-t border-stone-300 dark:border-zinc-600 px-3 py-2 text-right"
                 >
                   Total
                 </td>
-                <td className="border-t border-stone-300 px-2 py-2 text-center tabular-nums">
+                <td className="border-t border-stone-300 dark:border-zinc-600 px-2 py-2 text-center tabular-nums">
                   {totalKills}
                 </td>
-                <td className="border-t border-stone-300 px-2 py-2 text-center tabular-nums">
+                <td className="border-t border-stone-300 dark:border-zinc-600 px-2 py-2 text-center tabular-nums">
                   {rows.filter((r) => r.booyah).length > 0
                     ? rows.filter((r) => r.booyah).length
                     : '-'}
                 </td>
-                <td className="border-t border-stone-300 px-2 py-2 text-center tabular-nums font-bold text-porjar-red">
+                <td className="border-t border-stone-300 dark:border-zinc-600 px-2 py-2 text-center tabular-nums font-bold text-esi-red">
                   {rows.reduce((sum, r) => sum + calcTotal(r), 0)}
                 </td>
               </tr>
@@ -518,13 +522,13 @@ export function BRGridInput({
         <Button
           onClick={handleSave}
           disabled={submitting || validationErrors.length > 0}
-          className="w-full bg-porjar-red hover:bg-porjar-red-dark text-white"
+          className="w-full bg-esi-red hover:bg-esi-red-dark text-white"
         >
           <FloppyDisk size={16} className="mr-1.5" />
           {submitting ? 'Menyimpan...' : 'Simpan Hasil'}
         </Button>
         {lastSaved && (
-          <p className="text-center text-[10px] text-stone-400">
+          <p className="text-center text-[10px] text-stone-400 dark:text-zinc-500">
             Draft tersimpan otomatis ·{' '}
             {lastSaved.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </p>

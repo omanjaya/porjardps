@@ -2,6 +2,7 @@ package handler
 
 import (
 	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/credcrypto"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -35,6 +36,7 @@ type ImportHandler struct {
 	gameRepo       model.GameRepository
 	userRepo       model.UserRepository
 	rdb            *redis.Client
+	encKey         []byte // 32-byte AES-256 key derived from JWT secret
 }
 
 // NewImportHandler creates a new ImportHandler with all required repositories.
@@ -45,7 +47,9 @@ func NewImportHandler(
 	gameRepo model.GameRepository,
 	userRepo model.UserRepository,
 	rdb *redis.Client,
+	jwtSecret string,
 ) *ImportHandler {
+	key := credcrypto.DeriveEncKey(jwtSecret)
 	return &ImportHandler{
 		schoolRepo:     schoolRepo,
 		teamRepo:       teamRepo,
@@ -53,6 +57,7 @@ func NewImportHandler(
 		gameRepo:       gameRepo,
 		userRepo:       userRepo,
 		rdb:            rdb,
+		encKey:         key,
 	}
 }
 

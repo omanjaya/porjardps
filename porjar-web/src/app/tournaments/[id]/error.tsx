@@ -15,14 +15,14 @@ export default function TournamentError({
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-xl border border-porjar-border bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-porjar-red/10">
+      <div className="w-full max-w-md rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-8 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-esi-red/10">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="32"
             height="32"
             viewBox="0 0 256 256"
-            className="text-porjar-red"
+            className="text-esi-red"
           >
             <path
               fill="currentColor"
@@ -30,16 +30,16 @@ export default function TournamentError({
             />
           </svg>
         </div>
-        <h2 className="mb-2 text-lg font-bold text-porjar-text">
+        <h2 className="mb-2 text-lg font-bold text-esi-text">
           Gagal Memuat Turnamen
         </h2>
-        <p className="mb-6 text-sm text-porjar-muted">
+        <p className="mb-6 text-sm text-esi-muted">
           Maaf, terjadi kesalahan saat memuat data turnamen. Turnamen mungkin
           tidak tersedia atau terjadi gangguan server.
         </p>
         <button
           onClick={reset}
-          className="inline-flex items-center justify-center rounded-lg bg-porjar-red px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-porjar-red-dark"
+          className="inline-flex items-center justify-center rounded-lg bg-esi-red px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-esi-red-dark"
         >
           Coba Lagi
         </button>

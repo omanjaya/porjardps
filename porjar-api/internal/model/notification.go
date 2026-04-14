@@ -21,6 +21,7 @@ type Notification struct {
 
 type NotificationRepository interface {
 	Create(ctx context.Context, n *Notification) error
+	BulkCreate(ctx context.Context, notifications []*Notification) error
 	FindByID(ctx context.Context, id uuid.UUID) (*Notification, error)
 	FindByUser(ctx context.Context, userID uuid.UUID, limit, offset int) ([]*Notification, int, error)
 	MarkRead(ctx context.Context, id uuid.UUID) error

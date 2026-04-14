@@ -79,8 +79,8 @@ test.describe('Bracket Embed Page', () => {
     await page.goto(`/embed/bracket/${INVALID_UUID}?theme=light`)
     await page.waitForLoadState('networkidle')
 
-    // Light theme should apply bg-porjar-bg somewhere in the DOM
-    const lightEl = page.locator('[class*="bg-porjar-bg"], [class*="bg-stone"]')
+    // Light theme should apply bg-esi-bg somewhere in the DOM
+    const lightEl = page.locator('[class*="bg-esi-bg"], [class*="bg-stone"]')
     await expect(lightEl.first()).toBeVisible({ timeout: 5_000 })
   })
 

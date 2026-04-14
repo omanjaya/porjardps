@@ -78,7 +78,7 @@ export default function AchievementsPage() {
         <PageHeader title="Pencapaian" />
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-36 rounded-xl bg-stone-200" />
+            <Skeleton key={i} className="h-36 rounded-xl bg-stone-200 dark:bg-zinc-700" />
           ))}
         </div>
       </PublicLayout>
@@ -116,8 +116,8 @@ export default function AchievementsPage() {
               onClick={() => setActiveCategory(cat.value)}
               className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? 'border-porjar-red bg-porjar-red/10 text-porjar-red'
-                  : 'border-stone-200 text-stone-500 hover:border-stone-300 hover:text-stone-700'
+                  ? 'border-esi-red bg-esi-red/10 text-esi-red'
+                  : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600 hover:text-stone-700 dark:text-zinc-300'
               }`}
             >
               <IconComp size={16} weight={isActive ? 'fill' : 'regular'} />

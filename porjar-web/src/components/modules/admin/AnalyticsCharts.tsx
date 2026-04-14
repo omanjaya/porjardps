@@ -29,8 +29,8 @@ interface ChartTooltipProps {
 function ChartTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload || !payload.length) return null
   return (
-    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-lg">
-      <p className="mb-1 text-xs font-medium text-stone-700">{label}</p>
+    <div className="rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 shadow-lg">
+      <p className="mb-1 text-xs font-medium text-stone-700 dark:text-zinc-300">{label}</p>
       {payload.map((entry: TooltipPayloadEntry, i: number) => (
         <p key={i} className="text-xs" style={{ color: entry.color }}>
           {entry.name}: <span className="font-semibold">{entry.value}</span>
@@ -47,8 +47,8 @@ const AXIS_LINE = { stroke: '#d6d3d1' }
 // ═══ 1. Registration Chart ═══
 export function RegistrationChart({ data }: { data: RegistrationByDate[] }) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-bold text-stone-700">Registrasi (30 Hari Terakhir)</h3>
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-bold text-stone-700 dark:text-zinc-300">Registrasi (30 Hari Terakhir)</h3>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
@@ -76,8 +76,8 @@ function getGameLabel(slug: string) {
 export function GameDistributionChart({ data }: { data: TeamsByGame[] }) {
   const total = data.reduce((sum, d) => sum + d.count, 0)
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-bold text-stone-700">Distribusi Tim per Game</h3>
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-bold text-stone-700 dark:text-zinc-300">Distribusi Tim per Game</h3>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -86,7 +86,7 @@ export function GameDistributionChart({ data }: { data: TeamsByGame[] }) {
             </Pie>
             <RechartsTooltip content={<ChartTooltip />} />
             <Legend verticalAlign="bottom" iconType="circle" iconSize={8}
-              formatter={(value: string) => <span className="text-xs text-stone-500">{getGameLabel(value)}</span>} />
+              formatter={(value: string) => <span className="text-xs text-stone-500 dark:text-zinc-400">{getGameLabel(value)}</span>} />
             <text x="50%" y="42%" textAnchor="middle" dominantBaseline="middle" className="fill-stone-900 text-2xl font-bold">{total}</text>
             <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-stone-400 text-xs">Total Tim</text>
           </PieChart>
@@ -105,8 +105,8 @@ export function TournamentProgressChart({ data }: { data: TournamentProgress[] }
     label: `${d.completed}/${d.total}`,
   }))
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-bold text-stone-700">Progress Turnamen</h3>
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-bold text-stone-700 dark:text-zinc-300">Progress Turnamen</h3>
       <div className="overflow-x-auto">
         <div style={{ minWidth: 420, height: Math.max(200, chartData.length * 48) }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -139,7 +139,7 @@ export function MatchHeatmap({ data }: { data: MatchHeatmapCell[] }) {
   }
 
   function getColor(count: number) {
-    if (count === 0) return 'bg-stone-100'
+    if (count === 0) return 'bg-stone-100 dark:bg-zinc-800'
     const ratio = count / maxCount
     if (ratio < 0.25) return 'bg-red-100'
     if (ratio < 0.5) return 'bg-red-200'
@@ -148,21 +148,21 @@ export function MatchHeatmap({ data }: { data: MatchHeatmapCell[] }) {
   }
 
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-bold text-stone-700">Heatmap Aktivitas Pertandingan</h3>
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-bold text-stone-700 dark:text-zinc-300">Heatmap Aktivitas Pertandingan</h3>
       <div className="overflow-x-auto">
         <div className="min-w-[600px]">
           <div className="flex">
             <div className="w-10 shrink-0" />
             {Array.from({ length: 24 }).map((_, h) => (
-              <div key={h} className="flex-1 text-center text-[10px] text-stone-400">
+              <div key={h} className="flex-1 text-center text-[10px] text-stone-400 dark:text-zinc-500">
                 {h % 3 === 0 ? String(h).padStart(2, '0') : ''}
               </div>
             ))}
           </div>
           {DAY_LABELS.map((label, day) => (
             <div key={day} className="flex items-center gap-0.5 mb-0.5">
-              <div className="w-10 shrink-0 text-right pr-2 text-[10px] text-stone-400">{label}</div>
+              <div className="w-10 shrink-0 text-right pr-2 text-[10px] text-stone-400 dark:text-zinc-500">{label}</div>
               {Array.from({ length: 24 }).map((_, hour) => {
                 const count = lookup[`${day}-${hour}`] || 0
                 return (
@@ -172,9 +172,9 @@ export function MatchHeatmap({ data }: { data: MatchHeatmapCell[] }) {
               })}
             </div>
           ))}
-          <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-stone-400">
+          <div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-stone-400 dark:text-zinc-500">
             <span>Sedikit</span>
-            <div className="h-3 w-3 rounded-sm bg-stone-100 border border-stone-200" />
+            <div className="h-3 w-3 rounded-sm bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700" />
             <div className="h-3 w-3 rounded-sm bg-red-100" />
             <div className="h-3 w-3 rounded-sm bg-red-200" />
             <div className="h-3 w-3 rounded-sm bg-red-300" />
@@ -198,8 +198,8 @@ export function SchoolParticipationChart({ data }: { data: TopSchool[] }) {
     fill: LEVEL_COLORS[d.level] || '#a8a29e',
   }))
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-      <h3 className="mb-4 text-sm font-bold text-stone-700">Top 10 Sekolah (Jumlah Tim)</h3>
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm">
+      <h3 className="mb-4 text-sm font-bold text-stone-700 dark:text-zinc-300">Top 10 Sekolah (Jumlah Tim)</h3>
       <div className="overflow-x-auto">
         <div style={{ minWidth: 420, height: Math.max(200, chartData.length * 40) }}>
           <ResponsiveContainer width="100%" height="100%">
@@ -220,7 +220,7 @@ export function SchoolParticipationChart({ data }: { data: TopSchool[] }) {
         {Object.entries(LEVEL_COLORS).map(([level, color]) => (
           <div key={level} className="flex items-center gap-1.5">
             <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-xs text-stone-500">{level}</span>
+            <span className="text-xs text-stone-500 dark:text-zinc-400">{level}</span>
           </div>
         ))}
       </div>

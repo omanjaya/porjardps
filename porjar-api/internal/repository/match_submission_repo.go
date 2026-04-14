@@ -26,19 +26,19 @@ func NewMatchSubmissionRepo(db *pgxpool.Pool) model.MatchSubmissionRepository {
 	return &matchSubmissionRepo{db: db}
 }
 
-const matchSubmissionCols = `id, bracket_match_id, br_lobby_id, submitted_by, team_id,
+const matchSubmissionCols = `id, bracket_match_id, br_lobby_id, group_match_id, submitted_by, team_id,
 	claimed_winner_id, claimed_score_a, claimed_score_b,
-	claimed_placement, claimed_kills,
-	screenshot_urls, status, verified_by, verified_at,
+	claimed_placement, claimed_kills, kills_p1, kills_p2, kills_p3, kills_p4,
+	screenshot_urls, status, game_number, COALESCE(map_number, 1), verified_by, verified_at,
 	rejection_reason, admin_notes, created_at, updated_at`
 
 func scanMatchSubmission(row pgx.Row) (*model.MatchSubmission, error) {
 	s := &model.MatchSubmission{}
 	err := row.Scan(
-		&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.SubmittedBy, &s.TeamID,
+		&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.GroupMatchID, &s.SubmittedBy, &s.TeamID,
 		&s.ClaimedWinnerID, &s.ClaimedScoreA, &s.ClaimedScoreB,
-		&s.ClaimedPlacement, &s.ClaimedKills,
-		&s.ScreenshotURLs, &s.Status, &s.VerifiedBy, &s.VerifiedAt,
+		&s.ClaimedPlacement, &s.ClaimedKills, &s.KillsP1, &s.KillsP2, &s.KillsP3, &s.KillsP4,
+		&s.ScreenshotURLs, &s.Status, &s.GameNumber, &s.MapNumber, &s.VerifiedBy, &s.VerifiedAt,
 		&s.RejectionReason, &s.AdminNotes, &s.CreatedAt, &s.UpdatedAt,
 	)
 	return s, err
@@ -49,10 +49,10 @@ func scanMatchSubmissions(rows pgx.Rows) ([]*model.MatchSubmission, error) {
 	for rows.Next() {
 		s := &model.MatchSubmission{}
 		if err := rows.Scan(
-			&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.SubmittedBy, &s.TeamID,
+			&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.GroupMatchID, &s.SubmittedBy, &s.TeamID,
 			&s.ClaimedWinnerID, &s.ClaimedScoreA, &s.ClaimedScoreB,
-			&s.ClaimedPlacement, &s.ClaimedKills,
-			&s.ScreenshotURLs, &s.Status, &s.VerifiedBy, &s.VerifiedAt,
+			&s.ClaimedPlacement, &s.ClaimedKills, &s.KillsP1, &s.KillsP2, &s.KillsP3, &s.KillsP4,
+			&s.ScreenshotURLs, &s.Status, &s.GameNumber, &s.MapNumber, &s.VerifiedBy, &s.VerifiedAt,
 			&s.RejectionReason, &s.AdminNotes, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -69,29 +69,34 @@ func (r *matchSubmissionRepo) Create(ctx context.Context, s *model.MatchSubmissi
 	if s.Status == "" {
 		s.Status = "pending"
 	}
+	if s.GameNumber <= 0 {
+		s.GameNumber = 1
+	}
 	s.CreatedAt = time.Now()
 	s.UpdatedAt = time.Now()
 
+	if s.MapNumber <= 0 {
+		s.MapNumber = 1
+	}
 	var insertedID uuid.UUID
 	err := r.db.QueryRow(ctx,
 		`INSERT INTO match_submissions
-			(id, bracket_match_id, br_lobby_id, submitted_by, team_id,
+			(id, bracket_match_id, br_lobby_id, group_match_id, submitted_by, team_id,
 			 claimed_winner_id, claimed_score_a, claimed_score_b,
-			 claimed_placement, claimed_kills,
-			 screenshot_urls, status, verified_by, verified_at,
+			 claimed_placement, claimed_kills, kills_p1, kills_p2, kills_p3, kills_p4,
+			 screenshot_urls, status, game_number, map_number, verified_by, verified_at,
 			 rejection_reason, admin_notes, created_at, updated_at)
-		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
 		 ON CONFLICT DO NOTHING
 		 RETURNING id`,
-		s.ID, s.BracketMatchID, s.BRLobbyID, s.SubmittedBy, s.TeamID,
+		s.ID, s.BracketMatchID, s.BRLobbyID, s.GroupMatchID, s.SubmittedBy, s.TeamID,
 		s.ClaimedWinnerID, s.ClaimedScoreA, s.ClaimedScoreB,
-		s.ClaimedPlacement, s.ClaimedKills,
-		s.ScreenshotURLs, s.Status, s.VerifiedBy, s.VerifiedAt,
+		s.ClaimedPlacement, s.ClaimedKills, s.KillsP1, s.KillsP2, s.KillsP3, s.KillsP4,
+		s.ScreenshotURLs, s.Status, s.GameNumber, s.MapNumber, s.VerifiedBy, s.VerifiedAt,
 		s.RejectionReason, s.AdminNotes, s.CreatedAt, s.UpdatedAt,
 	).Scan(&insertedID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			// ON CONFLICT DO NOTHING: a pending submission for this team/match already exists
 			return apperror.Conflict("DUPLICATE_SUBMISSION", "Submission pending untuk tim ini sudah ada")
 		}
 		return fmt.Errorf("Create match submission: %w", err)
@@ -140,10 +145,10 @@ func (r *matchSubmissionRepo) FindByBracketMatchIDs(ctx context.Context, matchID
 	for rows.Next() {
 		s := &model.MatchSubmission{}
 		if err := rows.Scan(
-			&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.SubmittedBy, &s.TeamID,
+			&s.ID, &s.BracketMatchID, &s.BRLobbyID, &s.GroupMatchID, &s.SubmittedBy, &s.TeamID,
 			&s.ClaimedWinnerID, &s.ClaimedScoreA, &s.ClaimedScoreB,
-			&s.ClaimedPlacement, &s.ClaimedKills,
-			&s.ScreenshotURLs, &s.Status, &s.VerifiedBy, &s.VerifiedAt,
+			&s.ClaimedPlacement, &s.ClaimedKills, &s.KillsP1, &s.KillsP2, &s.KillsP3, &s.KillsP4,
+			&s.ScreenshotURLs, &s.Status, &s.GameNumber, &s.MapNumber, &s.VerifiedBy, &s.VerifiedAt,
 			&s.RejectionReason, &s.AdminNotes, &s.CreatedAt, &s.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("FindByBracketMatchIDs scan: %w", err)
@@ -168,6 +173,22 @@ func (r *matchSubmissionRepo) FindByLobby(ctx context.Context, brLobbyID uuid.UU
 	}
 	defer rows.Close()
 	return scanMatchSubmissions(rows)
+}
+
+func (r *matchSubmissionRepo) FindApprovedByLobbyTeamMap(ctx context.Context, lobbyID, teamID uuid.UUID, mapNumber int) (*model.MatchSubmission, error) {
+	row := r.db.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM match_submissions
+		 WHERE br_lobby_id = $1 AND team_id = $2 AND COALESCE(map_number, 1) = $3 AND status = 'approved'
+		 ORDER BY created_at DESC LIMIT 1`, matchSubmissionCols),
+		lobbyID, teamID, mapNumber)
+	s, err := scanMatchSubmission(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("FindApprovedByLobbyTeamMap: %w", err)
+	}
+	return s, nil
 }
 
 func (r *matchSubmissionRepo) FindByTeam(ctx context.Context, teamID uuid.UUID) ([]*model.MatchSubmission, error) {
@@ -222,6 +243,47 @@ func (r *matchSubmissionRepo) FindPendingByMatch(ctx context.Context, bracketMat
 	return scanMatchSubmissions(rows)
 }
 
+func (r *matchSubmissionRepo) FindByGroupMatch(ctx context.Context, groupMatchID uuid.UUID) ([]*model.MatchSubmission, error) {
+	rows, err := r.db.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM match_submissions WHERE group_match_id = $1 ORDER BY created_at DESC`, matchSubmissionCols),
+		groupMatchID)
+	if err != nil {
+		return nil, fmt.Errorf("FindByGroupMatch: %w", err)
+	}
+	defer rows.Close()
+	return scanMatchSubmissions(rows)
+}
+
+func (r *matchSubmissionRepo) FindPendingByGroupMatch(ctx context.Context, groupMatchID uuid.UUID) ([]*model.MatchSubmission, error) {
+	rows, err := r.db.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM match_submissions WHERE group_match_id = $1 AND status = 'pending' ORDER BY created_at DESC`, matchSubmissionCols),
+		groupMatchID)
+	if err != nil {
+		return nil, fmt.Errorf("FindPendingByGroupMatch: %w", err)
+	}
+	defer rows.Close()
+	return scanMatchSubmissions(rows)
+}
+
+func (r *matchSubmissionRepo) Update(ctx context.Context, s *model.MatchSubmission) error {
+	s.UpdatedAt = time.Now()
+	_, err := r.db.Exec(ctx,
+		`UPDATE match_submissions
+		 SET claimed_winner_id = $2, claimed_score_a = $3, claimed_score_b = $4,
+		     claimed_placement = $5, claimed_kills = $6,
+		     kills_p1 = $7, kills_p2 = $8, kills_p3 = $9, kills_p4 = $10,
+		     screenshot_urls = $11, updated_at = $12
+		 WHERE id = $1`,
+		s.ID, s.ClaimedWinnerID, s.ClaimedScoreA, s.ClaimedScoreB,
+		s.ClaimedPlacement, s.ClaimedKills,
+		s.KillsP1, s.KillsP2, s.KillsP3, s.KillsP4,
+		s.ScreenshotURLs, s.UpdatedAt)
+	if err != nil {
+		return fmt.Errorf("Update match submission: %w", err)
+	}
+	return nil
+}
+
 func (r *matchSubmissionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string, verifiedBy *uuid.UUID, rejectionReason *string, adminNotes *string) error {
 	now := time.Now()
 	_, err := r.db.Exec(ctx,
@@ -232,6 +294,39 @@ func (r *matchSubmissionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, st
 		id, status, verifiedBy, &now, rejectionReason, adminNotes, now)
 	if err != nil {
 		return fmt.Errorf("UpdateStatus: %w", err)
+	}
+	return nil
+}
+
+func (r *matchSubmissionRepo) UpdateScreenshots(ctx context.Context, id uuid.UUID, urls []string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE match_submissions SET screenshot_urls = $2, updated_at = NOW() WHERE id = $1`,
+		id, urls)
+	if err != nil {
+		return fmt.Errorf("UpdateScreenshots: %w", err)
+	}
+	return nil
+}
+
+func (r *matchSubmissionRepo) FindApprovedByMatch(ctx context.Context, bracketMatchID uuid.UUID) ([]*model.MatchSubmission, error) {
+	rows, err := r.db.Query(ctx,
+		fmt.Sprintf(`SELECT %s FROM match_submissions WHERE bracket_match_id = $1 AND status = 'approved' ORDER BY game_number ASC`, matchSubmissionCols),
+		bracketMatchID)
+	if err != nil {
+		return nil, fmt.Errorf("FindApprovedByMatch: %w", err)
+	}
+	defer rows.Close()
+	return scanMatchSubmissions(rows)
+}
+
+func (r *matchSubmissionRepo) DeleteScreenshot(ctx context.Context, id uuid.UUID, url string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE match_submissions
+		 SET screenshot_urls = array_remove(screenshot_urls, $2::text), updated_at = NOW()
+		 WHERE id = $1`,
+		id, url)
+	if err != nil {
+		return fmt.Errorf("DeleteScreenshot: %w", err)
 	}
 	return nil
 }
@@ -257,6 +352,11 @@ func (r *matchSubmissionRepo) List(ctx context.Context, filter model.MatchSubmis
 	if filter.BRLobbyID != nil {
 		conditions = append(conditions, fmt.Sprintf("br_lobby_id = $%d", argIdx))
 		args = append(args, *filter.BRLobbyID)
+		argIdx++
+	}
+	if filter.GroupMatchID != nil {
+		conditions = append(conditions, fmt.Sprintf("group_match_id = $%d", argIdx))
+		args = append(args, *filter.GroupMatchID)
 		argIdx++
 	}
 	if filter.TeamID != nil {
@@ -295,6 +395,22 @@ func (r *matchSubmissionRepo) List(ctx context.Context, filter model.MatchSubmis
 		return nil, 0, err
 	}
 	return subs, total, nil
+}
+
+func (r *matchSubmissionRepo) DeleteByBracketMatch(ctx context.Context, bracketMatchID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM match_submissions WHERE bracket_match_id = $1`, bracketMatchID)
+	if err != nil {
+		return fmt.Errorf("DeleteByBracketMatch: %w", err)
+	}
+	return nil
+}
+
+func (r *matchSubmissionRepo) DeleteByGroupMatch(ctx context.Context, groupMatchID uuid.UUID) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM match_submissions WHERE group_match_id = $1`, groupMatchID)
+	if err != nil {
+		return fmt.Errorf("DeleteByGroupMatch: %w", err)
+	}
+	return nil
 }
 
 // ──────────────────────────────────────────────

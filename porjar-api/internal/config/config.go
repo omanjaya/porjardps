@@ -46,13 +46,16 @@ type Config struct {
 	CORSAllowedOrigins string `env:"CORS_ALLOWED_ORIGINS" envDefault:"http://localhost:3000"`
 
 	// Rate Limiting
-	RateLimitGlobal int `env:"RATE_LIMIT_GLOBAL" envDefault:"100"`
-	RateLimitLogin  int `env:"RATE_LIMIT_LOGIN" envDefault:"5"`
+	RateLimitGlobal   int  `env:"RATE_LIMIT_GLOBAL" envDefault:"500"`
+	RateLimitLogin    int  `env:"RATE_LIMIT_LOGIN" envDefault:"20"`
+	RateLimitDisabled bool `env:"RATE_LIMIT_DISABLED" envDefault:"false"`
 
-	// WebSocket
-	WSMaxConnections int           `env:"WS_MAX_CONNECTIONS" envDefault:"5000"`
-	WSPingInterval   time.Duration `env:"WS_PING_INTERVAL" envDefault:"30s"`
-	WSIdleTimeout    time.Duration `env:"WS_IDLE_TIMEOUT" envDefault:"300s"`
+	// Centrifugo
+	CentrifugoURL    string `env:"CENTRIFUGO_URL" envDefault:"http://centrifugo:8000"`
+	CentrifugoAPIKey string `env:"CENTRIFUGO_API_KEY"`
+
+	// Challonge
+	ChallongeAPIKey string `env:"CHALLONGE_API_KEY"`
 
 	// Logging
 	LogLevel  string `env:"LOG_LEVEL" envDefault:"info"`
@@ -60,6 +63,20 @@ type Config struct {
 
 	// Submission queue worker pool
 	SubmissionWorkers int `env:"SUBMISSION_WORKERS" envDefault:"10"`
+
+	// SMTP (email notifications). Defaults make email a no-op.
+	SMTPEnabled  bool   `env:"SMTP_ENABLED" envDefault:"false"`
+	SMTPHost     string `env:"SMTP_HOST"`
+	SMTPPort     int    `env:"SMTP_PORT" envDefault:"587"`
+	SMTPUsername string `env:"SMTP_USERNAME"`
+	SMTPPassword string `env:"SMTP_PASSWORD"`
+	SMTPFromAddr string `env:"SMTP_FROM_ADDR" envDefault:"noreply@esidenpasar.com"`
+	SMTPFromName string `env:"SMTP_FROM_NAME" envDefault:"ESI Denpasar"`
+
+	// Push notifications (VAPID)
+	VAPIDPrivateKey string `env:"VAPID_PRIVATE_KEY"`
+	VAPIDPublicKey  string `env:"VAPID_PUBLIC_KEY"`
+	VAPIDSubject    string `env:"VAPID_SUBJECT" envDefault:"mailto:admin@esidenpasar.com"`
 }
 
 func Load() (*Config, error) {

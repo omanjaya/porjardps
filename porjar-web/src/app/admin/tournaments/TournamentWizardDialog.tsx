@@ -20,20 +20,23 @@ const GAME_CATEGORIES = [
   { label: 'HOK', slug: 'hok', format: 'single_elimination', bo: 3 },
   { label: 'Free Fire', slug: 'ff', format: 'battle_royale_points', bo: 1 },
   { label: 'PUBG Mobile', slug: 'pubgm', format: 'battle_royale_points', bo: 1 },
-  { label: 'eFootball Solo', slug: 'efootball-solo', format: 'single_elimination', bo: 1 },
-  { label: 'eFootball Duo', slug: 'efootball-duo', format: 'single_elimination', bo: 1 },
+  { label: 'eFootball Solo', slug: 'efootball-solo', format: 'group_stage_playoff', bo: 1 },
+  { label: 'eFootball Duo', slug: 'efootball-duo', format: 'group_stage_playoff', bo: 1 },
 ]
 
 const TINGKAT_OPTIONS = [
   { value: 'SD', label: 'SD', color: 'bg-amber-500', desc: 'Sekolah Dasar' },
   { value: 'SMP', label: 'SMP', color: 'bg-blue-500', desc: 'Sekolah Menengah Pertama' },
-  { value: 'SMA', label: 'SMA', color: 'bg-porjar-red', desc: 'Sekolah Menengah Atas/Kejuruan' },
+  { value: 'SMA', label: 'SMA', color: 'bg-esi-red', desc: 'Sekolah Menengah Atas/Kejuruan' },
 ]
 
 const FORMAT_LABELS: Record<string, string> = {
   single_elimination: 'Single Elimination',
   double_elimination: 'Double Elimination',
   round_robin: 'Round Robin',
+  swiss: 'Swiss System',
+  group_stage_playoff: 'Grup + Playoff',
+  multi_stage: 'Multi Stage',
   battle_royale_points: 'Battle Royale Points',
 }
 
@@ -86,7 +89,7 @@ export function TournamentWizardDialog({
     setWizCategory(cat.label)
     setWizFormat(cat.format)
     setWizBestOf(cat.format === 'battle_royale_points' ? '1' : String(cat.bo))
-    setWizName(`${cat.label} ${wizTingkat} - PORJAR 2026`)
+    setWizName(`${cat.label} ${wizTingkat} - ESI 2026`)
     setStep(3)
   }
 
@@ -104,6 +107,7 @@ export function TournamentWizardDialog({
         format: wizFormat,
         best_of: parseInt(wizBestOf),
         max_teams: wizMaxTeams ? parseInt(wizMaxTeams) : null,
+        school_level: wizTingkat || null,
         stage: 'main',
       })
       toast.success('Turnamen berhasil dibuat!')
@@ -118,12 +122,12 @@ export function TournamentWizardDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="bg-white border-stone-200 w-[calc(100vw-2rem)] max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 w-[calc(100vw-2rem)] max-w-lg p-0 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Progress bar */}
         {!createdTournament && (
-          <div className="flex border-b border-stone-100">
+          <div className="flex border-b border-stone-100 dark:border-zinc-700">
             {[1, 2, 3].map(s => (
-              <div key={s} className={`flex-1 h-1 transition-colors ${step >= s ? 'bg-porjar-red' : 'bg-stone-100'}`} />
+              <div key={s} className={`flex-1 h-1 transition-colors ${step >= s ? 'bg-esi-red' : 'bg-stone-100 dark:bg-zinc-800'}`} />
             ))}
           </div>
         )}
@@ -135,34 +139,61 @@ export function TournamentWizardDialog({
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
                 <CheckCircle size={32} weight="fill" className="text-green-600" />
               </div>
-              <h3 className="text-lg font-bold text-stone-900 mb-1">Turnamen Berhasil Dibuat!</h3>
-              <p className="text-sm text-stone-500 mb-6">{createdTournament.name}</p>
+              <h3 className="text-lg font-bold text-stone-900 dark:text-zinc-100 mb-1">Turnamen Berhasil Dibuat!</h3>
+              <p className="text-sm text-stone-500 dark:text-zinc-400 mb-6">{createdTournament.name}</p>
               <div className="flex flex-col gap-2">
                 {(createdTournament.format === 'single_elimination' || createdTournament.format === 'double_elimination') && (
                   <Link
                     href={`/admin/tournaments/${createdTournament.id}/bracket`}
-                    className="w-full rounded-lg bg-porjar-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-porjar-red-dark text-center"
+                    className="w-full rounded-lg bg-esi-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-esi-red-dark text-center"
                   >
                     Setup Bracket →
+                  </Link>
+                )}
+                {createdTournament.format === 'group_stage_playoff' && (
+                  <>
+                    <Link
+                      href={`/admin/tournaments/${createdTournament.id}/groups`}
+                      className="w-full rounded-lg bg-esi-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-esi-red-dark text-center"
+                    >
+                      Setup Grup →
+                    </Link>
+                    <p className="text-xs text-stone-400 dark:text-zinc-500 -mt-1">Anda bisa memilih 1 atau 2 leg saat mengacak grup.</p>
+                  </>
+                )}
+                {createdTournament.format === 'swiss' && (
+                  <Link
+                    href={`/admin/tournaments/${createdTournament.id}/swiss`}
+                    className="w-full rounded-lg bg-esi-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-esi-red-dark text-center"
+                  >
+                    Setup Swiss →
+                  </Link>
+                )}
+                {createdTournament.format === 'multi_stage' && (
+                  <Link
+                    href={`/admin/tournaments/${createdTournament.id}/stages`}
+                    className="w-full rounded-lg bg-esi-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-esi-red-dark text-center"
+                  >
+                    Setup Stages →
                   </Link>
                 )}
                 {createdTournament.format === 'battle_royale_points' && (
                   <Link
                     href={`/admin/tournaments/${createdTournament.id}/lobbies`}
-                    className="w-full rounded-lg bg-porjar-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-porjar-red-dark text-center"
+                    className="w-full rounded-lg bg-esi-red px-4 py-2.5 text-sm font-semibold text-white hover:bg-esi-red-dark text-center"
                   >
                     Setup POT →
                   </Link>
                 )}
                 <Link
                   href={`/admin/tournaments/${createdTournament.id}`}
-                  className="w-full rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 text-center"
+                  className="w-full rounded-lg border border-stone-300 dark:border-zinc-600 px-4 py-2.5 text-sm font-medium text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 text-center"
                 >
                   Lihat Detail Turnamen
                 </Link>
                 <button
                   onClick={() => { setCreatedTournament(null); onOpenChange(false) }}
-                  className="text-xs text-stone-400 hover:text-stone-600 mt-1"
+                  className="text-xs text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:text-zinc-400 mt-1"
                 >
                   Tutup
                 </button>
@@ -173,27 +204,27 @@ export function TournamentWizardDialog({
           {/* ─── Step 1: Pilih Tingkat ─── */}
           {step === 1 && (
             <div>
-              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-porjar-red">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-esi-red">
                 <GraduationCap size={14} /> Langkah 1 dari 3
               </div>
-              <h2 className="mb-1 text-xl font-bold text-stone-900">Pilih Tingkat</h2>
-              <p className="mb-6 text-sm text-stone-500">Turnamen untuk jenjang pendidikan mana?</p>
+              <h2 className="mb-1 text-xl font-bold text-stone-900 dark:text-zinc-100">Pilih Tingkat</h2>
+              <p className="mb-6 text-sm text-stone-500 dark:text-zinc-400">Turnamen untuk jenjang pendidikan mana?</p>
 
               <div className="grid gap-3">
                 {TINGKAT_OPTIONS.map(t => (
                   <button
                     key={t.value}
                     onClick={() => { setWizTingkat(t.value); setStep(2) }}
-                    className="group flex items-center gap-4 rounded-xl border border-stone-200 bg-white p-4 text-left transition-all hover:border-porjar-red/30 hover:shadow-md"
+                    className="group flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 text-left transition-all hover:border-esi-red/30 hover:shadow-md"
                   >
                     <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${t.color} text-white font-bold text-lg`}>
                       {t.value}
                     </div>
                     <div>
-                      <p className="font-bold text-stone-900 group-hover:text-porjar-red">{t.label}</p>
-                      <p className="text-xs text-stone-500">{t.desc}</p>
+                      <p className="font-bold text-stone-900 dark:text-zinc-100 group-hover:text-esi-red">{t.label}</p>
+                      <p className="text-xs text-stone-500 dark:text-zinc-400">{t.desc}</p>
                     </div>
-                    <ArrowRight size={16} className="ml-auto text-stone-300 transition-transform group-hover:translate-x-1 group-hover:text-porjar-red" />
+                    <ArrowRight size={16} className="ml-auto text-stone-300 dark:text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-esi-red" />
                   </button>
                 ))}
               </div>
@@ -203,12 +234,12 @@ export function TournamentWizardDialog({
           {/* ─── Step 2: Pilih Game/Kategori ─── */}
           {step === 2 && (
             <div>
-              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-porjar-red">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-esi-red">
                 <Trophy size={14} /> Langkah 2 dari 3
               </div>
-              <h2 className="mb-1 text-xl font-bold text-stone-900">Pilih Cabang Lomba</h2>
-              <p className="mb-6 text-sm text-stone-500">
-                Turnamen <span className="font-semibold text-stone-700">{wizTingkat}</span> — pilih cabang game
+              <h2 className="mb-1 text-xl font-bold text-stone-900 dark:text-zinc-100">Pilih Cabang Lomba</h2>
+              <p className="mb-6 text-sm text-stone-500 dark:text-zinc-400">
+                Turnamen <span className="font-semibold text-stone-700 dark:text-zinc-300">{wizTingkat}</span> — pilih cabang game
               </p>
 
               <div className="grid gap-2">
@@ -218,28 +249,28 @@ export function TournamentWizardDialog({
                     <button
                       key={cat.label}
                       onClick={() => selectCategory(cat)}
-                      className="group flex items-center gap-3 rounded-xl border border-stone-200 bg-white p-3.5 text-left transition-all hover:border-porjar-red/30 hover:shadow-md"
+                      className="group flex items-center gap-3 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3.5 text-left transition-all hover:border-esi-red/30 hover:shadow-md"
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-50 border border-stone-200">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-50 dark:bg-zinc-800/50 border border-stone-200 dark:border-zinc-700">
                         {config?.logo ? (
                           <img src={config.logo} alt={cat.label} className="h-6 w-6 object-contain" />
                         ) : (
-                          <Trophy size={18} className="text-stone-400" />
+                          <Trophy size={18} className="text-stone-400 dark:text-zinc-500" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-stone-900 group-hover:text-porjar-red">{cat.label}</p>
-                        <p className="text-[11px] text-stone-400">
-                          {FORMAT_LABELS[cat.format]} · BO{cat.bo}
+                        <p className="font-semibold text-stone-900 dark:text-zinc-100 group-hover:text-esi-red">{cat.label}</p>
+                        <p className="text-[11px] text-stone-400 dark:text-zinc-500">
+                          {FORMAT_LABELS[cat.format]}{cat.format !== 'battle_royale_points' ? ` · BO${cat.bo}` : ''}
                         </p>
                       </div>
-                      <ArrowRight size={14} className="text-stone-300 transition-transform group-hover:translate-x-1 group-hover:text-porjar-red" />
+                      <ArrowRight size={14} className="text-stone-300 dark:text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-esi-red" />
                     </button>
                   )
                 })}
               </div>
 
-              <button onClick={() => setStep(1)} className="mt-4 flex items-center gap-1 text-sm text-stone-500 hover:text-porjar-red transition-colors">
+              <button onClick={() => setStep(1)} className="mt-4 flex items-center gap-1 text-sm text-stone-500 dark:text-zinc-400 hover:text-esi-red transition-colors">
                 <ArrowLeft size={14} /> Kembali
               </button>
             </div>
@@ -248,14 +279,14 @@ export function TournamentWizardDialog({
           {/* ─── Step 3: Review & Konfigurasi ─── */}
           {step === 3 && (
             <div>
-              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-porjar-red">
+              <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-esi-red">
                 <CheckCircle size={14} /> Langkah 3 dari 3
               </div>
-              <h2 className="mb-1 text-xl font-bold text-stone-900">Review & Buat</h2>
-              <p className="mb-6 text-sm text-stone-500">Periksa detail turnamen sebelum membuat</p>
+              <h2 className="mb-1 text-xl font-bold text-stone-900 dark:text-zinc-100">Review & Buat</h2>
+              <p className="mb-6 text-sm text-stone-500 dark:text-zinc-400">Periksa detail turnamen sebelum membuat</p>
 
               {/* Summary card */}
-              <div className="mb-5 rounded-xl border-l-4 border-porjar-red bg-stone-50 p-4">
+              <div className="mb-5 rounded-xl border-l-4 border-esi-red bg-stone-50 dark:bg-zinc-800/50 p-4">
                 <div className="flex items-center gap-3">
                   {(() => {
                     const cat = GAME_CATEGORIES.find(c => c.label === wizCategory)
@@ -263,28 +294,31 @@ export function TournamentWizardDialog({
                     return config?.logo ? <img src={config.logo} alt="" className="h-8 w-8 object-contain" /> : null
                   })()}
                   <div>
-                    <p className="font-bold text-stone-900">{wizCategory}</p>
-                    <p className="text-xs text-stone-500">Tingkat {wizTingkat} · {FORMAT_LABELS[wizFormat]} · BO{wizBestOf}</p>
+                    <p className="font-bold text-stone-900 dark:text-zinc-100">{wizCategory}</p>
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">Tingkat {wizTingkat} · {FORMAT_LABELS[wizFormat]}{wizFormat !== 'battle_royale_points' ? ` · BO${wizBestOf}` : ''}</p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Nama Turnamen</label>
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Nama Turnamen</label>
                   <Input
                     value={wizName}
                     onChange={(e) => setWizName(e.target.value)}
-                    className="bg-white border-stone-300 focus:border-porjar-red"
+                    className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-stone-700">Format Bracket</label>
+                  <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Format Bracket</label>
                   <div className="flex flex-wrap gap-1.5">
                     {[
                       { value: 'single_elimination', label: 'Single Elimination' },
                       { value: 'double_elimination', label: 'Double Elimination' },
+                      { value: 'swiss', label: 'Swiss System' },
+                      { value: 'group_stage_playoff', label: 'Grup + Playoff' },
+                      { value: 'multi_stage', label: 'Multi Stage' },
                       { value: 'battle_royale_points', label: 'Battle Royale' },
                     ].map(f => (
                       <button
@@ -292,8 +326,8 @@ export function TournamentWizardDialog({
                         onClick={() => setWizFormat(f.value)}
                         className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
                           wizFormat === f.value
-                            ? 'border-porjar-red bg-porjar-red text-white'
-                            : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                            ? 'border-esi-red bg-esi-red text-white'
+                            : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50'
                         }`}
                       >
                         {f.label}
@@ -303,8 +337,9 @@ export function TournamentWizardDialog({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {wizFormat !== 'battle_royale_points' && (
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-stone-700">Best Of</label>
+                    <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Best Of</label>
                     <div className="flex gap-1">
                       {['1', '3', '5'].map(v => (
                         <button
@@ -312,8 +347,8 @@ export function TournamentWizardDialog({
                           onClick={() => setWizBestOf(v)}
                           className={`flex-1 rounded-lg border py-2 text-sm font-semibold transition-colors ${
                             wizBestOf === v
-                              ? 'border-porjar-red bg-porjar-red text-white'
-                              : 'border-stone-200 text-stone-600 hover:bg-stone-50'
+                              ? 'border-esi-red bg-esi-red text-white'
+                              : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50'
                           }`}
                         >
                           BO{v}
@@ -321,24 +356,25 @@ export function TournamentWizardDialog({
                       ))}
                     </div>
                   </div>
+                  )}
                   <div>
-                    <label className="mb-1.5 block text-sm font-medium text-stone-700">Maks Tim</label>
+                    <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Maks Tim</label>
                     <Input
                       value={wizMaxTeams}
                       onChange={(e) => setWizMaxTeams(e.target.value)}
                       placeholder="Opsional"
                       type="number"
-                      className="bg-white border-stone-300 focus:border-porjar-red"
+                      className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="mt-6 flex items-center justify-between">
-                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-sm text-stone-500 hover:text-porjar-red transition-colors">
+                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-sm text-stone-500 dark:text-zinc-400 hover:text-esi-red transition-colors">
                   <ArrowLeft size={14} /> Kembali
                 </button>
-                <Button onClick={handleCreate} disabled={creating} className="bg-porjar-red hover:bg-porjar-red-dark text-white px-6">
+                <Button onClick={handleCreate} disabled={creating} className="bg-esi-red hover:bg-esi-red-dark text-white px-6">
                   {creating ? 'Membuat...' : (
                     <>
                       Buat Turnamen

@@ -36,20 +36,20 @@ export function ConfirmDialog({
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent
         showCloseButton={false}
-        className="bg-white border-stone-200 text-stone-900"
+        className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100"
       >
         <DialogHeader>
-          <DialogTitle className="text-stone-900">{title}</DialogTitle>
-          <DialogDescription className="text-stone-500">
+          <DialogTitle className="text-stone-900 dark:text-zinc-100">{title}</DialogTitle>
+          <DialogDescription className="text-stone-500 dark:text-zinc-400">
             {description}
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="border-stone-200 bg-stone-50/50">
+        <DialogFooter className="border-stone-200 dark:border-zinc-700 bg-stone-50/50 dark:bg-zinc-800/50">
           <Button
             variant="outline"
             onClick={onCancel}
             disabled={loading}
-            className="border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:text-stone-900"
+            className="border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-stone-700 dark:text-zinc-300 hover:bg-stone-50 dark:hover:bg-zinc-700 hover:text-stone-900 dark:hover:text-zinc-100"
           >
             Batal
           </Button>

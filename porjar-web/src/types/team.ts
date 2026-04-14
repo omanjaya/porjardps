@@ -31,4 +31,4 @@ export interface TeamMember {
 export type TeamStatus = 'pending' | 'approved' | 'rejected' | 'eliminated' | 'active'
 export type TeamMemberRole = 'captain' | 'member' | 'substitute'
 
-export type SchoolLevel = 'SMP' | 'SMA' | 'SMK'
+export type SchoolLevel = 'SD' | 'SMP' | 'SMA' | 'SMK' | 'MTs' | 'MA'

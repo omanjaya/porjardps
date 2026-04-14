@@ -15,6 +15,7 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/validator"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
@@ -27,10 +28,11 @@ type AuthConfig struct {
 }
 
 type AuthService struct {
-	userRepo    model.UserRepository
-	consentRepo model.ConsentRepository
-	redis       *redis.Client
-	config      AuthConfig
+	userRepo     model.UserRepository
+	consentRepo  model.ConsentRepository
+	badgeService *BadgeService
+	redis        *redis.Client
+	config       AuthConfig
 }
 
 func NewAuthService(userRepo model.UserRepository, redisClient *redis.Client, cfg AuthConfig) *AuthService {
@@ -44,6 +46,11 @@ func NewAuthService(userRepo model.UserRepository, redisClient *redis.Client, cf
 // SetConsentRepo injects the consent repository (optional; if not set, consent recording is skipped).
 func (s *AuthService) SetConsentRepo(repo model.ConsentRepository) {
 	s.consentRepo = repo
+}
+
+// SetBadgeService injects the badge service for fire-and-forget badge awards.
+func (s *AuthService) SetBadgeService(bs *BadgeService) {
+	s.badgeService = bs
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, fullName, phone string) (*model.User, error) {
@@ -75,6 +82,19 @@ func (s *AuthService) Register(ctx context.Context, email, password, fullName, p
 		return nil, apperror.ErrInternal
 	}
 
+	audit.Log(ctx, audit.Entry{
+		UserID:     &user.ID,
+		Action:     "user_registered",
+		EntityType: "user",
+		EntityID:   &user.ID,
+		Details:    map[string]interface{}{"email": email, "full_name": fullName},
+	})
+
+	// Fire-and-forget: award "first-login" badge
+	if s.badgeService != nil {
+		go s.badgeService.AwardIfEligible(ctx, user.ID, "first-login")
+	}
+
 	return user, nil
 }
 
@@ -103,7 +123,7 @@ func (s *AuthService) RecordConsent(ctx context.Context, userID uuid.UUID, ipAdd
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (string, string, *model.User, error) {
+func (s *AuthService) Login(ctx context.Context, email, password, clientIP string) (string, string, *model.User, error) {
 	// Per-email rate limiting: max 10 failed attempts per 15 minutes
 	rateLimitKey := fmt.Sprintf("login_email:%s", strings.ToLower(email))
 	attempts, _ := s.redis.Get(ctx, rateLimitKey).Int()
@@ -111,26 +131,59 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 		return "", "", nil, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.", 429)
 	}
 
+	// Per-IP rate limiting: max 20 attempts per IP per 15 minutes (across all emails)
+	if clientIP != "" {
+		ipRateLimitKey := fmt.Sprintf("login_ip:%s", clientIP)
+		ipAttempts, _ := s.redis.Get(ctx, ipRateLimitKey).Int()
+		if ipAttempts >= 20 {
+			return "", "", nil, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan login. Coba lagi dalam 15 menit.", 429)
+		}
+	}
+
+	// dummyHash is used to equalize timing when the user is not found,
+	// preventing timing-based account enumeration attacks.
+	const dummyHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LPVKo/uovHi"
+
 	var user *model.User
 	var err error
 
-	// If input doesn't contain "@", treat as NISN login
-	if !strings.Contains(email, "@") {
+	// If input looks like a NIK (16 digits, no @), try NISN lookup first with email fallback
+	isNIK := !strings.Contains(email, "@") && len(email) == 16 && isAllDigits(email)
+	if isNIK {
+		user, err = s.userRepo.FindByNISN(ctx, email)
+		if err != nil || user == nil {
+			// Fallback to email lookup
+			user, err = s.userRepo.FindByEmail(ctx, email)
+		}
+	} else if !strings.Contains(email, "@") {
+		// Non-email input that isn't a 16-digit NIK: try NISN anyway
 		user, err = s.userRepo.FindByNISN(ctx, email)
 	} else {
 		user, err = s.userRepo.FindByEmail(ctx, email)
 	}
 	if err != nil || user == nil {
-		// Increment failed attempt counter
+		// Run bcrypt against dummy hash to equalize timing and prevent account enumeration
+		bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(password)) //nolint:errcheck
+		// Increment failed attempt counters
 		s.redis.Incr(ctx, rateLimitKey)
 		s.redis.Expire(ctx, rateLimitKey, 15*time.Minute)
+		if clientIP != "" {
+			ipRateLimitKey := fmt.Sprintf("login_ip:%s", clientIP)
+			s.redis.Incr(ctx, ipRateLimitKey)
+			s.redis.Expire(ctx, ipRateLimitKey, 15*time.Minute)
+		}
 		return "", "", nil, apperror.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		// Increment failed attempt counter
+		// Increment failed attempt counters
 		s.redis.Incr(ctx, rateLimitKey)
 		s.redis.Expire(ctx, rateLimitKey, 15*time.Minute)
+		if clientIP != "" {
+			ipRateLimitKey := fmt.Sprintf("login_ip:%s", clientIP)
+			s.redis.Incr(ctx, ipRateLimitKey)
+			s.redis.Expire(ctx, ipRateLimitKey, 15*time.Minute)
+		}
 		return "", "", nil, apperror.ErrInvalidCredentials
 	}
 
@@ -153,8 +206,11 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (string, string, error) {
 	key := fmt.Sprintf("refresh_token:%s", refreshToken)
 
-	userIDStr, err := s.redis.Get(ctx, key).Result()
-	if err != nil {
+	// Atomically get-and-delete the old token. If it returns nil the token was
+	// already consumed by a concurrent request — reject immediately to prevent
+	// the race condition that allows two concurrent refreshes to both succeed.
+	userIDStr, err := s.redis.GetDel(ctx, key).Result()
+	if err != nil || userIDStr == "" {
 		return "", "", apperror.ErrRefreshTokenInvalid
 	}
 
@@ -173,15 +229,11 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (st
 		return "", "", apperror.ErrInternal
 	}
 
-	// Rotate: generate new refresh token BEFORE deleting the old one
-	// so the user isn't locked out if generation fails
+	// Generate and store the new refresh token now that the old one is consumed
 	newRefreshToken, err := s.generateRefreshToken(ctx, user.ID)
 	if err != nil {
 		return "", "", apperror.ErrInternal
 	}
-
-	// Delete old refresh token only after new tokens are successfully generated
-	s.redis.Del(ctx, key)
 
 	return accessToken, newRefreshToken, nil
 }
@@ -247,7 +299,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 
 	if !validator.ValidatePassword(newPassword) {
 		return apperror.ValidationError(map[string]string{
-			"new_password": "Password minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka",
+			"new_password": "Password minimal 8 karakter, mengandung huruf kecil dan angka",
 		})
 	}
 
@@ -350,7 +402,7 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	// Validate password strength
 	if !validator.ValidatePassword(newPassword) {
 		return apperror.ValidationError(map[string]string{
-			"new_password": "Password minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka",
+			"new_password": "Password minimal 8 karakter, mengandung huruf kecil dan angka",
 		})
 	}
 
@@ -363,9 +415,6 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	if err != nil || user == nil {
 		return apperror.New("RESET_TOKEN_INVALID", "Token reset tidak valid atau sudah kedaluwarsa", 400)
 	}
-
-	// Delete the token from Redis BEFORE updating password so it can't be reused if the update fails
-	s.redis.Del(ctx, key)
 
 	// Hash new password
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -380,5 +429,19 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 		return apperror.ErrInternal
 	}
 
+	// Only delete the token AFTER the password has been successfully updated,
+	// so the token remains usable if the DB update fails (prevents silent data loss).
+	s.redis.Del(ctx, key)
+
 	return nil
+}
+
+// isAllDigits returns true if s is non-empty and contains only ASCII digits.
+func isAllDigits(s string) bool {
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return len(s) > 0
 }

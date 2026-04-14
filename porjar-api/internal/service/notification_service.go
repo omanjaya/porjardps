@@ -13,12 +13,13 @@ import (
 )
 
 type NotificationService struct {
-	repo model.NotificationRepository
-	hub  *ws.Hub
+	repo     model.NotificationRepository
+	userRepo model.UserRepository
+	hub      *ws.Hub
 }
 
-func NewNotificationService(repo model.NotificationRepository, hub *ws.Hub) *NotificationService {
-	return &NotificationService{repo: repo, hub: hub}
+func NewNotificationService(repo model.NotificationRepository, userRepo model.UserRepository, hub *ws.Hub) *NotificationService {
+	return &NotificationService{repo: repo, userRepo: userRepo, hub: hub}
 }
 
 // Create saves a notification to the database and broadcasts it via WebSocket
@@ -45,7 +46,7 @@ func (s *NotificationService) Create(ctx context.Context, userID uuid.UUID, noti
 		return nil // don't fail the operation if broadcast fails
 	}
 
-	room := fmt.Sprintf("user:%s", userID.String())
+	room := fmt.Sprintf("user#%s", userID.String())
 	s.hub.BroadcastToRoom(room, broadcastData)
 
 	return nil
@@ -69,7 +70,9 @@ func (s *NotificationService) GetByUser(ctx context.Context, userID uuid.UUID, p
 	return notifications, total, nil
 }
 
-// MarkRead marks a single notification as read (without ownership check — prefer MarkReadForUser)
+// MarkRead marks a single notification as read without an ownership check.
+// This is intended for admin/internal paths only (e.g. system-triggered reads).
+// For user-initiated reads, always use MarkReadForUser which verifies ownership.
 func (s *NotificationService) MarkRead(ctx context.Context, notificationID uuid.UUID) error {
 	if err := s.repo.MarkRead(ctx, notificationID); err != nil {
 		return fmt.Errorf("mark read: %w", err)
@@ -175,18 +178,23 @@ func (s *NotificationService) NotifyMatchResult(ctx context.Context, winnerTeamI
 		"loser_team_id":  loserTeamID.String(),
 	})
 
+	var notifications []*model.Notification
+
 	if members, err := memberRepo.FindByTeam(ctx, winnerTeamID); err == nil {
 		for _, m := range members {
 			if m.UserID == nil {
 				continue
 			}
-			if err := s.Create(ctx, *m.UserID, "match_result",
-				"Tim Kamu Menang!",
-				fmt.Sprintf("%s menang vs %s", winnerName, loserName),
-				matchData,
-			); err != nil {
-				slog.Error("failed to send match_result notification (winner)", "error", err, "user_id", m.UserID)
-			}
+			notifications = append(notifications, &model.Notification{
+				ID:        uuid.New(),
+				UserID:    *m.UserID,
+				Type:      "match_result",
+				Title:     "Tim Kamu Menang!",
+				Message:   fmt.Sprintf("%s menang vs %s", winnerName, loserName),
+				Data:      matchData,
+				IsRead:    false,
+				CreatedAt: time.Now(),
+			})
 		}
 	}
 
@@ -195,15 +203,77 @@ func (s *NotificationService) NotifyMatchResult(ctx context.Context, winnerTeamI
 			if m.UserID == nil {
 				continue
 			}
-			if err := s.Create(ctx, *m.UserID, "match_result",
-				"Pertandingan Selesai",
-				fmt.Sprintf("%s kalah dari %s", loserName, winnerName),
-				matchData,
-			); err != nil {
-				slog.Error("failed to send match_result notification (loser)", "error", err, "user_id", m.UserID)
+			notifications = append(notifications, &model.Notification{
+				ID:        uuid.New(),
+				UserID:    *m.UserID,
+				Type:      "match_result",
+				Title:     "Pertandingan Selesai",
+				Message:   fmt.Sprintf("%s kalah dari %s", loserName, winnerName),
+				Data:      matchData,
+				IsRead:    false,
+				CreatedAt: time.Now(),
+			})
+		}
+	}
+
+	if len(notifications) == 0 {
+		return
+	}
+
+	if err := s.repo.BulkCreate(ctx, notifications); err != nil {
+		slog.Error("failed to bulk create match_result notifications", "error", err)
+		return
+	}
+
+	// Broadcast each notification via WebSocket to user-specific channels.
+	// Only runs after successful BulkCreate so we never broadcast phantom notifications.
+	if s.hub != nil {
+		for _, n := range notifications {
+			broadcastData, err := ws.NewBroadcastData("notification", n)
+			if err != nil {
+				continue
+			}
+			room := fmt.Sprintf("user#%s", n.UserID.String())
+			s.hub.BroadcastToRoom(room, broadcastData)
+		}
+	}
+}
+
+// notifyAllAdmins sends a notification to all admin and superadmin users.
+func (s *NotificationService) notifyAllAdmins(ctx context.Context, notifType, title, message string, data json.RawMessage) {
+	for _, role := range []string{"admin", "superadmin"} {
+		r := role
+		admins, _, err := s.userRepo.List(ctx, model.UserFilter{Role: &r, Page: 1, Limit: 200})
+		if err != nil {
+			slog.Error("failed to list admins for notification", "error", err, "role", role)
+			continue
+		}
+		for _, admin := range admins {
+			if err := s.Create(ctx, admin.ID, notifType, title, message, data); err != nil {
+				slog.Error("failed to send admin notification", "error", err, "admin_id", admin.ID)
 			}
 		}
 	}
+}
+
+// NotifyAdminNewSubmission notifies admins when a new match submission is received.
+func (s *NotificationService) NotifyAdminNewSubmission(ctx context.Context, teamName, gameName, matchLabel string) {
+	data, _ := json.Marshal(map[string]string{"team": teamName, "game": gameName})
+	s.notifyAllAdmins(ctx, "new_submission",
+		"Submission Baru",
+		fmt.Sprintf("%s mengirim hasil %s (%s)", teamName, matchLabel, gameName),
+		data,
+	)
+}
+
+// NotifyAdminMatchCompleted notifies admins when a match is completed.
+func (s *NotificationService) NotifyAdminMatchCompleted(ctx context.Context, winnerName, loserName, gameName string, matchID uuid.UUID) {
+	data, _ := json.Marshal(map[string]string{"match_id": matchID.String()})
+	s.notifyAllAdmins(ctx, "match_completed",
+		"Pertandingan Selesai",
+		fmt.Sprintf("%s vs %s selesai — Pemenang: %s (%s)", winnerName, loserName, winnerName, gameName),
+		data,
+	)
 }
 
 // NotifyRegistrationConfirmed sends a notification when registration is confirmed

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
@@ -15,13 +16,18 @@ import (
 
 type SchoolHandler struct {
 	schoolService *service.SchoolService
+	coachService  *service.CoachService
 }
 
 func NewSchoolHandler(schoolService *service.SchoolService) *SchoolHandler {
 	return &SchoolHandler{schoolService: schoolService}
 }
 
-func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL fiber.Handler) {
+func (h *SchoolHandler) SetCoachService(cs *service.CoachService) {
+	h.coachService = cs
+}
+
+func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL fiber.Handler, coachMw ...fiber.Handler) {
 	// Public (rate limited)
 	app.Get("/schools", publicRL, h.List)
 	// Admin
@@ -30,6 +36,10 @@ func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, public
 	app.Put("/admin/schools/:id", authMw, adminMw, h.Update)
 	app.Get("/admin/schools/:id", authMw, adminMw, h.GetByID)
 	app.Delete("/admin/schools/:id", authMw, adminMw, h.Delete)
+	// Coach — upload school logo
+	if len(coachMw) > 0 {
+		app.Put("/schools/:id/logo", authMw, coachMw[0], h.UploadSchoolLogo)
+	}
 }
 
 type createSchoolRequest struct {
@@ -151,7 +161,7 @@ func (h *SchoolHandler) List(c *fiber.Ctx) error {
 		}
 	}
 	if pp := c.Query("per_page"); pp != "" {
-		if v, err := strconv.Atoi(pp); err == nil && v > 0 && v <= 100 {
+		if v, err := strconv.Atoi(pp); err == nil && v > 0 && v <= 500 {
 			filter.Limit = v
 		}
 	}
@@ -177,4 +187,53 @@ func (h *SchoolHandler) List(c *fiber.Ctx) error {
 		Total:      total,
 		TotalPages: totalPages,
 	})
+}
+
+type uploadSchoolLogoRequest struct {
+	LogoURL string `json:"logo_url"`
+}
+
+func (h *SchoolHandler) UploadSchoolLogo(c *fiber.Ctx) error {
+	schoolID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "ID sekolah tidak valid")
+	}
+
+	userID := middleware.GetUserID(c)
+
+	if h.coachService == nil {
+		return response.Err(c, apperror.ErrInternal)
+	}
+	schools, svcErr := h.coachService.GetCoachSchools(c.Context(), userID)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	authorized := false
+	for _, s := range schools {
+		if s.ID == schoolID {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		return response.Err(c, apperror.New("FORBIDDEN", "Anda tidak memiliki akses ke sekolah ini", 403))
+	}
+
+	var req uploadSchoolLogoRequest
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Format request tidak valid")
+	}
+
+	var logoPtr *string
+	if req.LogoURL != "" {
+		logoPtr = &req.LogoURL
+	}
+
+	school, svcErr := h.schoolService.UpdateLogoURL(c.Context(), schoolID, logoPtr)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.OK(c, school)
 }

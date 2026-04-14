@@ -85,7 +85,12 @@ func CSRFMiddleware() fiber.Handler {
 
 // SetCSRFToken sets a CSRF token cookie if one does not already exist.
 // Apply this on GET requests so the cookie is available before the first mutation.
-func SetCSRFToken() fiber.Handler {
+// Pass secureCookie=true in production (HTTPS) and false in dev (HTTP).
+func SetCSRFToken(secureCookie ...bool) fiber.Handler {
+	secure := true // default to secure (production)
+	if len(secureCookie) > 0 {
+		secure = secureCookie[0]
+	}
 	return func(c *fiber.Ctx) error {
 		if c.Method() == "GET" && c.Cookies(csrfCookieName) == "" {
 			token, err := generateCSRFToken()
@@ -97,7 +102,7 @@ func SetCSRFToken() fiber.Handler {
 				Value:    token,
 				Path:     "/",
 				MaxAge:   86400, // 24 hours
-				Secure:   true,
+				Secure:   secure,
 				HTTPOnly: false, // Must be readable by JS
 				SameSite: "Strict",
 			})

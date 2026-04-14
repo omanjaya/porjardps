@@ -57,9 +57,9 @@ func main() {
 	}
 	slog.Info("redis connected")
 
-	// WebSocket hub
-	hub := ws.NewHubWithLimit(cfg.WSMaxConnections)
-	go hub.Run()
+	// Centrifugo publisher — replaces the in-process WebSocket hub
+	hub := ws.NewHubWithLimit(0)
+	hub.SetConfig(cfg.CentrifugoURL, cfg.CentrifugoAPIKey)
 
 	// Submission queue — async processing via Redis Streams
 	submissionQueue := queue.NewSubmissionQueue(rdb)
@@ -71,18 +71,22 @@ func main() {
 
 	// Fiber app
 	app := fiber.New(fiber.Config{
-		BodyLimit:    2 * 1024 * 1024,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-		IdleTimeout:  cfg.IdleTimeout,
-		ErrorHandler: middleware.ErrorHandler,
+		BodyLimit:             2 * 1024 * 1024,
+		ReadTimeout:           cfg.ReadTimeout,
+		WriteTimeout:          cfg.WriteTimeout,
+		IdleTimeout:           cfg.IdleTimeout,
+		ErrorHandler:          middleware.ErrorHandler,
+		ProxyHeader:           "X-Forwarded-For",
+		EnableTrustedProxyCheck: true,
+		TrustedProxies:        []string{"127.0.0.1", "::1", "172.16.0.0/12", "10.0.0.0/8"},
 	})
 
 	// Global middleware
+	app.Use(middleware.ErrorLogger())
 	app.Use(middleware.Logger())
 	app.Use(middleware.SecurityHeaders())
 	app.Use(middleware.CORS(cfg.CORSAllowedOrigins))
-	app.Use(middleware.RateLimiter(rdb, cfg.RateLimitGlobal))
+	app.Use(middleware.RateLimiter(rdb, cfg.RateLimitGlobal, cfg.RateLimitDisabled))
 	app.Use(middleware.PrometheusMetrics())
 
 	// Health check
@@ -118,6 +122,17 @@ func main() {
 		})
 	})
 
+	// Readiness probe — returns 200 only if DB + Redis are reachable.
+	app.Get("/ready", func(c *fiber.Ctx) error {
+		if err := db.Ping(serverCtx); err != nil {
+			return c.Status(503).JSON(fiber.Map{"status": "not_ready", "db": "error"})
+		}
+		if err := rdb.Ping(serverCtx).Err(); err != nil {
+			return c.Status(503).JSON(fiber.Map{"status": "not_ready", "redis": "error"})
+		}
+		return c.JSON(fiber.Map{"status": "ready"})
+	})
+
 	// /metrics — Prometheus scrape endpoint.
 	// In production this should only be reachable from the internal Docker network
 	// (Prometheus scrapes via the service name); it is NOT wired through Nginx.
@@ -144,9 +159,6 @@ func main() {
 			case <-serverCtx.Done():
 				return
 			case <-ticker.C:
-				// WebSocket connections
-				middleware.WSConnectionsActive.Set(float64(hub.ConnectionCount()))
-
 				// Submission queue depth
 				if depth, err := submissionQueue.Depth(serverCtx); err == nil {
 					middleware.SubmissionQueueDepth.Set(float64(depth))
@@ -163,9 +175,6 @@ func main() {
 	api := app.Group("/api/v1")
 	setupRoutes(api, db, rdb, hub, cfg, submissionQueue, serverCtx)
 
-	// WebSocket routes
-	ws.SetupRoutes(app, hub, cfg.JWTSecret, cfg.CORSAllowedOrigins)
-
 	// Static file serving (uploads)
 	app.Static("/uploads", cfg.UploadDir)
 
@@ -174,6 +183,26 @@ func main() {
 	schedulerBrLobbyRepo := repository.NewBRLobbyRepo(db)
 	scheduler := service.NewMatchScheduler(schedulerBracketRepo, schedulerBrLobbyRepo, hub)
 	scheduler.Start()
+
+	// Start match reminder service (notifies players ~30 min before match)
+	reminderNotifRepo := repository.NewNotificationRepo(db)
+	reminderUserRepo := repository.NewUserRepo(db)
+	reminderNotifSvc := service.NewNotificationService(reminderNotifRepo, reminderUserRepo, hub)
+	reminderBracketRepo := repository.NewBracketRepo(db)
+	reminderBrLobbyRepo := repository.NewBRLobbyRepo(db)
+	reminderBrResultRepo := repository.NewBRLobbyResultRepo(db)
+	reminderTeamRepo := repository.NewTeamRepo(db)
+	reminderMemberRepo := repository.NewTeamMemberRepo(db)
+	matchReminder := service.NewMatchReminderService(
+		reminderBracketRepo,
+		reminderBrLobbyRepo,
+		reminderBrResultRepo,
+		reminderTeamRepo,
+		reminderMemberRepo,
+		reminderNotifSvc,
+		rdb,
+	)
+	matchReminder.Start(serverCtx)
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -192,10 +221,6 @@ func main() {
 	serverCancel()
 
 	scheduler.Stop()
-
-	// Close all active WebSocket connections before HTTP shutdown so clients
-	// receive a proper close frame instead of a TCP reset.
-	hub.Stop()
 
 	if err := app.Shutdown(); err != nil {
 		slog.Error("error during shutdown", "error", err)
@@ -256,9 +281,15 @@ func setupDatabase(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, erro
 
 func setupRedis(cfg *config.Config) *redis.Client {
 	return redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%d", cfg.RedisHost, cfg.RedisPort),
-		Password: cfg.RedisPassword,
-		DB:       cfg.RedisDB,
+		Addr:         fmt.Sprintf("%s:%d", cfg.RedisHost, cfg.RedisPort),
+		Password:     cfg.RedisPassword,
+		DB:           cfg.RedisDB,
+		PoolSize:     20,
+		MinIdleConns: 5,
+		MaxRetries:   3,
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
 	})
 }
 

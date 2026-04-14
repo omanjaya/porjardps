@@ -16,7 +16,7 @@ export function MatchScoreDisplay({
   isCompleted,
 }: MatchScoreDisplayProps) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-stone-50 p-5">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-5">
       {/* Teams */}
       <div className="flex items-center justify-between gap-3">
         {/* Team A */}
@@ -28,7 +28,7 @@ export function MatchScoreDisplay({
         {/* VS / Score */}
         <div className="flex flex-col items-center gap-1">
           {isLive && (
-            <div className="flex items-center gap-1 text-xs text-porjar-red mb-1">
+            <div className="flex items-center gap-1 text-xs text-esi-red mb-1">
               <Lightning size={12} weight="fill" className="animate-pulse" />
               <span className="font-bold uppercase tracking-wider">LIVE</span>
             </div>
@@ -39,24 +39,24 @@ export function MatchScoreDisplay({
                 'text-4xl font-black tabular-nums',
                 isCompleted && match.winner?.id === match.team_a?.id
                   ? 'text-green-600'
-                  : 'text-stone-800'
+                  : 'text-stone-800 dark:text-zinc-200'
               )}
             >
               {seriesScore.a}
             </span>
-            <span className="text-xl font-bold text-stone-300">:</span>
+            <span className="text-xl font-bold text-stone-300 dark:text-zinc-600">:</span>
             <span
               className={cn(
                 'text-4xl font-black tabular-nums',
                 isCompleted && match.winner?.id === match.team_b?.id
                   ? 'text-green-600'
-                  : 'text-stone-800'
+                  : 'text-stone-800 dark:text-zinc-200'
               )}
             >
               {seriesScore.b}
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-stone-400 font-semibold">
+          <span className="text-[10px] uppercase tracking-widest text-stone-400 dark:text-zinc-500 font-semibold">
             BO{match.best_of}
           </span>
         </div>
@@ -70,7 +70,7 @@ export function MatchScoreDisplay({
 
       {/* Winner banner */}
       {isCompleted && match.winner && (
-        <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
+        <div className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 px-3 py-2">
           <Trophy size={16} weight="fill" className="text-green-600" />
           <span className="text-sm font-semibold text-green-600">
             {match.winner.name} menang!
@@ -90,7 +90,7 @@ function TeamDisplay({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
-      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white border border-stone-200 overflow-hidden">
+      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 overflow-hidden">
         {team?.logo_url ? (
           <img
             src={mediaUrl(team.logo_url)!}
@@ -98,20 +98,24 @@ function TeamDisplay({
             className="h-full w-full object-cover"
           />
         ) : (
-          <Trophy size={24} className="text-stone-400" />
+          <Trophy size={24} className="text-stone-400 dark:text-zinc-500" />
         )}
       </div>
       <span
         className={cn(
-          'text-sm font-semibold text-center truncate max-w-full',
-          isWinner ? 'text-green-600' : 'text-stone-800'
+          'text-sm font-semibold text-center break-words',
+          isWinner ? 'text-green-600' : 'text-stone-800 dark:text-zinc-200'
         )}
-        title={team?.name ?? 'TBD'}
       >
         {team?.name ?? 'TBD'}
       </span>
+      {team?.school_name && (
+        <span className="text-[10px] text-stone-400 dark:text-zinc-500 text-center">
+          {team.school_name}
+        </span>
+      )}
       {team?.seed != null && (
-        <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider">
+        <span className="text-[10px] font-medium text-stone-400 dark:text-zinc-500 uppercase tracking-wider">
           Seed #{team.seed}
         </span>
       )}

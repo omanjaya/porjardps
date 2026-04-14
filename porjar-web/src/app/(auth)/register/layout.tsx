@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Daftar',
-  description: 'Daftar akun PORJAR Denpasar Esport untuk mendaftarkan tim',
+  description: 'Daftar akun ESI Denpasar Esport untuk mendaftarkan tim',
   robots: { index: false, follow: false },
 }
 

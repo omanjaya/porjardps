@@ -79,6 +79,20 @@ func (s *SchoolService) List(ctx context.Context, filter model.SchoolFilter) ([]
 	return schools, total, nil
 }
 
+func (s *SchoolService) UpdateLogoURL(ctx context.Context, id uuid.UUID, logoURL *string) (*model.School, error) {
+	school, err := s.schoolRepo.FindByID(ctx, id)
+	if err != nil || school == nil {
+		return nil, apperror.NotFound("SCHOOL")
+	}
+
+	if err := s.schoolRepo.UpdateLogoURL(ctx, id, logoURL); err != nil {
+		return nil, apperror.Wrap(err, "update school logo")
+	}
+
+	school.LogoURL = logoURL
+	return school, nil
+}
+
 func (s *SchoolService) Delete(ctx context.Context, id uuid.UUID) error {
 	school, err := s.schoolRepo.FindByID(ctx, id)
 	if err != nil || school == nil {
@@ -91,6 +105,10 @@ func (s *SchoolService) Delete(ctx context.Context, id uuid.UUID) error {
 	}
 	if hasTeams {
 		return apperror.BusinessRule("SCHOOL_HAS_TEAMS", "Sekolah tidak dapat dihapus karena masih memiliki tim terdaftar")
+	}
+
+	if err := s.schoolRepo.Delete(ctx, id); err != nil {
+		return apperror.Wrap(err, "delete school")
 	}
 
 	return nil

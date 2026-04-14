@@ -169,7 +169,7 @@ export function PointRuleEditor({
                   type="number"
                   min={0}
                   value={placements[pos] ?? 0}
-                  onChange={(e) => updatePlacement(pos, parseInt(e.target.value) || 0)}
+                  onChange={(e) => updatePlacement(pos, e.target.value === '' ? 0 : parseInt(e.target.value))}
                   className="h-9 w-full text-center bg-transparent border-slate-700/50 text-slate-200 text-sm px-1"
                 />
               </div>
@@ -207,7 +207,7 @@ export function PointRuleEditor({
               max={10}
               value={wwcdBonus}
               onChange={(e) => {
-                setWwcdBonus(parseInt(e.target.value) || 0)
+                setWwcdBonus(e.target.value === '' ? 0 : parseInt(e.target.value))
                 setActivePreset('custom')
               }}
               className="bg-slate-900/60 border-slate-700 text-slate-200"
@@ -223,7 +223,7 @@ export function PointRuleEditor({
               type="number"
               min={0}
               value={qualificationThreshold}
-              onChange={(e) => setQualificationThreshold(parseInt(e.target.value) || 0)}
+              onChange={(e) => setQualificationThreshold(e.target.value === '' ? 0 : parseInt(e.target.value))}
               className="bg-slate-900/60 border-slate-700 text-slate-200"
             />
             <p className="mt-1 text-[10px] text-slate-500">

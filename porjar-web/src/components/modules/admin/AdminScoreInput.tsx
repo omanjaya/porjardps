@@ -61,14 +61,14 @@ export function AdminScoreInput({ match, bestOf, onSubmit }: AdminScoreInputProp
   return (
     <div className="space-y-4">
       {/* Match info header */}
-      <div className="flex items-center justify-between rounded-xl bg-porjar-bg px-4 py-3">
-        <span className="text-sm font-semibold text-stone-900">
+      <div className="flex items-center justify-between rounded-xl bg-esi-bg px-4 py-3">
+        <span className="text-sm font-semibold text-stone-900 dark:text-zinc-100">
           {match.team_a?.name ?? 'TBD'}
         </span>
-        <span className="text-lg font-bold text-porjar-red tabular-nums">
+        <span className="text-lg font-bold text-esi-red tabular-nums">
           {totalA} - {totalB}
         </span>
-        <span className="text-sm font-semibold text-stone-900">
+        <span className="text-sm font-semibold text-stone-900 dark:text-zinc-100">
           {match.team_b?.name ?? 'TBD'}
         </span>
       </div>
@@ -78,9 +78,9 @@ export function AdminScoreInput({ match, bestOf, onSubmit }: AdminScoreInputProp
         {games.map((game, i) => (
           <div
             key={game.game_number}
-            className="flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-2.5 shadow-sm"
+            className="flex items-center gap-3 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-2.5 shadow-sm"
           >
-            <span className="w-20 text-xs font-semibold uppercase tracking-wider text-stone-400">
+            <span className="w-20 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
               Game {game.game_number}
             </span>
             <div className="flex flex-1 items-center justify-center gap-3">
@@ -88,16 +88,16 @@ export function AdminScoreInput({ match, bestOf, onSubmit }: AdminScoreInputProp
                 type="number"
                 min={0}
                 value={game.score_a}
-                onChange={(e) => updateGame(i, 'score_a', parseInt(e.target.value) || 0)}
-                className="w-16 text-center bg-white border-stone-300 text-stone-900 focus:border-porjar-red"
+                onChange={(e) => updateGame(i, 'score_a', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                className="w-16 text-center bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 focus:border-esi-red"
               />
-              <span className="text-xs font-bold text-stone-300">VS</span>
+              <span className="text-xs font-bold text-stone-300 dark:text-zinc-600">VS</span>
               <Input
                 type="number"
                 min={0}
                 value={game.score_b}
-                onChange={(e) => updateGame(i, 'score_b', parseInt(e.target.value) || 0)}
-                className="w-16 text-center bg-white border-stone-300 text-stone-900 focus:border-porjar-red"
+                onChange={(e) => updateGame(i, 'score_b', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                className="w-16 text-center bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 focus:border-esi-red"
               />
             </div>
           </div>
@@ -105,27 +105,27 @@ export function AdminScoreInput({ match, bestOf, onSubmit }: AdminScoreInputProp
       </div>
 
       {/* Submit */}
-      <Button onClick={() => setConfirmOpen(true)} className="w-full bg-porjar-red hover:bg-porjar-red-dark text-white">
+      <Button onClick={() => setConfirmOpen(true)} className="w-full bg-esi-red hover:bg-esi-red-dark text-white">
         Simpan Skor
       </Button>
 
       {/* Confirm dialog */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent className="bg-white border-stone-200 text-stone-900">
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-stone-900">
+            <DialogTitle className="flex items-center gap-2 text-stone-900 dark:text-zinc-100">
               <WarningCircle size={20} className="text-amber-500" />
               Konfirmasi Skor
             </DialogTitle>
-            <DialogDescription className="text-stone-500">
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
               Pastikan skor sudah benar sebelum menyimpan.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="rounded-xl bg-porjar-bg px-4 py-3 text-center">
-            <p className="text-sm text-stone-600">
+          <div className="rounded-xl bg-esi-bg px-4 py-3 text-center">
+            <p className="text-sm text-stone-600 dark:text-zinc-400">
               {match.team_a?.name ?? 'TBD'}{' '}
-              <span className="text-lg font-bold text-porjar-red">
+              <span className="text-lg font-bold text-esi-red">
                 {totalA} - {totalB}
               </span>{' '}
               {match.team_b?.name ?? 'TBD'}
@@ -136,11 +136,11 @@ export function AdminScoreInput({ match, bestOf, onSubmit }: AdminScoreInputProp
             <Button
               variant="outline"
               onClick={() => setConfirmOpen(false)}
-              className="border-stone-300 text-stone-600"
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
             >
               Batal
             </Button>
-            <Button onClick={handleConfirm} disabled={submitting} className="bg-porjar-red hover:bg-porjar-red-dark text-white">
+            <Button onClick={handleConfirm} disabled={submitting} className="bg-esi-red hover:bg-esi-red-dark text-white">
               {submitting ? 'Menyimpan...' : 'Ya, Simpan'}
             </Button>
           </DialogFooter>

@@ -20,6 +20,9 @@ type ActiveMatchDTO struct {
 	BestOf      *int       `json:"best_of"`
 	LobbyName   *string    `json:"lobby_name"`
 	ScheduledAt *time.Time `json:"scheduled_at"`
+	NumMaps     int        `json:"num_maps"`
+	CurrentMap  int        `json:"current_map"`
+	MapNames    []string   `json:"map_names"`
 }
 
 // GetPlayerActiveMatches returns bracket matches and BR lobbies where the player's team(s) can submit results.
@@ -78,7 +81,7 @@ func (s *MatchSubmissionService) GetPlayerActiveMatches(ctx context.Context, use
 	for _, t := range userTeams {
 		bracketMatches, _ := s.bracketRepo.ListByTeam(ctx, t.ID)
 		for _, bm := range bracketMatches {
-			if bm.Status != "live" && bm.Status != "scheduled" {
+			if bm.Status != "live" {
 				continue
 			}
 			bracketEntries = append(bracketEntries, bracketEntry{team: t, bm: bm})
@@ -161,9 +164,31 @@ func (s *MatchSubmissionService) GetPlayerActiveMatches(ctx context.Context, use
 			if err != nil || lobby == nil {
 				continue
 			}
-			if lobby.Status != "live" && lobby.Status != "scheduled" {
+			if lobby.Status != "live" {
 				continue
 			}
+
+			numMaps := lobby.NumMaps
+			if numMaps <= 0 {
+				numMaps = 1
+			}
+
+			// Determine which map the team can submit next:
+			// find the highest approved map for this team+lobby, then +1
+			currentMap := 1
+			for m := numMaps; m >= 1; m-- {
+				approved, _ := s.submissionRepo.FindApprovedByLobbyTeamMap(ctx, lobby.ID, t.ID, m)
+				if approved != nil {
+					currentMap = m + 1
+					break
+				}
+			}
+
+			// If all maps already approved, skip (no more submissions needed)
+			if currentMap > numMaps {
+				continue
+			}
+
 			result = append(result, &ActiveMatchDTO{
 				ID:          lobby.ID.String(),
 				Type:        "battle_royale",
@@ -173,6 +198,74 @@ func (s *MatchSubmissionService) GetPlayerActiveMatches(ctx context.Context, use
 				GameSlug:    gameSlug,
 				LobbyName:   &lobby.LobbyName,
 				ScheduledAt: lobby.ScheduledAt,
+				NumMaps:     numMaps,
+				CurrentMap:  currentMap,
+				MapNames:    lobby.MapNames,
+			})
+		}
+	}
+
+	// Step 8: Group matches
+	for _, t := range userTeams {
+		game := gameMap[t.GameID]
+		gameName, gameSlug := "", ""
+		if game != nil {
+			gameName = game.Name
+			gameSlug = game.Slug
+		}
+
+		if s.groupRepo == nil {
+			continue
+		}
+		groupMatches, _ := s.groupRepo.FindLiveMatchesByTeam(ctx, t.ID)
+		for _, gm := range groupMatches {
+			// Skip if team already has pending submission for this match
+			pendingSubs, _ := s.submissionRepo.FindPendingByGroupMatch(ctx, gm.ID)
+			hasPending := false
+			for _, ps := range pendingSubs {
+				if ps.TeamID == t.ID {
+					hasPending = true
+					break
+				}
+			}
+			if hasPending {
+				continue
+			}
+
+			teamAName, teamBName := "TBD", "TBD"
+			if gm.TeamAID != nil {
+				if ta := teamByID[*gm.TeamAID]; ta != nil {
+					teamAName = ta.Name
+				}
+			}
+			if gm.TeamBID != nil {
+				if tb := teamByID[*gm.TeamBID]; tb != nil {
+					teamBName = tb.Name
+				}
+			}
+
+			// Fetch opponent teams not already in teamByID
+			if gm.TeamAID != nil && teamByID[*gm.TeamAID] == nil {
+				if teams, err := s.teamRepo.FindByIDs(ctx, []uuid.UUID{*gm.TeamAID}); err == nil && len(teams) > 0 {
+					teamByID[*gm.TeamAID] = teams[0]
+					teamAName = teams[0].Name
+				}
+			}
+			if gm.TeamBID != nil && teamByID[*gm.TeamBID] == nil {
+				if teams, err := s.teamRepo.FindByIDs(ctx, []uuid.UUID{*gm.TeamBID}); err == nil && len(teams) > 0 {
+					teamByID[*gm.TeamBID] = teams[0]
+					teamBName = teams[0].Name
+				}
+			}
+
+			result = append(result, &ActiveMatchDTO{
+				ID:          gm.ID.String(),
+				Type:        "group",
+				TeamAName:   teamAName,
+				TeamBName:   teamBName,
+				GameName:    gameName,
+				GameSlug:    gameSlug,
+				ScheduledAt: gm.ScheduledAt,
 			})
 		}
 	}
@@ -182,19 +275,19 @@ func (s *MatchSubmissionService) GetPlayerActiveMatches(ctx context.Context, use
 
 // GetPlayerSubmissions returns all submissions for the player's teams.
 func (s *MatchSubmissionService) GetPlayerSubmissions(ctx context.Context, userID uuid.UUID) ([]*model.MatchSubmission, error) {
-	allTeams, _, err := s.teamRepo.List(ctx, model.TeamFilter{Page: 1, Limit: 200})
+	// Get user's team memberships directly (efficient)
+	memberships, err := s.teamMemberRepo.FindByUser(ctx, userID)
 	if err != nil {
-		return nil, apperror.Wrap(err, "list teams")
+		return nil, apperror.Wrap(err, "find user memberships")
+	}
+	if len(memberships) == 0 {
+		return []*model.MatchSubmission{}, nil
 	}
 
 	var all []*model.MatchSubmission
 	seen := map[uuid.UUID]bool{}
-	for _, t := range allTeams {
-		member, _ := s.teamMemberRepo.FindByTeamAndUser(ctx, t.ID, userID)
-		if member == nil {
-			continue
-		}
-		subs, _ := s.submissionRepo.FindByTeam(ctx, t.ID)
+	for _, m := range memberships {
+		subs, _ := s.submissionRepo.FindByTeam(ctx, m.TeamID)
 		for _, sub := range subs {
 			if !seen[sub.ID] {
 				seen[sub.ID] = true
@@ -203,6 +296,190 @@ func (s *MatchSubmissionService) GetPlayerSubmissions(ctx context.Context, userI
 		}
 	}
 	return all, nil
+}
+
+// EnrichForPlayer converts raw submissions into PlayerSubmissionDTOs with match info, team names, etc.
+func (s *MatchSubmissionService) EnrichForPlayer(ctx context.Context, subs []*model.MatchSubmission) []*model.PlayerSubmissionDTO {
+	if len(subs) == 0 {
+		return []*model.PlayerSubmissionDTO{}
+	}
+
+	// Collect IDs
+	teamIDSet := make(map[uuid.UUID]struct{})
+	userIDSet := make(map[uuid.UUID]struct{})
+	bracketMatchIDs := make([]uuid.UUID, 0)
+	brLobbyIDs := make([]uuid.UUID, 0)
+
+	for _, sub := range subs {
+		teamIDSet[sub.TeamID] = struct{}{}
+		userIDSet[sub.SubmittedBy] = struct{}{}
+		if sub.ClaimedWinnerID != nil {
+			teamIDSet[*sub.ClaimedWinnerID] = struct{}{}
+		}
+		if sub.BracketMatchID != nil {
+			bracketMatchIDs = append(bracketMatchIDs, *sub.BracketMatchID)
+		}
+		if sub.BRLobbyID != nil {
+			brLobbyIDs = append(brLobbyIDs, *sub.BRLobbyID)
+		}
+	}
+
+	// Batch-fetch bracket matches
+	bracketMap := make(map[uuid.UUID]*model.BracketMatch)
+	if len(bracketMatchIDs) > 0 {
+		if matches, err := s.bracketRepo.FindByIDs(ctx, bracketMatchIDs); err == nil {
+			for _, m := range matches {
+				bracketMap[m.ID] = m
+				if m.TeamAID != nil {
+					teamIDSet[*m.TeamAID] = struct{}{}
+				}
+				if m.TeamBID != nil {
+					teamIDSet[*m.TeamBID] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// Batch-fetch BR lobbies
+	lobbyMap := make(map[uuid.UUID]*model.BRLobby)
+	if len(brLobbyIDs) > 0 {
+		for _, lid := range brLobbyIDs {
+			if lobby, err := s.brLobbyRepo.FindByID(ctx, lid); err == nil && lobby != nil {
+				lobbyMap[lid] = lobby
+			}
+		}
+	}
+
+	// Batch-fetch teams
+	teamIDs := make([]uuid.UUID, 0, len(teamIDSet))
+	for id := range teamIDSet {
+		teamIDs = append(teamIDs, id)
+	}
+	teamMap := make(map[uuid.UUID]*model.Team)
+	if teams, err := s.teamRepo.FindByIDs(ctx, teamIDs); err == nil {
+		for _, t := range teams {
+			teamMap[t.ID] = t
+		}
+	}
+
+	// Batch-fetch users
+	userIDs := make([]uuid.UUID, 0, len(userIDSet))
+	for id := range userIDSet {
+		userIDs = append(userIDs, id)
+	}
+	userMap := make(map[uuid.UUID]string)
+	if users, err := s.userRepo.FindByIDs(ctx, userIDs); err == nil {
+		for _, u := range users {
+			userMap[u.ID] = u.FullName
+		}
+	}
+
+	// Collect game IDs from teams and batch-fetch games
+	gameIDSet := make(map[uuid.UUID]struct{})
+	for _, t := range teamMap {
+		gameIDSet[t.GameID] = struct{}{}
+	}
+	gameIDs := make([]uuid.UUID, 0, len(gameIDSet))
+	for id := range gameIDSet {
+		gameIDs = append(gameIDs, id)
+	}
+	gameMap := make(map[uuid.UUID]*model.Game)
+	if games, err := s.gameRepo.FindByIDs(ctx, gameIDs); err == nil {
+		for _, g := range games {
+			gameMap[g.ID] = g
+		}
+	}
+
+	// Build DTOs
+	result := make([]*model.PlayerSubmissionDTO, len(subs))
+	for i, sub := range subs {
+		dto := &model.PlayerSubmissionDTO{
+			ID:               sub.ID,
+			ClaimedScoreA:    sub.ClaimedScoreA,
+			ClaimedScoreB:    sub.ClaimedScoreB,
+			ClaimedPlacement: sub.ClaimedPlacement,
+			ClaimedKills:     sub.ClaimedKills,
+			KillsP1:          sub.KillsP1,
+			KillsP2:          sub.KillsP2,
+			KillsP3:          sub.KillsP3,
+			KillsP4:          sub.KillsP4,
+			Screenshots:      sub.ScreenshotURLs,
+			Status:           sub.Status,
+			SubmittedBy:      userMap[sub.SubmittedBy],
+			SubmittedAt:      sub.CreatedAt,
+			RejectionReason:  sub.RejectionReason,
+		}
+		if dto.Screenshots == nil {
+			dto.Screenshots = []string{}
+		}
+
+		// Team name
+		if t := teamMap[sub.TeamID]; t != nil {
+			dto.SubmittedTeam = t.Name
+			if g := gameMap[t.GameID]; g != nil {
+				dto.GameName = g.Name
+				dto.GameSlug = g.Slug
+			}
+		}
+
+		// Winner name
+		if sub.ClaimedWinnerID != nil {
+			if t := teamMap[*sub.ClaimedWinnerID]; t != nil {
+				dto.ClaimedWinner = t.Name
+			}
+		}
+
+		// Bracket match info
+		if sub.BracketMatchID != nil {
+			dto.MatchType = "bracket"
+			dto.MatchID = sub.BracketMatchID.String()
+			if bm := bracketMap[*sub.BracketMatchID]; bm != nil {
+				if bm.TeamAID != nil {
+					if t := teamMap[*bm.TeamAID]; t != nil {
+						dto.TeamAName = t.Name
+					}
+				}
+				if bm.TeamBID != nil {
+					if t := teamMap[*bm.TeamBID]; t != nil {
+						dto.TeamBName = t.Name
+					}
+				}
+			}
+		}
+
+		// BR lobby info
+		if sub.BRLobbyID != nil {
+			dto.MatchType = "battle_royale"
+			dto.MatchID = sub.BRLobbyID.String()
+			if lobby := lobbyMap[*sub.BRLobbyID]; lobby != nil {
+				dto.TeamAName = lobby.LobbyName
+				dto.TeamBName = "Battle Royale"
+			}
+		}
+
+		// Group match info
+		if sub.GroupMatchID != nil {
+			dto.MatchType = "group"
+			dto.MatchID = sub.GroupMatchID.String()
+			if s.groupRepo != nil {
+				if gm, err := s.groupRepo.FindMatchByID(ctx, *sub.GroupMatchID); err == nil && gm != nil {
+					if gm.TeamAID != nil {
+						if t := teamMap[*gm.TeamAID]; t != nil {
+							dto.TeamAName = t.Name
+						}
+					}
+					if gm.TeamBID != nil {
+						if t := teamMap[*gm.TeamBID]; t != nil {
+							dto.TeamBName = t.Name
+						}
+					}
+				}
+			}
+		}
+
+		result[i] = dto
+	}
+	return result
 }
 
 // strPtr returns a pointer to the given string.

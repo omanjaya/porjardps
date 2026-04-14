@@ -18,10 +18,10 @@ export function StatTrend({ label, value, trend, sparklineData }: StatTrendProps
   const chartData = sparklineData.map((v, i) => ({ i, v }))
 
   return (
-    <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-white px-5 py-4 shadow-sm">
+    <div className="flex items-center justify-between rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-5 py-4 shadow-sm">
       <div className="min-w-0">
-        <p className="text-2xl font-bold tabular-nums text-stone-900">{value}</p>
-        <p className="mt-0.5 text-sm text-stone-500">{label}</p>
+        <p className="text-2xl font-bold tabular-nums text-stone-900 dark:text-zinc-100">{value}</p>
+        <p className="mt-0.5 text-sm text-stone-500 dark:text-zinc-400">{label}</p>
         <div className={`mt-1 flex items-center gap-1 text-xs font-medium ${trendColor}`}>
           {isPositive ? <ArrowUp size={12} weight="bold" /> : <ArrowDown size={12} weight="bold" />}
           <span>{trend}</span>

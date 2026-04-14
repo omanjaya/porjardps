@@ -119,6 +119,34 @@ func (m *MockBRLobbyResultRepository) FindByTeamAndLobby(ctx context.Context, te
 	return args.Get(0).(*model.BRLobbyResult), args.Error(1)
 }
 
+func (m *MockBRLobbyResultRepository) DeleteByLobbyAndMap(ctx context.Context, lobbyID uuid.UUID, mapNumber int) error {
+	return m.Called(ctx, lobbyID, mapNumber).Error(0)
+}
+
+func (m *MockBRLobbyResultRepository) ListByLobbyAndMap(ctx context.Context, lobbyID uuid.UUID, mapNumber int) ([]*model.BRLobbyResult, error) {
+	args := m.Called(ctx, lobbyID, mapNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.BRLobbyResult), args.Error(1)
+}
+
+func (m *MockBRLobbyResultRepository) CountMapResultsByLobby(ctx context.Context, lobbyID uuid.UUID) (map[int]int, error) {
+	args := m.Called(ctx, lobbyID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[int]int), args.Error(1)
+}
+
+func (m *MockBRLobbyResultRepository) FindByTeamLobbyAndMap(ctx context.Context, teamID, lobbyID uuid.UUID, mapNumber int) (*model.BRLobbyResult, error) {
+	args := m.Called(ctx, teamID, lobbyID, mapNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.BRLobbyResult), args.Error(1)
+}
+
 type MockBRPointRuleRepository struct {
 	mock.Mock
 }
@@ -255,7 +283,7 @@ func (m *MockStandingsRepository) BulkUpsert(ctx context.Context, standings []*m
 	return m.Called(ctx, standings).Error(0)
 }
 
-func (m *MockStandingsRepository) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID) error {
+func (m *MockStandingsRepository) UpdateRankPositions(ctx context.Context, tournamentID uuid.UUID, tiebreakerOrder []string) error {
 	return m.Called(ctx, tournamentID).Error(0)
 }
 

@@ -69,6 +69,31 @@ services:
     networks:
       - porjar-net
 
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    restart: always
+    volumes:
+      - ./centrifugo.json:/centrifugo/config.json
+    command: centrifugo --config=config.json
+    env_file: .env.centrifugo
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - porjar-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
   api:
     image: porjar/api:${PORJAR_VERSION:-latest}
     restart: always
@@ -78,8 +103,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      centrifugo:
+        condition: service_healthy
     ports:
-      - "127.0.0.1:9091:8080"
+      - "127.0.0.1:9090:8080"
     volumes:
       - uploads_data:/app/storage/uploads
     networks:
@@ -102,13 +129,18 @@ services:
 
   web:
     image: porjar/web:${PORJAR_VERSION:-latest}
+    build:
+      context: ./porjar-web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://esidenpasar.com/api/v1}
+        NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-wss://esidenpasar.com/ws/connection/websocket}
     restart: always
     env_file: .env.prod.web
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "127.0.0.1:4201:4200"
+      - "127.0.0.1:4200:4200"
     networks:
       - porjar-net
     healthcheck:

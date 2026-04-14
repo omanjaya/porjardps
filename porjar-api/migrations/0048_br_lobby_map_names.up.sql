@@ -1,0 +1,1 @@
+ALTER TABLE br_lobbies ADD COLUMN IF NOT EXISTS map_names TEXT[] NOT NULL DEFAULT '{}';

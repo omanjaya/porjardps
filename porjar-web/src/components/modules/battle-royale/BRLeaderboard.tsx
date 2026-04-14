@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Trophy, Export } from '@phosphor-icons/react'
+import { Trophy, Export, FilePdf } from '@phosphor-icons/react'
+import { api } from '@/lib/api'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { BRLeaderboardTable } from './BRLeaderboardTable'
 import type { SortKey, SortDir, TeamExtras } from './BRLeaderboardTable'
@@ -14,6 +16,7 @@ interface BRLeaderboardProps {
   qualificationThreshold?: number
   teamMembers?: Record<string, TeamMember[]>
   previousRanks?: Record<string, number>
+  tournamentId?: string
 }
 
 type DayFilter = 'all' | number
@@ -24,11 +27,13 @@ export function BRLeaderboard({
   qualificationThreshold = 0,
   teamMembers = {},
   previousRanks = {},
+  tournamentId,
 }: BRLeaderboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('rank_position')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [expandedTeamId, setExpandedTeamId] = useState<string | null>(null)
   const [dayFilter, setDayFilter] = useState<DayFilter>('all')
+  const [pdfExporting, setPdfExporting] = useState(false)
 
   // Get unique days
   const days = useMemo(() => {
@@ -47,23 +52,30 @@ export function BRLeaderboard({
     const extras: Record<string, TeamExtras> = {}
     for (const standing of standings) {
       const teamId = standing.team.id
-      let wwcdCount = 0
-      let totalPenalties = 0
-      let hasDnf = false
-      let hasDns = false
+      // Use backend wwcd_count for total; compute day-filtered count from lobby results
+      const totalPenalties = 0
+      const hasDnf = false
+      const hasDns = false
 
-      for (const lobby of filteredLobbies) {
-        if (lobby.status !== 'completed') continue
-        const result = (lobby.results ?? []).find((r) => r.team.id === teamId)
-        if (result) {
-          if (result.placement === 1) wwcdCount++
+      let wwcdCount = 0
+      if (dayFilter === 'all') {
+        // Use the authoritative backend value
+        wwcdCount = standing.wwcd_count ?? 0
+      } else {
+        // For day-filtered view, compute from visible lobby results
+        for (const lobby of filteredLobbies) {
+          if (lobby.status !== 'completed') continue
+          const results = lobby.results ?? []
+          for (const r of results) {
+            if (r.team.id === teamId && r.placement === 1) wwcdCount++
+          }
         }
       }
 
       extras[teamId] = { wwcdCount, totalPenalties, hasDnf, hasDns }
     }
     return extras
-  }, [standings, filteredLobbies])
+  }, [standings, filteredLobbies, dayFilter])
 
   const sorted = useMemo(() => {
     return [...standings].sort((a, b) => {
@@ -129,6 +141,25 @@ export function BRLeaderboard({
     URL.revokeObjectURL(url)
   }, [sorted, teamExtras])
 
+  // Export PDF
+  const handleExportPDF = useCallback(async () => {
+    if (!tournamentId) return
+    setPdfExporting(true)
+    try {
+      const blob = await api.getBlob(`/tournaments/${tournamentId}/standings/export`)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `standings-${new Date().toISOString().slice(0, 10)}.pdf`
+      link.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Gagal mengunduh PDF standings')
+    } finally {
+      setPdfExporting(false)
+    }
+  }, [tournamentId])
+
   // Find qualification line index
   const qualLineIdx = useMemo(() => {
     if (qualificationThreshold <= 0) return -1
@@ -140,14 +171,14 @@ export function BRLeaderboard({
     <div className="space-y-4">
       {/* Controls: Day filter tabs + Export */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-1 rounded-lg bg-stone-100 p-1">
+        <div className="flex items-center gap-1 rounded-lg bg-stone-100 dark:bg-zinc-800 p-1">
           <button
             onClick={() => setDayFilter('all')}
             className={cn(
               'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               dayFilter === 'all'
-                ? 'bg-white text-stone-900 shadow-sm'
-                : 'text-stone-500 hover:text-stone-700'
+                ? 'bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 shadow-sm'
+                : 'text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300'
             )}
           >
             Semua
@@ -159,8 +190,8 @@ export function BRLeaderboard({
               className={cn(
                 'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
                 dayFilter === day
-                  ? 'bg-white text-stone-900 shadow-sm'
-                  : 'text-stone-500 hover:text-stone-700'
+                  ? 'bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 shadow-sm'
+                  : 'text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300'
               )}
             >
               Day {day}
@@ -168,19 +199,32 @@ export function BRLeaderboard({
           ))}
         </div>
 
-        <Button
-          variant="outline"
-          onClick={handleExportCSV}
-          className="border-stone-300 text-stone-600 h-8 text-xs"
-        >
-          <Export size={14} className="mr-1" />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400 h-8 text-xs"
+          >
+            <Export size={14} className="mr-1" />
+            CSV
+          </Button>
+          {tournamentId && (
+            <Button
+              variant="outline"
+              onClick={handleExportPDF}
+              disabled={pdfExporting}
+              className="border-stone-300 dark:border-zinc-600 text-red-600 dark:text-red-400 h-8 text-xs"
+            >
+              <FilePdf size={14} className="mr-1" />
+              {pdfExporting ? 'Mengunduh...' : 'PDF'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Qualification threshold indicator */}
       {qualificationThreshold > 0 && (
-        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-600">
+        <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 px-3 py-2 text-xs text-green-600">
           <Trophy size={14} weight="fill" />
           Qualification threshold: {qualificationThreshold} poin
         </div>

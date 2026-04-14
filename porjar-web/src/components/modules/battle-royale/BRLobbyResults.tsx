@@ -13,11 +13,11 @@ interface BRLobbyResultsProps {
 
 export function BRLobbyResults({ lobbyResults, members, extras }: BRLobbyResultsProps) {
   return (
-    <div className="bg-porjar-bg px-6 py-3 space-y-4">
+    <div className="bg-esi-bg px-6 py-3 space-y-4">
       {/* Per-lobby results */}
       {lobbyResults.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
             Detail Per Lobby
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
@@ -25,21 +25,21 @@ export function BRLobbyResults({ lobbyResults, members, extras }: BRLobbyResults
               <div
                 key={lobby.id}
                 className={cn(
-                  'rounded-lg border border-stone-200 bg-white px-3 py-2',
-                  result.placement === 1 && 'border-amber-200 bg-amber-50/50'
+                  'rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2',
+                  result.placement === 1 && 'border-amber-200 bg-amber-50 dark:bg-amber-950/30'
                 )}
               >
-                <p className="text-xs font-medium text-stone-500">
+                <p className="text-xs font-medium text-stone-500 dark:text-zinc-400">
                   {lobby.lobby_name}
                 </p>
                 <div className="mt-1 flex items-baseline gap-3 text-sm">
-                  <span className="text-stone-900">
+                  <span className="text-stone-900 dark:text-zinc-100">
                     #{result.placement}
                   </span>
-                  <span className="text-stone-500">
+                  <span className="text-stone-500 dark:text-zinc-400">
                     {result.kills}K
                   </span>
-                  <span className="font-bold text-porjar-red">
+                  <span className="font-bold text-esi-red">
                     {result.total_points}pts
                   </span>
                   {result.placement === 1 && (
@@ -59,19 +59,19 @@ export function BRLobbyResults({ lobbyResults, members, extras }: BRLobbyResults
       {/* Per-player stats */}
       {members.length > 0 && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-400">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
             Statistik Pemain
           </p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
             {members.map((member) => (
               <div
                 key={member.id}
-                className="rounded-lg border border-stone-200 bg-white px-3 py-2"
+                className="rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2"
               >
-                <p className="text-xs font-medium text-stone-700 truncate">
+                <p className="text-xs font-medium text-stone-700 dark:text-zinc-300 truncate">
                   {member.in_game_name || member.full_name}
                 </p>
-                <p className="text-[10px] text-stone-400 capitalize">
+                <p className="text-[10px] text-stone-400 dark:text-zinc-500 capitalize">
                   {member.role}
                 </p>
               </div>

@@ -31,6 +31,8 @@ type SchoolRepository interface {
 	FindByNameAndLevel(ctx context.Context, name, level string) (*School, error)
 	Create(ctx context.Context, s *School) error
 	Update(ctx context.Context, s *School) error
+	UpdateLogoURL(ctx context.Context, id uuid.UUID, logoURL *string) error
 	List(ctx context.Context, filter SchoolFilter) ([]*School, int, error)
 	HasTeams(ctx context.Context, id uuid.UUID) (bool, error)
+	Delete(ctx context.Context, id uuid.UUID) error
 }

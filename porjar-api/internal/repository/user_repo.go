@@ -22,6 +22,15 @@ func NewUserRepo(db *pgxpool.Pool) model.UserRepository {
 
 const userColumns = `id, email, password_hash, full_name, phone, role, avatar_url, nisn, tingkat, nomor_pertandingan, needs_password_change, created_at, updated_at`
 
+// userColumnsAliased returns the user columns prefixed with a table alias (e.g. "u.id, u.email, ...").
+func userColumnsAliased(alias string) string {
+	cols := []string{"id", "email", "password_hash", "full_name", "phone", "role", "avatar_url", "nisn", "tingkat", "nomor_pertandingan", "needs_password_change", "created_at", "updated_at"}
+	for i, c := range cols {
+		cols[i] = alias + "." + c
+	}
+	return strings.Join(cols, ", ")
+}
+
 func scanUser(row pgx.Row) (*model.User, error) {
 	u := &model.User{}
 	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Phone, &u.Role, &u.AvatarURL,
@@ -149,6 +158,18 @@ func (r *userRepo) List(ctx context.Context, filter model.UserFilter) ([]*model.
 		conditions = append(conditions, fmt.Sprintf("(full_name ILIKE $%d OR email ILIKE $%d)", argIdx, argIdx))
 		args = append(args, "%"+*filter.Search+"%")
 	}
+	if filter.IsCaptain != nil && *filter.IsCaptain {
+		conditions = append(conditions, "id IN (SELECT captain_user_id FROM teams WHERE captain_user_id IS NOT NULL)")
+	}
+	if filter.NotInGameID != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf(`id NOT IN (
+			SELECT tm.user_id FROM team_members tm
+			JOIN teams t ON t.id = tm.team_id
+			WHERE t.game_id = $%d AND tm.user_id IS NOT NULL
+		)`, argIdx))
+		args = append(args, *filter.NotInGameID)
+	}
 
 	where := ""
 	if len(conditions) > 0 {
@@ -204,20 +225,27 @@ func (r *userRepo) ListByNISN(ctx context.Context, filter model.UserNISNFilter) 
 		conditions []string
 		args       []interface{}
 		argIdx     int
+		join       string
 	)
 
 	// Only NISN users
-	conditions = append(conditions, "nisn IS NOT NULL")
+	conditions = append(conditions, "u.nisn IS NOT NULL")
 
 	if filter.Tingkat != nil {
 		argIdx++
-		conditions = append(conditions, fmt.Sprintf("tingkat = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("u.tingkat = $%d", argIdx))
 		args = append(args, *filter.Tingkat)
+	}
+
+	if filter.SchoolID != nil {
+		argIdx++
+		join = fmt.Sprintf(` JOIN team_members tm ON tm.user_id = u.id JOIN teams t ON t.id = tm.team_id AND t.school_id = $%d`, argIdx)
+		args = append(args, *filter.SchoolID)
 	}
 
 	where := " WHERE " + strings.Join(conditions, " AND ")
 
-	query := `SELECT ` + userColumns + ` FROM users` + where + ` ORDER BY full_name ASC`
+	query := `SELECT DISTINCT ` + userColumnsAliased("u") + ` FROM users u` + join + where + ` ORDER BY u.full_name ASC`
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {

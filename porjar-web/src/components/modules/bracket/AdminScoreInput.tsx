@@ -46,15 +46,15 @@ export function AdminScoreInput({
 
   return (
     <div className="space-y-3">
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 px-1">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400 px-1">
         Input Skor
       </h3>
       {gameScores.map((gs, i) => (
         <div
           key={i}
-          className="flex items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5"
+          className="flex items-center gap-3 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-4 py-2.5"
         >
-          <span className="w-16 text-xs font-semibold uppercase tracking-wider text-stone-500">
+          <span className="w-16 text-xs font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
             Game {i + 1}
           </span>
           <div className="flex flex-1 items-center justify-center gap-3">
@@ -62,20 +62,22 @@ export function AdminScoreInput({
               type="number"
               min={0}
               value={gs.score_a}
-              onChange={(e) =>
-                updateGameScore(i, 'score_a', parseInt(e.target.value) || 0)
-              }
-              className="w-16 text-center bg-white border-stone-200 text-stone-800"
+              onChange={(e) => {
+                const val = Math.max(0, parseInt(e.target.value) || 0)
+                updateGameScore(i, 'score_a', val)
+              }}
+              className="w-16 text-center bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-800 dark:text-zinc-200"
             />
-            <span className="text-xs font-bold text-stone-400">VS</span>
+            <span className="text-xs font-bold text-stone-400 dark:text-zinc-500">VS</span>
             <Input
               type="number"
               min={0}
               value={gs.score_b}
-              onChange={(e) =>
-                updateGameScore(i, 'score_b', parseInt(e.target.value) || 0)
-              }
-              className="w-16 text-center bg-white border-stone-200 text-stone-800"
+              onChange={(e) => {
+                const val = Math.max(0, parseInt(e.target.value) || 0)
+                updateGameScore(i, 'score_b', val)
+              }}
+              className="w-16 text-center bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-800 dark:text-zinc-200"
             />
           </div>
         </div>
@@ -85,7 +87,7 @@ export function AdminScoreInput({
           variant="outline"
           size="sm"
           onClick={onCancel}
-          className="flex-1 border-stone-200 text-stone-700"
+          className="flex-1 border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300"
         >
           Batal
         </Button>

@@ -11,7 +11,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { BracketManager } from '@/components/modules/admin/BracketManager'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileText } from '@phosphor-icons/react'
+import { FileText, WarningCircle, List } from '@phosphor-icons/react'
 import type { Tournament } from '@/types'
 
 export default function AdminBracketPage() {
@@ -46,6 +46,8 @@ export default function AdminBracketPage() {
     )
   }
 
+  const isBR = tournament?.format === 'battle_royale_points' || tournament?.format === 'battle_royale_placement'
+
   return (
     <AdminLayout>
       <PageHeader
@@ -57,26 +59,41 @@ export default function AdminBracketPage() {
           { label: 'Bracket' },
         ]}
         actions={
-          <Link href={`/admin/tournaments/${params.id}/report`}>
-            <Button
-              variant="outline"
-              className="border-stone-300 text-stone-600 hover:bg-stone-50"
-            >
-              <FileText className="mr-2 h-4 w-4" />
-              Laporan
-            </Button>
-          </Link>
+          !isBR ? (
+            <Link href={`/admin/tournaments/${params.id}/report`}>
+              <Button
+                variant="outline"
+                className="border-stone-300 text-stone-600 hover:bg-stone-50"
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Laporan
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 
-      {tournament && (
+      {isBR ? (
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/20 p-10 text-center">
+          <WarningCircle size={40} weight="duotone" className="mx-auto mb-3 text-amber-500" />
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            Turnamen ini menggunakan format Battle Royale. Lihat halaman Lobby untuk manajemen pertandingan.
+          </p>
+          <Link href={`/admin/tournaments/${params.id}/lobbies`}>
+            <Button className="mt-4 gap-1.5 bg-esi-red text-white hover:bg-esi-red/90">
+              <List size={16} weight="duotone" />
+              Ke Halaman Lobby
+            </Button>
+          </Link>
+        </div>
+      ) : tournament ? (
         <BracketManager
           tournamentId={params.id}
           format={tournament.format}
           bestOf={tournament.best_of}
           tournamentName={tournament.name}
         />
-      )}
+      ) : null}
     </AdminLayout>
   )
 }

@@ -30,6 +30,7 @@ func (h *LobbyRotationHandler) RegisterRoutes(app fiber.Router, authMw, adminMw 
 	app.Post("/admin/tournaments/:id/rotation", authMw, adminMw, h.GenerateRotation)
 	app.Post("/admin/lobbies/:id/assign-teams", authMw, adminMw, h.AssignTeams)
 	app.Post("/admin/tournaments/:id/check-qualification", authMw, adminMw, h.CheckQualification)
+	app.Post("/admin/tournaments/:id/lobbies/swap-teams", authMw, adminMw, h.SwapLobbyTeams)
 
 	// Public routes
 	app.Get("/lobbies/:id/teams", h.GetLobbyTeams)
@@ -145,6 +146,50 @@ func (h *LobbyRotationHandler) GetDailyStandings(c *fiber.Ctx) error {
 	}
 
 	return response.OK(c, standings)
+}
+
+// SwapLobbyTeams swaps two teams between their lobbies.
+func (h *LobbyRotationHandler) SwapLobbyTeams(c *fiber.Ctx) error {
+	if _, err := uuid.Parse(c.Params("id")); err != nil {
+		return response.BadRequest(c, "Tournament ID tidak valid")
+	}
+
+	var req struct {
+		TeamAID  string `json:"team_a_id"`
+		LobbyAID string `json:"lobby_a_id"`
+		TeamBID  string `json:"team_b_id"`
+		LobbyBID string `json:"lobby_b_id"`
+	}
+	if err := c.BodyParser(&req); err != nil {
+		return response.BadRequest(c, "Format request tidak valid")
+	}
+
+	details := make(map[string]string)
+	teamAID, err := uuid.Parse(req.TeamAID)
+	if err != nil {
+		details["team_a_id"] = "Team A ID tidak valid"
+	}
+	lobbyAID, err := uuid.Parse(req.LobbyAID)
+	if err != nil {
+		details["lobby_a_id"] = "Lobby A ID tidak valid"
+	}
+	teamBID, err := uuid.Parse(req.TeamBID)
+	if err != nil {
+		details["team_b_id"] = "Team B ID tidak valid"
+	}
+	lobbyBID, err := uuid.Parse(req.LobbyBID)
+	if err != nil {
+		details["lobby_b_id"] = "Lobby B ID tidak valid"
+	}
+	if len(details) > 0 {
+		return response.Err(c, apperror.ValidationError(details))
+	}
+
+	if svcErr := h.rotationService.SwapLobbyTeams(c.Context(), teamAID, lobbyAID, teamBID, lobbyBID); svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+
+	return response.OK(c, fiber.Map{"message": "Tim berhasil ditukar antar lobby"})
 }
 
 func (h *LobbyRotationHandler) CheckQualification(c *fiber.Ctx) error {

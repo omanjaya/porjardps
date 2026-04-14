@@ -22,6 +22,7 @@ type Team struct {
 	// Populated by JOIN queries (not a DB column on teams)
 	SchoolLogoURL *string `json:"school_logo_url,omitempty"`
 	SchoolName    *string `json:"school_name,omitempty"`
+	SchoolLevel   *string `json:"school_level,omitempty"`
 }
 
 type TeamSummary struct {

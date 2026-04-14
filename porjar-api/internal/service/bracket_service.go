@@ -9,6 +9,7 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
+	"github.com/redis/go-redis/v9"
 )
 
 type BracketService struct {
@@ -19,12 +20,17 @@ type BracketService struct {
 	teamRepo       model.TeamRepository
 	standingsRepo  model.StandingsRepository
 	hub            *ws.Hub
+	rdb            *redis.Client
 	memberRepo     model.TeamMemberRepository
 	notifSvc       *NotificationService
+	gameRepo       model.GameRepository
+	tournamentSvc  *TournamentService
 }
 
-func (s *BracketService) SetMemberRepo(r model.TeamMemberRepository) { s.memberRepo = r }
-func (s *BracketService) SetNotificationService(n *NotificationService) { s.notifSvc = n }
+func (s *BracketService) SetMemberRepo(r model.TeamMemberRepository)     { s.memberRepo = r }
+func (s *BracketService) SetNotificationService(n *NotificationService)   { s.notifSvc = n }
+func (s *BracketService) SetGameRepo(r model.GameRepository)             { s.gameRepo = r }
+func (s *BracketService) SetTournamentService(t *TournamentService)       { s.tournamentSvc = t }
 
 func NewBracketService(
 	bracketRepo model.BracketRepository,
@@ -34,6 +40,7 @@ func NewBracketService(
 	teamRepo model.TeamRepository,
 	standingsRepo model.StandingsRepository,
 	hub *ws.Hub,
+	rdb *redis.Client,
 ) *BracketService {
 	return &BracketService{
 		bracketRepo:    bracketRepo,
@@ -43,6 +50,7 @@ func NewBracketService(
 		teamRepo:       teamRepo,
 		standingsRepo:  standingsRepo,
 		hub:            hub,
+		rdb:            rdb,
 	}
 }
 

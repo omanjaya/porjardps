@@ -87,8 +87,8 @@ export function ScheduleTimeline({
           <div className="mb-4 flex items-center gap-3">
             {/* Today: prominent left-border highlight */}
             {highlightToday && group.isToday && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-porjar-red px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm shadow-red-200 animate-in fade-in duration-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-white/70 animate-pulse" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-esi-red px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white shadow-sm shadow-red-200 animate-in fade-in duration-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-white dark:bg-zinc-900/70 animate-pulse" />
                 Hari Ini
               </span>
             )}
@@ -97,8 +97,8 @@ export function ScheduleTimeline({
               className={cn(
                 'shrink-0 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-widest',
                 highlightToday && group.isToday
-                  ? 'bg-red-50 text-porjar-red'
-                  : 'bg-stone-100 text-stone-500'
+                  ? 'bg-red-50 dark:bg-red-950/30 text-esi-red'
+                  : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400'
               )}
             >
               {group.label}
@@ -107,18 +107,18 @@ export function ScheduleTimeline({
             <div
               className={cn(
                 'h-px flex-1',
-                highlightToday && group.isToday ? 'bg-porjar-red/20' : 'bg-stone-100'
+                highlightToday && group.isToday ? 'bg-esi-red/20' : 'bg-stone-100 dark:bg-zinc-800'
               )}
             />
-            <span className="text-xs text-stone-400 tabular-nums">
+            <span className="text-xs text-stone-400 dark:text-zinc-500 tabular-nums">
               {group.items.length} pertandingan
             </span>
           </div>
 
           {/* Today highlight bar */}
           {highlightToday && group.isToday && (
-            <div className="mb-4 rounded-xl border-l-4 border-porjar-red bg-red-50/60 px-4 py-2.5">
-              <p className="text-[11px] font-medium text-porjar-red">
+            <div className="mb-4 rounded-xl border-l-4 border-esi-red bg-red-50 dark:bg-red-950/30 px-4 py-2.5">
+              <p className="text-[11px] font-medium text-esi-red">
                 Pertandingan hari ini — jadwal bisa berubah, pantau terus!
               </p>
             </div>
@@ -180,11 +180,11 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
           {/* Tournament separator — only shown when there are multiple tournaments */}
           {hasMultipleTournaments && tGroup.label && (
             <div className="mb-3 flex items-center gap-2">
-              <div className="h-px flex-1 bg-stone-100" />
-              <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+              <div className="h-px flex-1 bg-stone-100 dark:bg-zinc-800" />
+              <span className="rounded-full border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-stone-400 dark:text-zinc-500">
                 {tGroup.label}
               </span>
-              <div className="h-px flex-1 bg-stone-100" />
+              <div className="h-px flex-1 bg-stone-100 dark:bg-zinc-800" />
             </div>
           )}
 
@@ -200,12 +200,12 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                   onClick={() => onScheduleClick?.(schedule)}
                   disabled={!onScheduleClick}
                   className={cn(
-                    'group relative w-full overflow-hidden rounded-2xl border bg-white text-left',
+                    'group relative w-full overflow-hidden rounded-2xl border bg-white dark:bg-zinc-900 text-left',
                     'transition-all duration-200',
                     onScheduleClick && 'hover:-translate-y-0.5 hover:shadow-lg cursor-pointer',
                     isOngoing
-                      ? 'border-porjar-red/30 shadow-md shadow-red-100'
-                      : 'border-stone-200 shadow-sm',
+                      ? 'border-esi-red/30 shadow-md shadow-red-100'
+                      : 'border-stone-200 dark:border-zinc-700 shadow-sm',
                     'animate-in fade-in slide-in-from-left-2 duration-300 fill-mode-both'
                   )}
                   style={{ animationDelay: `${groupIdx * 80 + (tIdx * tGroup.items.length + itemIdx) * 60}ms` }}
@@ -220,7 +220,7 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
 
                   {/* Ongoing glow pulse */}
                   {isOngoing && (
-                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-porjar-red/20 animate-pulse" />
+                    <div className="pointer-events-none absolute inset-0 rounded-2xl ring-2 ring-esi-red/20 animate-pulse" />
                   )}
 
                   <div className="relative flex items-stretch">
@@ -237,7 +237,7 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                       <div
                         className={cn(
                           'flex h-11 w-11 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105',
-                          gameConfig ? gameConfig.bgColor : 'bg-stone-100'
+                          gameConfig ? gameConfig.bgColor : 'bg-stone-100 dark:bg-zinc-800'
                         )}
                       >
                         {gameConfig ? (
@@ -247,16 +247,16 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                             className="h-7 w-7 rounded-lg object-contain"
                           />
                         ) : (
-                          <GameController size={18} weight="fill" className="text-stone-400" />
+                          <GameController size={18} weight="fill" className="text-stone-400 dark:text-zinc-500" />
                         )}
                       </div>
                     </div>
 
                     {/* Time column */}
-                    <div className="flex w-20 shrink-0 flex-col justify-center gap-0.5 border-r border-stone-100 py-4 pr-3">
+                    <div className="flex w-20 shrink-0 flex-col justify-center gap-0.5 border-r border-stone-100 dark:border-zinc-700 py-4 pr-3">
                       <div className="flex items-center gap-1">
-                        <Clock size={11} className="text-stone-400 shrink-0" />
-                        <span className="text-sm font-semibold text-stone-700 tabular-nums leading-none">
+                        <Clock size={11} className="text-stone-400 dark:text-zinc-500 shrink-0" />
+                        <span className="text-sm font-semibold text-stone-700 dark:text-zinc-300 tabular-nums leading-none">
                           {new Date(schedule.scheduled_at).toLocaleTimeString('id-ID', {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -264,7 +264,7 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                         </span>
                       </div>
                       {schedule.end_at && (
-                        <span className="pl-[15px] text-[11px] tabular-nums text-stone-400 leading-none">
+                        <span className="pl-[15px] text-[11px] tabular-nums text-stone-400 dark:text-zinc-500 leading-none">
                           {'– '}
                           {new Date(schedule.end_at).toLocaleTimeString('id-ID', {
                             hour: '2-digit',
@@ -291,37 +291,37 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                         )}
                         {/* Show tournament name if no multi-tournament separator above */}
                         {!hasMultipleTournaments && schedule.tournament && (
-                          <span className="inline-flex shrink-0 items-center rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 text-[10px] text-stone-500">
+                          <span className="inline-flex shrink-0 items-center rounded-full border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-2 py-0.5 text-[10px] text-stone-500 dark:text-zinc-400">
                             {schedule.tournament.name}
                           </span>
                         )}
                       </div>
-                      <p className="truncate text-sm font-semibold text-stone-900 leading-snug">
+                      <p className="truncate text-sm font-semibold text-stone-900 dark:text-zinc-100 leading-snug">
                         {schedule.title}
                       </p>
 
                       {/* Teams */}
                       {schedule.team_a && schedule.team_b ? (
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="truncate text-xs font-medium text-stone-700 max-w-[35%]">
+                          <span className="truncate text-xs font-medium text-stone-700 dark:text-zinc-300 max-w-[35%]">
                             {schedule.team_a.school_name ?? schedule.team_a.name}
                           </span>
-                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100">
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-zinc-500 bg-stone-100 dark:bg-zinc-800">
                             vs
                           </span>
-                          <span className="truncate text-xs font-medium text-stone-700 max-w-[35%]">
+                          <span className="truncate text-xs font-medium text-stone-700 dark:text-zinc-300 max-w-[35%]">
                             {schedule.team_b.school_name ?? schedule.team_b.name}
                           </span>
                         </div>
                       ) : schedule.tournament && hasMultipleTournaments ? null : schedule.tournament ? (
-                        <p className="mt-1 truncate text-xs text-stone-400">
+                        <p className="mt-1 truncate text-xs text-stone-400 dark:text-zinc-500">
                           {schedule.tournament.name}
                         </p>
                       ) : null}
 
                       {/* Venue */}
                       {schedule.venue && (
-                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-stone-400">
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-stone-400 dark:text-zinc-500">
                           <MapPin size={11} />
                           <span>{schedule.venue}</span>
                         </div>
@@ -332,8 +332,8 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
                     <div className="flex shrink-0 flex-col items-end justify-center gap-2 pr-4 py-4">
                       <StatusBadge status={schedule.status} />
                       {isOngoing && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-porjar-red">
-                          <span className="h-1.5 w-1.5 rounded-full bg-porjar-red animate-pulse" />
+                        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-esi-red">
+                          <span className="h-1.5 w-1.5 rounded-full bg-esi-red animate-pulse" />
                           LIVE
                         </span>
                       )}
@@ -353,14 +353,14 @@ function DayScheduleItems({ items, groupIdx, onScheduleClick }: DayScheduleItems
 
 function EmptyScheduleState({ hasFilter }: { hasFilter: boolean }) {
   return (
-    <div className="animate-in fade-in duration-500 flex flex-col items-center justify-center rounded-2xl border border-stone-100 bg-stone-50 py-20 text-center">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-stone-200 bg-white shadow-sm">
-        <CalendarBlank size={32} weight="thin" className="text-stone-300" />
+    <div className="animate-in fade-in duration-500 flex flex-col items-center justify-center rounded-2xl border border-stone-100 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 py-20 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
+        <CalendarBlank size={32} weight="thin" className="text-stone-300 dark:text-zinc-600" />
       </div>
-      <p className="text-sm font-semibold text-stone-600">
+      <p className="text-sm font-semibold text-stone-600 dark:text-zinc-400">
         {hasFilter ? 'Tidak ada jadwal untuk cabang ini' : 'Belum ada jadwal tersedia'}
       </p>
-      <p className="mt-1.5 max-w-xs text-xs text-stone-400 leading-relaxed">
+      <p className="mt-1.5 max-w-xs text-xs text-stone-400 dark:text-zinc-500 leading-relaxed">
         {hasFilter
           ? 'Coba pilih cabang e-sport lain atau hapus filter untuk melihat semua jadwal.'
           : 'Jadwal pertandingan akan muncul di sini setelah panitia mempublikasikan jadwal resmi.'}

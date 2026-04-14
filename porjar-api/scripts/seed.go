@@ -39,6 +39,9 @@ func main() {
 	fmt.Println("seeding test accounts...")
 	seedUsers(ctx, db)
 
+	fmt.Println("seeding penalty configs...")
+	seedPenaltyConfigs(ctx, db)
+
 	fmt.Println("seeding achievements...")
 	seedAchievements(ctx, db)
 
@@ -204,6 +207,7 @@ func seedUsers(ctx context.Context, db *pgxpool.Pool) {
 		{"superadmin@porjar.test", "Super1234", "Super Admin Porjar", "superadmin"},
 		{"player1@porjar.test", "Player1234", "Player Satu", "player"},
 		{"player2@porjar.test", "Player1234", "Player Dua", "player"},
+		{"referee@porjar.test", "Referee1234", "Wasit Porjar", "referee"},
 	}
 
 	for _, u := range users {
@@ -221,6 +225,56 @@ func seedUsers(ctx context.Context, db *pgxpool.Pool) {
 		)
 		if err != nil {
 			log.Printf("  warn: user %s: %v", u.email, err)
+		}
+	}
+}
+
+func seedPenaltyConfigs(ctx context.Context, db *pgxpool.Pool) {
+	// Get game IDs by slug
+	type gameConfig struct {
+		slug                   string
+		yellowPoints           int
+		redPoints              int
+		redIsDisqualification  bool
+		yellowDesc, redDesc    string
+	}
+
+	configs := []gameConfig{
+		{"hok", 1, 3, false, "Pelanggaran ringan", "Pelanggaran berat"},
+		{"ml", 1, 3, false, "Pelanggaran ringan", "Pelanggaran berat"},
+		{"ff", 2, 5, false, "Pelanggaran ringan", "Pelanggaran berat"},
+		{"pubgm", 2, 5, false, "Pelanggaran ringan", "Pelanggaran berat"},
+		{"efootball", 3, 5, true, "Pelanggaran ringan", "Diskualifikasi"},
+	}
+
+	for _, cfg := range configs {
+		var gameID string
+		err := db.QueryRow(ctx, `SELECT id FROM games WHERE slug = $1`, cfg.slug).Scan(&gameID)
+		if err != nil {
+			log.Printf("  warn: game %s not found: %v", cfg.slug, err)
+			continue
+		}
+
+		// Yellow card config
+		_, err = db.Exec(ctx,
+			`INSERT INTO game_penalty_configs (game_id, card_type, point_deduction, is_disqualification, description)
+			 VALUES ($1, 'yellow', $2, false, $3)
+			 ON CONFLICT (game_id, card_type) DO NOTHING`,
+			gameID, cfg.yellowPoints, cfg.yellowDesc,
+		)
+		if err != nil {
+			log.Printf("  warn: penalty config %s yellow: %v", cfg.slug, err)
+		}
+
+		// Red card config
+		_, err = db.Exec(ctx,
+			`INSERT INTO game_penalty_configs (game_id, card_type, point_deduction, is_disqualification, description)
+			 VALUES ($1, 'red', $2, $3, $4)
+			 ON CONFLICT (game_id, card_type) DO NOTHING`,
+			gameID, cfg.redPoints, cfg.redIsDisqualification, cfg.redDesc,
+		)
+		if err != nil {
+			log.Printf("  warn: penalty config %s red: %v", cfg.slug, err)
 		}
 	}
 }

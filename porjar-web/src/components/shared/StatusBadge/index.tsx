@@ -15,63 +15,73 @@ type StatusType =
   | 'registration'
   | 'bye'
   | 'postponed'
+  | 'draft'
+  | 'published'
 
 const statusConfig: Record<StatusType, { label: string; className: string }> = {
   pending: {
-    label: 'Pending',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    label: 'Menunggu',
+    className: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   },
   approved: {
-    label: 'Approved',
-    className: 'bg-green-50 text-green-700 border-green-200',
+    label: 'Disetujui',
+    className: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
   },
   active: {
-    label: 'Active',
-    className: 'bg-green-50 text-green-700 border-green-200',
+    label: 'Aktif',
+    className: 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
   },
   rejected: {
-    label: 'Rejected',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Ditolak',
+    className: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
   },
   eliminated: {
-    label: 'Eliminated',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Tereliminasi',
+    className: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
   },
   live: {
-    label: 'LIVE',
-    className: 'bg-red-50 text-red-700 border-red-200',
+    label: 'Live',
+    className: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
   },
   completed: {
-    label: 'Completed',
-    className: 'bg-stone-100 text-stone-600 border-stone-200',
+    label: 'Selesai',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   },
   scheduled: {
-    label: 'Scheduled',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
+    label: 'Terjadwal',
+    className: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   },
   upcoming: {
     label: 'Akan Datang',
-    className: 'bg-blue-50 text-blue-700 border-blue-200',
+    className: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   },
   ongoing: {
     label: 'Berlangsung',
-    className: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+    className: 'bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-800',
   },
   registration: {
     label: 'Registrasi',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    className: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
   },
   cancelled: {
     label: 'Dibatalkan',
-    className: 'bg-stone-100 text-stone-500 border-stone-200',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   },
   bye: {
     label: 'BYE',
-    className: 'bg-stone-100 text-stone-500 border-stone-200',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   },
   postponed: {
-    label: 'Postponed',
-    className: 'bg-amber-50 text-amber-700 border-amber-200',
+    label: 'Ditunda',
+    className: 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800',
+  },
+  draft: {
+    label: 'Draf',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
+  },
+  published: {
+    label: 'Dipublikasi',
+    className: 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800',
   },
 }
 
@@ -84,7 +94,7 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const config = statusConfig[status as StatusType] ?? {
     label: status,
-    className: 'bg-stone-100 text-stone-500 border-stone-200',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   }
 
   return (

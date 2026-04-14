@@ -1,227 +1,125 @@
 package ws
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
-	"sync"
+	"net/http"
+	"time"
 )
 
-const (
-	maxConnsPerIP         = 20
-	maxSubscriptionsPerClient = 50
-)
-
+// Hub is a thin adapter that publishes events to Centrifugo via its HTTP API.
+// It maintains the same interface as the previous in-process WebSocket hub so
+// all service files remain unchanged.
 type Hub struct {
-	clients    map[*Client]bool
-	rooms      map[string]map[*Client]bool
-	register   chan *Client
-	unregister chan *Client
-	broadcast  chan *Message
-	mu         sync.RWMutex
-	maxConns   int
-	connPerIP  map[string]int // tracks connection count per IP
-	clientSubs map[*Client]int // tracks subscription count per client
+	apiURL string // e.g. http://centrifugo:8000
+	apiKey string
+	client *http.Client
 }
 
-func NewHub() *Hub {
+// NewHub creates a new Centrifugo publisher with the given API URL and key.
+func NewHub(apiURL, apiKey string) *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		rooms:      make(map[string]map[*Client]bool),
-		register:   make(chan *Client, 256),
-		unregister: make(chan *Client, 256),
-		broadcast:  make(chan *Message, 4096),
-		connPerIP:  make(map[string]int),
-		clientSubs: make(map[*Client]int),
+		apiURL: apiURL,
+		apiKey: apiKey,
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-// NewHubWithLimit creates a Hub that enforces a maximum connection limit.
-func NewHubWithLimit(maxConns int) *Hub {
+// NewHubWithLimit is kept for backward compatibility.
+// maxConns is ignored — Centrifugo manages connection limits.
+func NewHubWithLimit(_ int) *Hub {
 	return &Hub{
-		clients:    make(map[*Client]bool),
-		rooms:      make(map[string]map[*Client]bool),
-		register:   make(chan *Client, 256),
-		unregister: make(chan *Client, 256),
-		broadcast:  make(chan *Message, 4096),
-		maxConns:   maxConns,
-		connPerIP:  make(map[string]int),
-		clientSubs: make(map[*Client]int),
+		client: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-// Stop closes all active WebSocket connections and drains the hub.
-// Call this before app.Shutdown() so clients receive a proper close frame.
-func (h *Hub) Stop() {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	for client := range h.clients {
-		client.closeSend()
-		delete(h.clients, client)
-	}
-	h.rooms = make(map[string]map[*Client]bool)
-	h.connPerIP = make(map[string]int)
-	h.clientSubs = make(map[*Client]int)
+// SetConfig configures the Centrifugo API endpoint after creation.
+// Call this before the first broadcast.
+func (h *Hub) SetConfig(apiURL, apiKey string) {
+	h.apiURL = apiURL
+	h.apiKey = apiKey
 }
 
-func (h *Hub) Run() {
-	defer func() {
-		if r := recover(); r != nil {
-			slog.Error("ws hub recovered from panic", "error", r)
-			go h.Run() // restart the loop
-		}
-	}()
+// Run is a no-op kept for backward compatibility with existing startup code.
+func (h *Hub) Run() {}
 
-	for {
-		select {
-		case client := <-h.register:
-			h.mu.Lock()
-			if h.maxConns > 0 && len(h.clients) >= h.maxConns {
-				h.mu.Unlock()
-				client.conn.Close()
-				slog.Warn("ws connection limit reached, rejecting client", "limit", h.maxConns)
-				continue
-			}
-			// Per-IP connection limit
-			if client.IP != "" && h.connPerIP[client.IP] >= maxConnsPerIP {
-				h.mu.Unlock()
-				client.conn.Close()
-				slog.Warn("ws per-IP connection limit reached, rejecting client", "ip", client.IP, "limit", maxConnsPerIP)
-				continue
-			}
-			h.clients[client] = true
-			if client.IP != "" {
-				h.connPerIP[client.IP]++
-			}
-			h.mu.Unlock()
-			slog.Debug("ws client connected", "total", h.ConnectionCount())
+// Stop is a no-op. Centrifugo manages its own connection lifecycle.
+func (h *Hub) Stop() {}
 
-		case client := <-h.unregister:
-			h.mu.Lock()
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
-				client.closeSend()
-				// Decrement per-IP counter
-				if client.IP != "" {
-					h.connPerIP[client.IP]--
-					if h.connPerIP[client.IP] <= 0 {
-						delete(h.connPerIP, client.IP)
-					}
-				}
-				// Clean up subscription tracking
-				delete(h.clientSubs, client)
-				// Remove from all rooms
-				for room, clients := range h.rooms {
-					delete(clients, client)
-					if len(clients) == 0 {
-						delete(h.rooms, room)
-					}
-				}
-			}
-			h.mu.Unlock()
-			slog.Debug("ws client disconnected", "total", h.ConnectionCount())
+// ConnectionCount always returns 0. Use Centrifugo's /health endpoint or
+// Prometheus metrics for real connection counts.
+func (h *Hub) ConnectionCount() int { return 0 }
 
-		case msg := <-h.broadcast:
-			h.mu.RLock()
-			if msg.Room != "" {
-				// Broadcast to specific room
-				if clients, ok := h.rooms[msg.Room]; ok {
-					for client := range clients {
-						select {
-						case client.send <- msg.Data:
-						default:
-							go func(c *Client) {
-								h.unregister <- c
-							}(client)
-						}
-					}
-				}
-			} else {
-				// Broadcast to all clients
-				for client := range h.clients {
-					select {
-					case client.send <- msg.Data:
-					default:
-						go func(c *Client) {
-							h.unregister <- c
-						}(client)
-					}
-				}
-			}
-			h.mu.RUnlock()
-		}
-	}
+// RoomConnectionCount always returns 0.
+func (h *Hub) RoomConnectionCount(_ string) int { return 0 }
+
+// BroadcastToRoom publishes data to a specific Centrifugo channel.
+func (h *Hub) BroadcastToRoom(channel string, data []byte) {
+	h.publish(channel, data)
 }
 
-// Subscribe adds a client to a room
-func (h *Hub) Subscribe(client *Client, room string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+// BroadcastToAll publishes data to the live-scores channel.
+// All former usages of broadcast-to-all were global notifications that are
+// appropriately scoped to the public live-scores channel.
+func (h *Hub) BroadcastToAll(data []byte) {
+	h.publish("live-scores", data)
+}
 
-	// Per-client subscription limit
-	if h.clientSubs[client] >= maxSubscriptionsPerClient {
-		slog.Warn("ws per-client subscription limit reached, ignoring", "limit", maxSubscriptionsPerClient)
+type centrifugoPublishRequest struct {
+	Method string                   `json:"method"`
+	Params centrifugoPublishParams  `json:"params"`
+}
+
+type centrifugoPublishParams struct {
+	Channel string          `json:"channel"`
+	Data    json.RawMessage `json:"data"`
+}
+
+func (h *Hub) publish(channel string, data []byte) {
+	if h.apiURL == "" {
+		slog.Warn("centrifugo: apiURL is empty, skipping publish", "channel", channel)
 		return
 	}
 
-	if _, ok := h.rooms[room]; !ok {
-		h.rooms[room] = make(map[*Client]bool)
+	req := centrifugoPublishRequest{
+		Method: "publish",
+		Params: centrifugoPublishParams{
+			Channel: channel,
+			Data:    json.RawMessage(data),
+		},
 	}
-	// Only increment if not already subscribed to this room
-	if !h.rooms[room][client] {
-		h.rooms[room][client] = true
-		h.clientSubs[client]++
+
+	body, err := json.Marshal(req)
+	if err != nil {
+		slog.Error("centrifugo: marshal publish request", "error", err)
+		return
 	}
-}
 
-// Unsubscribe removes a client from a room
-func (h *Hub) Unsubscribe(client *Client, room string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if clients, ok := h.rooms[room]; ok {
-		if clients[client] {
-			delete(clients, client)
-			h.clientSubs[client]--
-		}
-		if len(clients) == 0 {
-			delete(h.rooms, room)
-		}
+	httpReq, err := http.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		fmt.Sprintf("%s/api", h.apiURL),
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		slog.Error("centrifugo: create request", "error", err)
+		return
 	}
-}
 
-// BroadcastToRoom sends a message to all clients in a room
-func (h *Hub) BroadcastToRoom(room string, data []byte) {
-	h.broadcast <- &Message{Room: room, Data: data}
-}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-API-Key", h.apiKey)
 
-// BroadcastToAll sends a message to all connected clients
-func (h *Hub) BroadcastToAll(data []byte) {
-	h.broadcast <- &Message{Data: data}
-}
-
-// ConnectionCount returns the total number of connected clients
-func (h *Hub) ConnectionCount() int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return len(h.clients)
-}
-
-// RoomConnectionCount returns the number of clients subscribed to a specific room
-func (h *Hub) RoomConnectionCount(room string) int {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	if clients, ok := h.rooms[room]; ok {
-		return len(clients)
+	resp, err := h.client.Do(httpReq)
+	if err != nil {
+		slog.Error("centrifugo: publish failed", "channel", channel, "error", err)
+		return
 	}
-	return 0
-}
+	defer resp.Body.Close()
 
-// Register exposes the register channel
-func (h *Hub) Register() chan<- *Client {
-	return h.register
-}
-
-// Unregister exposes the unregister channel
-func (h *Hub) Unregister() chan<- *Client {
-	return h.unregister
+	if resp.StatusCode != http.StatusOK {
+		slog.Error("centrifugo: publish non-200", "channel", channel, "status", resp.StatusCode)
+	}
 }

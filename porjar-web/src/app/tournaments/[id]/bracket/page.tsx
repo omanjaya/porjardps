@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { BracketView } from '@/components/modules/bracket/BracketView'
 import { MatchDetailSheet } from '@/components/modules/bracket/MatchDetailSheet'
@@ -152,7 +151,7 @@ export default function BracketPage() {
 
   useWebSocket({
     channels: [`tournament:${params.id}`],
-    messageTypes: ['score_update', 'match_status', 'match_complete', 'bracket_advance'],
+    messageTypes: ['score_update', 'match_status', 'match_complete', 'bracket_advance', 'bracket_update'],
     onMessage: handleWSMessage,
   })
 
@@ -189,16 +188,16 @@ export default function BracketPage() {
 
   if (loading) {
     return (
-      <PublicLayout>
-        <Skeleton className="h-10 w-64 bg-stone-100" />
-        <Skeleton className="mt-4 h-24 w-full bg-stone-100" />
-        <Skeleton className="mt-4 h-96 w-full bg-stone-100" />
-      </PublicLayout>
+      <>
+        <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
+        <Skeleton className="mt-4 h-24 w-full bg-stone-100 dark:bg-zinc-800" />
+        <Skeleton className="mt-4 h-96 w-full bg-stone-100 dark:bg-zinc-800" />
+      </>
     )
   }
 
   return (
-    <PublicLayout>
+    <>
       <PageHeader
         title={tournament?.name ?? 'Bracket'}
         description={
@@ -215,30 +214,30 @@ export default function BracketPage() {
 
       {/* Tournament info header */}
       {tournament && (
-        <div className="mb-6 rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="mb-6 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
           <div className="flex flex-wrap items-center gap-4">
             {/* Game & format info */}
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 border border-porjar-red/20">
-                <GameController size={20} className="text-porjar-red" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950 border border-esi-red/20">
+                <GameController size={20} className="text-esi-red" />
               </div>
               <div>
-                <span className="text-sm font-semibold text-stone-900 block">
+                <span className="text-sm font-semibold text-stone-900 dark:text-zinc-100 block">
                   {tournament.game?.name ?? 'Game'}
                 </span>
-                <span className="text-xs text-stone-500">
+                <span className="text-xs text-stone-500 dark:text-zinc-400">
                   {tournament.format?.replace(/_/g, ' ')} &middot; BO{tournament.best_of}
                 </span>
               </div>
             </div>
 
-            <div className="hidden sm:block h-8 w-px bg-stone-200" />
+            <div className="hidden sm:block h-8 w-px bg-stone-200 dark:bg-zinc-700" />
 
             {/* Status */}
             <StatusBadge status={tournament.status} />
 
             {/* Teams count */}
-            <div className="flex items-center gap-1.5 text-xs text-stone-500">
+            <div className="flex items-center gap-1.5 text-xs text-stone-500 dark:text-zinc-400">
               <Users size={14} />
               <span>{tournament.team_count} tim</span>
             </div>
@@ -246,8 +245,8 @@ export default function BracketPage() {
             {/* Live indicator */}
             {liveCount > 0 && (
               <>
-                <div className="hidden sm:block h-8 w-px bg-stone-200" />
-                <div className="flex items-center gap-1.5 text-xs text-porjar-red">
+                <div className="hidden sm:block h-8 w-px bg-stone-200 dark:bg-zinc-700" />
+                <div className="flex items-center gap-1.5 text-xs text-esi-red">
                   <Lightning size={14} weight="fill" className="animate-pulse" />
                   <span className="font-semibold">{liveCount} match sedang berlangsung</span>
                 </div>
@@ -257,9 +256,9 @@ export default function BracketPage() {
             {/* Countdown to next match */}
             {nextScheduledMatch && liveCount === 0 && (
               <>
-                <div className="hidden sm:block h-8 w-px bg-stone-200" />
+                <div className="hidden sm:block h-8 w-px bg-stone-200 dark:bg-zinc-700" />
                 <div className="flex items-center gap-2">
-                  <CalendarBlank size={14} className="text-stone-400" />
+                  <CalendarBlank size={14} className="text-stone-400 dark:text-zinc-500" />
                   <CountdownTimer
                     targetDate={nextScheduledMatch.scheduled_at!}
                     label="Match berikutnya"
@@ -272,7 +271,7 @@ export default function BracketPage() {
             {/* Embed button */}
             {matches.length > 0 && (
               <>
-                <div className="hidden sm:block h-8 w-px bg-stone-200" />
+                <div className="hidden sm:block h-8 w-px bg-stone-200 dark:bg-zinc-700" />
                 <EmbedCodeDialog
                   tournamentId={params.id}
                   tournamentName={tournament.name}
@@ -297,11 +296,11 @@ export default function BracketPage() {
           format={tournament?.format as 'single_elimination' | 'double_elimination' | 'round_robin' | undefined}
         />
       ) : (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 bg-white py-20 shadow-sm">
-          <Trophy size={48} className="text-stone-300" />
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 py-20 shadow-sm">
+          <Trophy size={48} className="text-stone-300 dark:text-zinc-600" />
           <div className="text-center">
-            <p className="text-stone-600 font-medium">Bracket belum tersedia</p>
-            <p className="text-sm text-stone-400 mt-1">
+            <p className="text-stone-600 dark:text-zinc-400 font-medium">Bracket belum tersedia</p>
+            <p className="text-sm text-stone-400 dark:text-zinc-500 mt-1">
               Bracket akan ditampilkan setelah panitia melakukan pengundian.
             </p>
           </div>
@@ -318,6 +317,6 @@ export default function BracketPage() {
         }}
         isAdmin={false}
       />
-    </PublicLayout>
+    </>
   )
 }

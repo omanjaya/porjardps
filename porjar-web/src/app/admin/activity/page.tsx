@@ -16,6 +16,7 @@ import {
   CaretRight,
   MagnifyingGlass,
   User as UserIcon,
+  ArrowClockwise,
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 
@@ -85,25 +86,25 @@ function getActionColor(action: string): ActionColor {
 const colorMap: Record<ActionColor, { dot: string; bg: string; text: string; border: string }> = {
   green: {
     dot: 'bg-green-500',
-    bg: 'bg-green-50',
+    bg: 'bg-green-50 dark:bg-green-950/30',
     text: 'text-green-700',
     border: 'border-green-200',
   },
   blue: {
     dot: 'bg-blue-500',
-    bg: 'bg-blue-50',
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
     text: 'text-blue-700',
     border: 'border-blue-200',
   },
   red: {
     dot: 'bg-red-500',
-    bg: 'bg-red-50',
+    bg: 'bg-red-50 dark:bg-red-950/30',
     text: 'text-red-700',
     border: 'border-red-200',
   },
   amber: {
     dot: 'bg-amber-500',
-    bg: 'bg-amber-50',
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
     text: 'text-amber-700',
     border: 'border-amber-200',
   },
@@ -158,6 +159,15 @@ export default function AdminActivityPage() {
     loadData()
   }, [loadData])
 
+  // Auto-refresh every 30s
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return
+    const id = setInterval(() => {
+      loadData()
+    }, 30000)
+    return () => clearInterval(id)
+  }, [loadData, isAuthenticated, authLoading])
+
   // Reset page when filters change
   useEffect(() => {
     setPage(1)
@@ -199,31 +209,31 @@ export default function AdminActivityPage() {
       <div className="mb-4 sm:mb-6 flex flex-wrap items-end gap-3">
         {/* Date range */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-stone-500">Dari</label>
+          <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Dari</label>
           <Input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="h-9 w-40 bg-white border-stone-300 text-stone-900 text-sm focus:border-porjar-red focus:ring-porjar-red/20"
+            className="h-9 w-40 bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 text-sm focus:border-esi-red focus:ring-esi-red/20"
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-stone-500">Sampai</label>
+          <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Sampai</label>
           <Input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="h-9 w-40 bg-white border-stone-300 text-stone-900 text-sm focus:border-porjar-red focus:ring-porjar-red/20"
+            className="h-9 w-40 bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 text-sm focus:border-esi-red focus:ring-esi-red/20"
           />
         </div>
 
         {/* Action type */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-stone-500">Tipe Aksi</label>
+          <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Tipe Aksi</label>
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
-            className="h-9 rounded-md border border-stone-300 bg-white px-3 text-sm text-stone-900 outline-none focus:border-porjar-red focus:ring-porjar-red/20"
+            className="h-9 rounded-md border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 text-sm text-stone-900 dark:text-zinc-100 outline-none focus:border-esi-red focus:ring-esi-red/20"
           >
             {ACTION_TYPE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -233,19 +243,35 @@ export default function AdminActivityPage() {
           </select>
         </div>
 
+        {/* Manual refresh */}
+        <div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={loadData}
+            disabled={loading}
+            className="h-9 min-h-[44px] sm:min-h-0"
+            aria-label="Muat ulang"
+          >
+            <ArrowClockwise size={14} className={cn('mr-1', loading && 'animate-spin')} />
+            Refresh
+          </Button>
+        </div>
+
         {/* User search */}
         <div>
-          <label className="mb-1 block text-xs font-medium text-stone-500">Cari Pengguna</label>
+          <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Cari Pengguna</label>
           <div className="relative">
             <MagnifyingGlass
               size={14}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400 dark:text-zinc-500"
             />
             <Input
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
               placeholder="Nama pengguna..."
-              className="h-9 w-48 pl-8 bg-white border-stone-300 text-stone-900 text-sm focus:border-porjar-red focus:ring-porjar-red/20"
+              className="h-9 w-48 pl-8 bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 text-sm focus:border-esi-red focus:ring-esi-red/20"
             />
           </div>
         </div>
@@ -278,7 +304,7 @@ export default function AdminActivityPage() {
               return (
                 <div
                   key={log.id}
-                  className="group relative flex items-start gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-red-50/50"
+                  className="group relative flex items-start gap-4 rounded-lg px-2 py-3 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   {/* Avatar / dot */}
                   <div className="relative z-10 flex-shrink-0">
@@ -286,7 +312,7 @@ export default function AdminActivityPage() {
                       <img
                         src={log.user_avatar}
                         alt={log.user_name ?? ''}
-                        className="h-10 w-10 rounded-full border-2 border-stone-200 object-cover"
+                        className="h-10 w-10 rounded-full border-2 border-stone-200 dark:border-zinc-700 object-cover"
                       />
                     ) : (
                       <div
@@ -307,7 +333,7 @@ export default function AdminActivityPage() {
                     {/* Color dot indicator */}
                     <div
                       className={cn(
-                        'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-porjar-bg',
+                        'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-esi-bg',
                         colors.dot
                       )}
                     />
@@ -316,7 +342,7 @@ export default function AdminActivityPage() {
                   {/* Content */}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium text-stone-900">
+                      <span className="text-sm font-medium text-stone-900 dark:text-zinc-100">
                         {log.user_name ?? 'Sistem'}
                       </span>
                       <span
@@ -332,10 +358,10 @@ export default function AdminActivityPage() {
 
                     {/* Entity info */}
                     {log.entity_type && (
-                      <p className="mt-0.5 text-xs text-stone-400">
+                      <p className="mt-0.5 text-xs text-stone-400 dark:text-zinc-500">
                         {log.entity_type}
                         {log.entity_id && (
-                          <span className="ml-1 font-mono text-stone-400">
+                          <span className="ml-1 font-mono text-stone-400 dark:text-zinc-500">
                             #{log.entity_id.slice(0, 8)}
                           </span>
                         )}
@@ -344,7 +370,7 @@ export default function AdminActivityPage() {
 
                     {/* Details */}
                     {log.details && Object.keys(log.details).length > 0 && (
-                      <p className="mt-1 text-xs text-stone-400 line-clamp-1">
+                      <p className="mt-1 text-xs text-stone-400 dark:text-zinc-500 line-clamp-1">
                         {JSON.stringify(log.details)}
                       </p>
                     )}
@@ -352,9 +378,9 @@ export default function AdminActivityPage() {
 
                   {/* Timestamp & IP */}
                   <div className="flex-shrink-0 text-right">
-                    <p className="text-xs text-stone-500">{formatTimestamp(log.created_at)}</p>
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">{formatTimestamp(log.created_at)}</p>
                     {log.ip_address && (
-                      <p className="mt-0.5 font-mono text-[10px] text-stone-400">
+                      <p className="mt-0.5 font-mono text-[10px] text-stone-400 dark:text-zinc-500">
                         {log.ip_address}
                       </p>
                     )}
@@ -367,7 +393,7 @@ export default function AdminActivityPage() {
           {/* Pagination */}
           {data.meta.total_pages > 1 && (
             <div className="mt-6 flex items-center justify-between">
-              <p className="text-xs text-stone-400">
+              <p className="text-xs text-stone-400 dark:text-zinc-500">
                 Halaman {data.meta.page} dari {data.meta.total_pages} ({data.meta.total} aktivitas)
               </p>
               <div className="flex items-center gap-1">
@@ -376,17 +402,17 @@ export default function AdminActivityPage() {
                   variant="ghost"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="text-stone-500 hover:text-stone-900"
+                  className="text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100"
                 >
                   <CaretLeft size={16} />
                 </Button>
-                <span className="px-2 text-sm text-stone-700 tabular-nums">{page}</span>
+                <span className="px-2 text-sm text-stone-700 dark:text-zinc-300 tabular-nums">{page}</span>
                 <Button
                   size="sm"
                   variant="ghost"
                   disabled={page >= data.meta.total_pages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="text-stone-500 hover:text-stone-900"
+                  className="text-stone-500 dark:text-zinc-400 hover:text-stone-900 dark:hover:text-zinc-100 dark:text-zinc-100"
                 >
                   <CaretRight size={16} />
                 </Button>

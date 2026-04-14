@@ -66,7 +66,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
     return (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="aspect-video rounded-lg bg-stone-100" />
+          <Skeleton key={i} className="aspect-video rounded-lg bg-stone-100 dark:bg-zinc-800" />
         ))}
       </div>
     )
@@ -74,9 +74,9 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
 
   if (media.length === 0 && !isAdmin) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 bg-stone-100/80 p-10 text-center">
-        <Images size={40} weight="duotone" className="mb-3 text-stone-300" />
-        <p className="text-sm text-stone-500">Belum ada media</p>
+      <div className="flex flex-col items-center justify-center rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800/80 p-10 text-center">
+        <Images size={40} weight="duotone" className="mb-3 text-stone-300 dark:text-zinc-600" />
+        <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada media</p>
       </div>
     )
   }
@@ -101,7 +101,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
         {media.map((item, index) => (
           <div
             key={item.id}
-            className="group relative cursor-pointer overflow-hidden rounded-lg border border-stone-200 bg-white transition-all hover:border-stone-300 hover:scale-[1.02]"
+            className="group relative cursor-pointer overflow-hidden rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 transition-all hover:border-stone-300 dark:border-zinc-600 hover:scale-[1.02]"
             onClick={() => setLightboxIndex(index)}
           >
             {item.file_type === 'image' ? (
@@ -111,8 +111,8 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                 className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-110"
               />
             ) : (
-              <div className="flex aspect-video items-center justify-center bg-stone-100">
-                <Images size={32} className="text-stone-400" />
+              <div className="flex aspect-video items-center justify-center bg-stone-100 dark:bg-zinc-800">
+                <Images size={32} className="text-stone-400 dark:text-zinc-500" />
               </div>
             )}
 
@@ -144,7 +144,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                     'flex h-7 w-7 items-center justify-center rounded-full transition-colors',
                     item.is_highlight
                       ? 'bg-amber-500 text-black'
-                      : 'bg-stone-100/90 text-stone-600 hover:bg-amber-500 hover:text-black'
+                      : 'bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 hover:bg-amber-500 hover:text-black'
                   )}
                   title="Toggle Highlight"
                 >
@@ -152,14 +152,14 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                 </button>
                 <button
                   onClick={() => setEditingId(item.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100/90 text-stone-600 transition-colors hover:bg-blue-500 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 transition-colors hover:bg-blue-500 hover:text-white"
                   title="Edit"
                 >
                   <PencilSimple size={14} />
                 </button>
                 <button
                   onClick={() => handleDelete(item.id)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100/90 text-stone-600 transition-colors hover:bg-red-500 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 transition-colors hover:bg-red-500 hover:text-white"
                   title="Hapus"
                 >
                   <Trash size={14} />

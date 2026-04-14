@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
@@ -11,7 +12,8 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
 
-// recalculateStandings aggregates all lobby results per team and updates standings
+// recalculateStandings aggregates all lobby results per team and updates standings.
+// For multi-map lobbies, all maps within a lobby are summed and counted as one "match played".
 func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.UUID) error {
 	// Get all lobbies for this tournament
 	lobbies, err := s.lobbyRepo.ListByTournament(ctx, tournamentID)
@@ -19,14 +21,17 @@ func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.
 		return fmt.Errorf("list lobbies: %w", err)
 	}
 
-	// Aggregate results per team
+	// Aggregate results per team.
+	// For multi-map: sum all maps within a lobby, count each lobby as one match.
 	type teamAgg struct {
 		totalPoints          int
 		totalKills           int
 		totalPlacementPoints int
-		matchesPlayed        int
 		bestPlacement        int
 		sumPlacement         int
+		mapCount             int               // count of individual map results for avg placement
+		wwcdCount            int               // placement == 1 per map game
+		lobbies              map[uuid.UUID]bool // track distinct lobbies for matchesPlayed
 	}
 	agg := make(map[uuid.UUID]*teamAgg)
 
@@ -39,17 +44,22 @@ func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.
 		for _, r := range results {
 			a, ok := agg[r.TeamID]
 			if !ok {
-				a = &teamAgg{bestPlacement: r.Placement}
+				a = &teamAgg{bestPlacement: math.MaxInt32, lobbies: make(map[uuid.UUID]bool)}
 				agg[r.TeamID] = a
 			}
 			a.totalPoints += r.TotalPoints
 			a.totalKills += r.Kills
 			a.totalPlacementPoints += r.PlacementPoints
-			a.matchesPlayed++
-			a.sumPlacement += r.Placement
+			a.lobbies[r.LobbyID] = true
+			a.mapCount++
+			if r.Placement == 1 {
+				a.wwcdCount++
+			}
+			// For best/avg placement, track per-map placements
 			if r.Placement < a.bestPlacement {
 				a.bestPlacement = r.Placement
 			}
+			a.sumPlacement += r.Placement
 		}
 	}
 
@@ -70,29 +80,48 @@ func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.
 	// Upsert standings for each team
 	var standings []*model.Standing
 	for teamID, a := range agg {
+		matchesPlayed := len(a.lobbies) // count distinct lobbies, not individual map results
 		bestP := a.bestPlacement
-		avgP := float64(a.sumPlacement) / float64(a.matchesPlayed)
+		avgP := 0.0
+		if a.mapCount > 0 {
+			avgP = float64(a.sumPlacement) / float64(a.mapCount)
+		}
 
 		standing := &model.Standing{
 			ID:                   uuid.New(),
 			TournamentID:         tournamentID,
 			TeamID:               teamID,
-			MatchesPlayed:        a.matchesPlayed,
+			MatchesPlayed:        matchesPlayed,
 			TotalPoints:          a.totalPoints,
 			TotalKills:           a.totalKills,
 			TotalPlacementPoints: a.totalPlacementPoints,
 			BestPlacement:        &bestP,
 			AvgPlacement:         &avgP,
+			WWCDCount:            a.wwcdCount,
 		}
 		standings = append(standings, standing)
+	}
+
+	// Delete all existing standings for the tournament first so that teams
+	// whose results have been fully removed do not retain stale standings rows.
+	if err := s.standingsRepo.DeleteByTournament(ctx, tournamentID); err != nil {
+		return fmt.Errorf("delete existing standings: %w", err)
 	}
 
 	if err := s.standingsRepo.BulkUpsert(ctx, standings); err != nil {
 		return fmt.Errorf("bulk upsert standings: %w", err)
 	}
 
-	// Update rank positions
-	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID); err != nil {
+	// Fetch tiebreaker order from tournament config
+	var tiebreakerOrder []string
+	if s.tournamentRepo != nil {
+		if t, err := s.tournamentRepo.FindByID(ctx, tournamentID); err == nil && t != nil {
+			tiebreakerOrder = t.TiebreakerOrder
+		}
+	}
+
+	// Update rank positions with tournament-specific tiebreaker
+	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID, tiebreakerOrder); err != nil {
 		return fmt.Errorf("update rank positions: %w", err)
 	}
 
@@ -101,6 +130,9 @@ func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.
 
 // broadcastResults sends WebSocket updates for results and standings
 func (s *BRService) broadcastResults(tournamentID, lobbyID uuid.UUID) {
+	if s.hub == nil {
+		return
+	}
 	room := fmt.Sprintf("tournament:%s", tournamentID.String())
 
 	// Broadcast BR result update
@@ -162,6 +194,36 @@ func (s *BRService) CalculateDailyStandings(ctx context.Context, tournamentID uu
 			}
 			a.totalPoints += r.TotalPoints
 			a.totalKills += r.Kills
+		}
+	}
+
+	// Deduct penalties from daily standings totals (mirrors recalculateStandings logic)
+	if s.penaltyRepo != nil {
+		penalties, penErr := s.penaltyRepo.FindByTournament(ctx, tournamentID)
+		if penErr != nil {
+			return apperror.Wrap(penErr, "find penalties for daily standings")
+		}
+		for _, p := range penalties {
+			// Only apply lobby-specific penalties if they belong to a lobby on this day.
+			// Tournament-wide penalties (no lobby) are skipped — they only apply to overall standings.
+			if p.LobbyID == nil {
+				continue // Tournament-wide penalties only apply to overall standings
+			}
+			// Check if this penalty's lobby is on the current day
+			lobbyOnDay := false
+			for _, lobby := range lobbies {
+				if lobby.ID == *p.LobbyID && lobby.DayNumber == dayNumber {
+					lobbyOnDay = true
+					break
+				}
+			}
+			if !lobbyOnDay {
+				continue
+			}
+			a, ok := agg[p.TeamID]
+			if ok {
+				a.totalPoints -= p.Points
+			}
 		}
 	}
 

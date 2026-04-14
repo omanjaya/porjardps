@@ -4,13 +4,12 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { LiveScoreCard } from '@/components/modules/match/LiveScoreCard'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Lightning, Trophy } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
-import type { BracketMatch, WSMessage } from '@/types'
+import type { BracketMatch, Game, WSMessage, TournamentStatus } from '@/types'
 import { usePageAnimation } from '@/hooks/usePageAnimation'
 
 export default function LiveMatchesPage() {
@@ -19,6 +18,8 @@ export default function LiveMatchesPage() {
   const [recentMatches, setRecentMatches] = useState<BracketMatch[]>([])
   const [newIds, setNewIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [games, setGames] = useState<Game[]>([])
+  const [gameFilter, setGameFilter] = useState<string>('all')
 
   const pendingUpdatesRef = useRef<WSMessage[]>([])
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -41,6 +42,7 @@ export default function LiveMatchesPage() {
       }
     }
     load()
+    api.get<Game[]>('/games').then(g => setGames(g ?? [])).catch(() => {})
   }, [])
 
   const flushUpdates = useCallback(() => {
@@ -67,6 +69,10 @@ export default function LiveMatchesPage() {
     })
   }, [])
 
+  const recentMatchesRef = useRef<BracketMatch[]>([])
+  // Keep ref in sync with state for use inside WS callback without stale closure
+  useEffect(() => { recentMatchesRef.current = recentMatches }, [recentMatches])
+
   const handleWSMessage = useCallback((msg: WSMessage) => {
     // match_complete: prepend to recent results feed with flash
     if (msg.type === 'match_complete') {
@@ -74,27 +80,36 @@ export default function LiveMatchesPage() {
       const matchId = data?.match_id as string | undefined
       if (!matchId) return
 
-      // Build a synthetic BracketMatch for the card
+      // Skip if this match already exists in recent results (duplicate WS message)
+      if (recentMatchesRef.current.some((m) => m.id === matchId)) {
+        // Still remove from live list in case it's lingering
+        setMatches((prev) => prev.filter((m) => m.id !== matchId))
+        return
+      }
+
+      // Build a synthetic BracketMatch for the card, using WS data when available
       const synthetic: BracketMatch = {
         id: matchId,
-        tournament_id: '',
-        round: 0,
-        match_number: 0,
-        bracket_position: 'winners',
-        team_a: data.winner_name ? { id: data.winner_id as string, name: data.winner_name as string, logo_url: null, school_logo_url: null } : null,
-        team_b: data.loser_name ? { id: data.loser_id as string, name: data.loser_name as string, logo_url: null, school_logo_url: null } : null,
-        winner: data.winner_name ? { id: data.winner_id as string, name: data.winner_name as string, logo_url: null, school_logo_url: null } : null,
+        tournament_id: (data.tournament_id as string) || '',
+        round: (data.round as number) ?? 0,
+        match_number: (data.match_number as number) ?? 0,
+        bracket_position: (data.bracket_position as string) ?? null,
+        team_a: data.winner_name ? { id: data.winner_id as string, name: data.winner_name as string, logo_url: (data.winner_logo_url as string) ?? null, school_logo_url: (data.winner_school_logo_url as string) ?? null } : null,
+        team_b: data.loser_name ? { id: data.loser_id as string, name: data.loser_name as string, logo_url: (data.loser_logo_url as string) ?? null, school_logo_url: (data.loser_school_logo_url as string) ?? null } : null,
+        winner: data.winner_name ? { id: data.winner_id as string, name: data.winner_name as string, logo_url: (data.winner_logo_url as string) ?? null, school_logo_url: (data.winner_school_logo_url as string) ?? null } : null,
         score_a: (data.score_a as number) ?? 0,
         score_b: (data.score_b as number) ?? 0,
         status: 'completed',
-        best_of: 1,
-        scheduled_at: null,
-        started_at: null,
-        completed_at: new Date().toISOString(),
-        next_match_id: null,
-        loser_next_match_id: null,
-        stream_url: null,
-        tournament: undefined,
+        best_of: (data.best_of as number) ?? 1,
+        scheduled_at: (data.scheduled_at as string) ?? null,
+        started_at: (data.started_at as string) ?? null,
+        completed_at: (data.completed_at as string) ?? new Date().toISOString(),
+        next_match_id: (data.next_match_id as string) ?? null,
+        loser_next_match_id: (data.loser_next_match_id as string) ?? null,
+        stream_url: (data.stream_url as string) ?? null,
+        tournament: data.tournament_name
+          ? { id: (data.tournament_id as string) || '', name: data.tournament_name as string, status: ((data.tournament_status as string) || 'ongoing') as TournamentStatus }
+          : undefined,
         games: [],
       }
 
@@ -122,36 +137,108 @@ export default function LiveMatchesPage() {
     messageTypes: ['score_update', 'match_status', 'match_complete'],
   })
 
+  // Filter matches by game
+  // NOTE: BracketMatch/TournamentSummary don't include game_slug or game_id,
+  // so we fall back to checking if the tournament name contains the game slug.
+  // This is fragile — if the API adds game_slug to match data, use that instead.
+  const matchesGameSlug = (match: BracketMatch, slug: string): boolean => {
+    const name = match.tournament?.name?.toLowerCase() ?? ''
+    return name.includes(slug.toLowerCase())
+  }
+
+  const filteredLive = gameFilter === 'all'
+    ? matches
+    : matches.filter(m => matchesGameSlug(m, gameFilter))
+
+  const filteredRecent = gameFilter === 'all'
+    ? recentMatches
+    : recentMatches.filter(m => matchesGameSlug(m, gameFilter))
+
   return (
-    <PublicLayout>
+    <>
       <PageHeader
         title="Pertandingan Live"
-        description="Skor real-time & hasil terkini"
+        description="Skor real-time & hasil terkini — update otomatis"
       />
+
+      {/* Stats bar */}
+      {!loading && (
+        <div className="flex items-center gap-4 mb-4 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+            </span>
+            <span className="font-bold text-stone-800 dark:text-zinc-200">{matches.length}</span>
+            <span className="text-stone-500 dark:text-zinc-400">Live</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Trophy size={12} weight="fill" className="text-yellow-500" />
+            <span className="font-bold text-stone-800 dark:text-zinc-200">{recentMatches.length}</span>
+            <span className="text-stone-500 dark:text-zinc-400">Selesai</span>
+          </div>
+        </div>
+      )}
+
+      {/* Game filter */}
+      {!loading && games.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setGameFilter('all')}
+            className={cn(
+              'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+              gameFilter === 'all'
+                ? 'bg-esi-red text-white'
+                : 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 hover:bg-stone-200 dark:hover:bg-zinc-700'
+            )}
+          >
+            Semua
+          </button>
+          {games.map(g => (
+            <button
+              key={g.slug}
+              onClick={() => setGameFilter(g.slug)}
+              className={cn(
+                'rounded-full px-3 py-1 text-xs font-semibold transition-colors',
+                gameFilter === g.slug
+                  ? 'bg-esi-red text-white'
+                  : 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 hover:bg-stone-200 dark:hover:bg-zinc-700'
+              )}
+            >
+              {g.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div ref={containerRef}>
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 rounded-2xl bg-slate-800" />
+            <Skeleton key={i} className="h-56 rounded-2xl bg-stone-200 dark:bg-zinc-700" />
           ))}
         </div>
       ) : (
         <>
           {/* Live matches */}
-          {matches.length > 0 && (
+          {filteredLive.length > 0 && (
             <section className="anim-section mb-8">
               <div className="mb-3 flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
                 </span>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-700">Sedang Berlangsung</h2>
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">{matches.length}</span>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-700 dark:text-zinc-300">Sedang Berlangsung</h2>
+                <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">{filteredLive.length}</span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {matches.map((match) => (
+                {filteredLive.map((match) => (
                   <div key={match.id} className="anim-card">
+                    {match.tournament?.name && (
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500 truncate">
+                        {match.tournament.name}
+                      </p>
+                    )}
                     <LiveScoreCard match={match} onClick={(m) => router.push(`/matches/${m.id}`)} />
                   </div>
                 ))}
@@ -160,23 +247,24 @@ export default function LiveMatchesPage() {
           )}
 
           {/* Empty state for live */}
-          {matches.length === 0 && (
-            <div className="mb-8 flex items-center gap-3 rounded-xl border border-dashed border-stone-200 px-5 py-4">
-              <Lightning size={18} className="text-stone-300" weight="duotone" />
-              <p className="text-sm text-stone-400">Tidak ada match live saat ini</p>
+          {filteredLive.length === 0 && (
+            <div className="mb-8 rounded-xl border border-dashed border-stone-200 dark:border-zinc-700 bg-stone-50/50 dark:bg-zinc-800/30 p-8 text-center">
+              <Lightning size={40} className="mx-auto mb-3 text-stone-300 dark:text-zinc-600" weight="duotone" />
+              <p className="text-sm font-medium text-stone-500 dark:text-zinc-400">Tidak ada match live saat ini</p>
+              <p className="mt-1 text-xs text-stone-400 dark:text-zinc-500">Match yang sedang berlangsung akan muncul di sini secara real-time</p>
             </div>
           )}
 
           {/* Recent results */}
-          {recentMatches.length > 0 && (
+          {filteredRecent.length > 0 && (
             <section className="anim-section">
               <div className="mb-3 flex items-center gap-2">
                 <Trophy size={14} weight="fill" className="text-yellow-500" />
-                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-700">Hasil Terkini</h2>
-                <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500">{recentMatches.length}</span>
+                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-700 dark:text-zinc-300">Hasil Terkini</h2>
+                <span className="rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:text-zinc-400">{filteredRecent.length}</span>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {recentMatches.map((match) => (
+                {filteredRecent.map((match) => (
                   <div key={match.id} className="anim-card">
                     <CompletedMatchCard
                       match={match}
@@ -191,7 +279,7 @@ export default function LiveMatchesPage() {
         </>
       )}
       </div>
-    </PublicLayout>
+    </>
   )
 }
 
@@ -199,7 +287,7 @@ function TeamAvatar({ name, logoUrl }: { name: string; logoUrl?: string | null }
   if (logoUrl) {
     return (
       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10">
-        <img src={logoUrl} alt={name} width={40} height={40} className="h-full w-full object-cover" />
+        <img src={logoUrl} alt={name} width={40} height={40} loading="lazy" className="h-full w-full object-cover" />
       </div>
     )
   }

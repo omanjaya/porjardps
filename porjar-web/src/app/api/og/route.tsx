@@ -15,7 +15,7 @@ const MAX_SUBTITLE = 120
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
-  const title = (searchParams.get('title') || 'PORJAR Denpasar Esport').slice(0, MAX_TITLE)
+  const title = (searchParams.get('title') || 'ESI Denpasar Esport').slice(0, MAX_TITLE)
   const subtitle = (searchParams.get('subtitle') || 'Pekan Olahraga Pelajar Kota Denpasar 2026').slice(0, MAX_SUBTITLE)
   const type = searchParams.get('type') || 'default'
   const accentColor = ACCENT_COLORS[type] || ACCENT_COLORS.default
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
           }}
         >
           <span style={{ color: accentColor, fontSize: '14px', fontWeight: 700, letterSpacing: '2px' }}>
-            PORJAR DENPASAR ESPORT
+            ESI KOTA DENPASAR
           </span>
         </div>
 

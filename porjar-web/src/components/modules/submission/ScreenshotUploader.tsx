@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { UploadSimple, X, Image as ImageIcon, Warning } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -27,7 +27,7 @@ const MAX_SIZE = 10 * 1024 * 1024
 // Konversi dan kompres gambar ke WebP di browser sebelum upload.
 // Menghemat bandwidth dan storage server tanpa tambahan CPU load di backend.
 async function compressToWebP(file: File, maxWidth = 1920, quality = 0.85): Promise<File> {
-  return new Promise((resolve) => {
+  const compressionPromise = new Promise<File>((resolve) => {
     const img = new Image()
     const objectUrl = URL.createObjectURL(file)
 
@@ -59,6 +59,13 @@ async function compressToWebP(file: File, maxWidth = 1920, quality = 0.85): Prom
     img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file) }
     img.src = objectUrl
   })
+
+  // P13: Timeout after 10 seconds — resolve with original file if compression hangs
+  const timeoutPromise = new Promise<File>((resolve) => {
+    setTimeout(() => resolve(file), 10_000)
+  })
+
+  return Promise.race([compressionPromise, timeoutPromise])
 }
 
 export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: ScreenshotUploaderProps) {
@@ -84,7 +91,7 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
       const compressed = await compressToWebP(item.file)
       setFiles(prev => prev.map(f => f.id === item.id ? { ...f, progress: 50 } : f))
 
-      const result = await api.upload<{ url: string }>('/uploads/screenshot', compressed)
+      const result = await api.upload<{ url: string }>('/upload', compressed)
 
       setFiles(prev => prev.map(f => f.id === item.id ? { ...f, progress: 100, url: result.url } : f))
       return result.url
@@ -94,8 +101,19 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
     }
   }
 
+  // P1: Use useEffect to sync onUpload with current files state, avoiding stale closures
+  useEffect(() => {
+    const urls = files.filter(f => f.url).map(f => f.url!)
+    onUpload(urls)
+  }, [files]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleFiles = useCallback(async (newFiles: File[]) => {
-    const remaining = maxFiles - files.length
+    // Use functional update to read current length without stale closure
+    let remaining = 0
+    setFiles(prev => {
+      remaining = maxFiles - prev.length
+      return prev
+    })
     if (remaining <= 0) return
 
     const toAdd = newFiles.slice(0, remaining)
@@ -114,25 +132,19 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
     setFiles(prev => [...prev, ...newItems])
 
     const validItems = newItems.filter(item => !item.error)
-    const urls: string[] = []
-
     for (const item of validItems) {
-      const url = await uploadFile(item)
-      if (url) urls.push(url)
+      await uploadFile(item)
     }
-
-    if (urls.length > 0) {
-      const allUrls = [...files.filter(f => f.url).map(f => f.url!), ...urls]
-      onUpload(allUrls)
-    }
-  }, [files, maxFiles, onUpload]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [maxFiles]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeFile = (id: string) => {
     setFiles(prev => {
-      const updated = prev.filter(f => f.id !== id)
-      const urls = updated.filter(f => f.url).map(f => f.url!)
-      onUpload(urls)
-      return updated
+      const removed = prev.find(f => f.id === id)
+      // P12: Revoke ObjectURL to prevent memory leak
+      if (removed?.preview) {
+        URL.revokeObjectURL(removed.preview)
+      }
+      return prev.filter(f => f.id !== id)
     })
   }
 
@@ -168,28 +180,32 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
         className={cn(
           'relative flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-6 transition-colors',
           isDragging
-            ? 'border-porjar-red bg-porjar-red/5'
-            : 'border-stone-300 bg-porjar-bg/50 hover:border-porjar-red/50 hover:bg-porjar-bg',
+            ? 'border-esi-red bg-esi-red/5'
+            : 'border-stone-300 dark:border-zinc-600 bg-esi-bg/50 hover:border-esi-red/50 hover:bg-esi-bg',
           files.length >= maxFiles && 'pointer-events-none opacity-50'
         )}
       >
-        <UploadSimple size={32} weight="duotone" className="mb-2 text-porjar-red" />
-        <p className="text-sm font-medium text-porjar-text">
+        <UploadSimple size={32} weight="duotone" className="mb-2 text-esi-red" />
+        <p className="text-sm font-medium text-esi-text">
           Drag & drop screenshot di sini
         </p>
-        <p className="mt-1 text-xs text-porjar-muted">
-          atau klik untuk pilih file (JPG, PNG, WebP, max 10MB)
+        <p className="mt-1 text-xs text-esi-muted">
+          atau ketuk untuk buka kamera / galeri (max 10MB)
         </p>
-        <p className="mt-0.5 text-[10px] text-porjar-muted/70">
+        <p className="mt-0.5 text-[10px] text-esi-muted/70">
+          JPG, PNG, atau WebP
+        </p>
+        <p className="mt-0.5 text-[10px] text-esi-muted/70">
           Otomatis dikompresi ke WebP sebelum dikirim
         </p>
-        <p className="mt-1 text-xs text-porjar-muted">
+        <p className="mt-1 text-xs text-esi-muted">
           {files.length}/{maxFiles} file
         </p>
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/*"
+          capture="environment"
           multiple
           className="hidden"
           onChange={handleInputChange}
@@ -198,29 +214,29 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
 
       {/* Thumbnails */}
       {files.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5" data-testid="screenshot-thumbnails">
           {files.map(item => (
             <div
               key={item.id}
-              className="group relative overflow-hidden rounded-lg border border-stone-200 bg-white"
+              className="group relative overflow-hidden rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
             >
               {item.error ? (
                 <div className="flex h-24 flex-col items-center justify-center gap-1 p-2">
-                  <Warning size={20} className="text-porjar-red" />
-                  <p className="text-center text-[10px] text-porjar-red">{item.error}</p>
+                  <Warning size={20} className="text-esi-red" />
+                  <p className="text-center text-[10px] text-esi-red">{item.error}</p>
                 </div>
               ) : (
                 <>
                   <img
                     src={item.preview}
                     alt="Preview"
-                    className="h-24 w-full object-cover"
+                    className="h-28 sm:h-24 w-full object-cover"
                   />
                   {/* Progress bar */}
                   {item.progress < 100 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-200">
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-stone-200 dark:bg-zinc-700">
                       <div
-                        className="h-full bg-porjar-red transition-all duration-300"
+                        className="h-full bg-esi-red transition-all duration-300"
                         style={{ width: `${item.progress}%` }}
                       />
                     </div>
@@ -235,10 +251,12 @@ export function ScreenshotUploader({ onUpload, maxFiles = 5, className }: Screen
                 </>
               )}
               <button
+                type="button"
+                aria-label="Hapus screenshot"
                 onClick={(e) => { e.stopPropagation(); removeFile(item.id) }}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white shadow-md transition-opacity sm:opacity-0 sm:group-hover:opacity-100 hover:bg-black/90"
               >
-                <X size={12} weight="bold" />
+                <X size={16} weight="bold" />
               </button>
             </div>
           ))}

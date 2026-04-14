@@ -19,6 +19,21 @@ func NewTeamInviteRepo(db *pgxpool.Pool) model.TeamInviteRepository {
 	return &teamInviteRepo{db: db}
 }
 
+func (r *teamInviteRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.TeamInvite, error) {
+	inv := &model.TeamInvite{}
+	err := r.db.QueryRow(ctx,
+		`SELECT id, team_id, invite_code, created_by, max_uses, used_count, expires_at, is_active, created_at
+		 FROM team_invites WHERE id = $1`, id).
+		Scan(&inv.ID, &inv.TeamID, &inv.InviteCode, &inv.CreatedBy, &inv.MaxUses, &inv.UsedCount, &inv.ExpiresAt, &inv.IsActive, &inv.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("FindByID: %w", err)
+	}
+	return inv, nil
+}
+
 func (r *teamInviteRepo) FindByCode(ctx context.Context, code string) (*model.TeamInvite, error) {
 	inv := &model.TeamInvite{}
 	err := r.db.QueryRow(ctx,

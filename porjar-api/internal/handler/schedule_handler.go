@@ -87,6 +87,11 @@ func (h *ScheduleHandler) Create(c *fiber.Ctx) error {
 	}
 	if req.EndAt != nil {
 		if t, err := parseTime(*req.EndAt); err == nil {
+			if !t.After(scheduledAt) {
+				return response.Err(c, apperror.ValidationError(map[string]string{
+					"end_at": "Waktu selesai harus setelah waktu mulai",
+				}))
+			}
 			input.EndAt = &t
 		}
 	}

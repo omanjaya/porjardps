@@ -5,13 +5,13 @@ import Link from 'next/link'
 import {
   Sword,
   Clock,
-  ArrowRight,
-  WarningCircle,
+  Lightning,
+  ArrowCounterClockwise,
 } from '@phosphor-icons/react'
-import { toast } from 'sonner'
 import { DashboardLayout } from '@/components/layouts/DashboardLayout'
 import { useAuthStore } from '@/store/auth-store'
 import { api } from '@/lib/api'
+import { getLiveScoreClient } from '@/lib/ws'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 import type { BracketMatch, TeamMember } from '@/types'
@@ -22,6 +22,7 @@ import {
   MatchHistory,
   MatchHistoryCard,
   SubmissionStatusSection,
+  TeamCardsSection,
 } from './MyMatchesComponents'
 import type { MyTeamInfo, SubmissionStatus } from './MyMatchesComponents'
 
@@ -39,11 +40,45 @@ export default function MyMatchesPage() {
   const [data, setData] = useState<MyMatchData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [liveAlert, setLiveAlert] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated || authLoading) return
     loadData()
   }, [isAuthenticated, authLoading])
+
+  // WebSocket: reload when match_starting or match_status=live notification arrives
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return
+    const ws = getLiveScoreClient()
+    // P2: Capture userId in closure to prevent subscription leak on user change
+    const userId = user.id
+    const room = `user:${userId}`
+    ws.connect()
+    ws.subscribe(room)
+
+    const unsub = ws.on('notification', (msg) => {
+      const notif = msg.data as { type: string; title?: string }
+      if (notif?.type === 'match_starting') {
+        setLiveAlert(notif.title ?? 'Pertandinganmu dimulai!')
+        loadData()
+      }
+    })
+
+    return () => {
+      unsub()
+      ws.unsubscribe(room)
+    }
+  }, [isAuthenticated, user?.id])
+
+  // Reload on page visibility (user navigates back from notification)
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') loadData()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   async function loadData() {
     setIsLoading(true)
@@ -52,15 +87,7 @@ export default function MyMatchesPage() {
       const result = await api.get<MyMatchData>('/player/my-matches')
       setData(result)
     } catch {
-      toast.error('Gagal memuat data')
-      setData({
-        team: null,
-        current_match: null,
-        upcoming_matches: [],
-        past_matches: [],
-        bracket_path: [],
-        submissions: [],
-      })
+      setError('Gagal memuat data pertandingan. Periksa koneksi internet kamu.')
     } finally {
       setIsLoading(false)
     }
@@ -74,26 +101,40 @@ export default function MyMatchesPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Player Header */}
-          <PlayerHeader user={user} team={data?.team ?? null} />
+          {/* Error state */}
+          {error && (
+            <div className="rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 p-6 text-center">
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
+              <button
+                onClick={() => loadData()}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-esi-red px-4 py-2 text-sm font-semibold text-white hover:brightness-110 transition"
+              >
+                <ArrowCounterClockwise size={14} weight="bold" />
+                Coba Lagi
+              </button>
+            </div>
+          )}
 
-          {/* Needs password change banner */}
-          {user?.needs_password_change && (
-            <Link
-              href="/dashboard/change-password"
-              className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 transition-all hover:border-amber-300 hover:shadow-sm"
+          {/* Player Header */}
+          {!error && <PlayerHeader user={user} team={data?.team ?? null} />}
+
+          {/* Live alert banner */}
+          {liveAlert && (
+            <button
+              onClick={() => setLiveAlert(null)}
+              className="flex w-full items-center gap-3 rounded-xl border border-esi-red/40 bg-red-50 dark:bg-red-950/30 p-4 text-left animate-pulse"
             >
-              <WarningCircle size={24} weight="fill" className="shrink-0 text-amber-600" />
+              <Lightning size={22} weight="fill" className="shrink-0 text-esi-red" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-900">Ubah password default kamu</p>
-                <p className="text-xs text-amber-700">Demi keamanan, segera ubah password NISN kamu</p>
+                <p className="text-sm font-bold text-red-700 dark:text-red-300">{liveAlert}</p>
+                <p className="text-xs text-red-600 dark:text-red-400">Pertandinganmu sedang berlangsung sekarang!</p>
               </div>
-              <ArrowRight size={18} className="text-amber-600" />
-            </Link>
+              <span className="text-xs text-red-400">✕</span>
+            </button>
           )}
 
           {/* Current/Next Match */}
-          {data?.team ? (
+          {!error && data?.team ? (
             <>
               <CurrentMatchCard
                 match={data.current_match}
@@ -101,19 +142,19 @@ export default function MyMatchesPage() {
               />
 
               {/* Bracket Position */}
-              {data.bracket_path.length > 0 && (
+              {(data.bracket_path ?? []).length > 0 && (
                 <BracketPosition path={data.bracket_path} />
               )}
 
               {/* Upcoming Matches */}
-              {data.upcoming_matches.length > 0 && (
+              {(data.upcoming_matches ?? []).length > 0 && (
                 <div className="space-y-3">
-                  <h2 className="flex items-center gap-2 text-lg font-bold text-porjar-text">
+                  <h2 className="flex items-center gap-2 text-lg font-bold text-esi-text">
                     <Clock size={20} weight="bold" />
                     Pertandingan Mendatang
                   </h2>
                   <div className="space-y-3">
-                    {data.upcoming_matches.map((match) => (
+                    {(data.upcoming_matches ?? []).map((match) => (
                       <MatchHistoryCard
                         key={match.id}
                         match={match}
@@ -126,24 +167,27 @@ export default function MyMatchesPage() {
 
               {/* Match History */}
               <MatchHistory
-                matches={data.past_matches}
+                matches={data.past_matches ?? []}
                 myTeamId={data.team.id}
               />
 
               {/* Submission Status */}
-              {data.submissions.length > 0 && (
-                <SubmissionStatusSection submissions={data.submissions} />
+              {(data.submissions ?? []).length > 0 && (
+                <SubmissionStatusSection submissions={data.submissions ?? []} />
               )}
+
+              {/* Team Cards */}
+              <TeamCardsSection teamId={data.team.id} />
             </>
-          ) : (
-            <div className="rounded-xl border border-porjar-border bg-white p-6 shadow-sm">
+          ) : !error ? (
+            <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-6 shadow-sm">
               <EmptyState
                 icon={Sword}
                 title="Belum ada pertandingan"
                 description="Kamu belum terdaftar di tim manapun. Hubungi panitia atau guru pembina untuk informasi lebih lanjut."
               />
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </DashboardLayout>

@@ -56,14 +56,14 @@ export function MatchResultFeed({ matches, newMatchIds = [] }: MatchResultFeedPr
   if (completedItems.length === 0) return null
 
   return (
-    <div className="mb-4 rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+    <div className="mb-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-stone-100 px-4 py-2.5">
+      <div className="flex items-center gap-2 border-b border-stone-100 dark:border-zinc-700 px-4 py-2.5">
         <Trophy size={14} weight="fill" className="text-yellow-500" />
-        <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">
+        <span className="text-xs font-semibold text-stone-600 dark:text-zinc-400 uppercase tracking-wide">
           Hasil Terkini
         </span>
-        <span className="ml-auto text-[10px] text-stone-400">{completedItems.length} pertandingan selesai</span>
+        <span className="ml-auto text-[10px] text-stone-400 dark:text-zinc-500">{completedItems.length} pertandingan selesai</span>
       </div>
 
       {/* Feed */}
@@ -94,33 +94,33 @@ function FeedCard({ item }: { item: FeedItem }) {
       className={cn(
         'flex-shrink-0 rounded-lg border px-3 py-2 text-left transition-colors duration-700',
         flash
-          ? 'border-yellow-300 bg-yellow-50'
-          : 'border-stone-100 bg-stone-50'
+          ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-950/30'
+          : 'border-stone-100 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50'
       )}
     >
       {/* Round label */}
-      <p className="mb-1 text-[10px] font-medium text-stone-400 uppercase tracking-wide">
+      <p className="mb-1 text-[10px] font-medium text-stone-400 dark:text-zinc-500 uppercase tracking-wide">
         Round {item.round}
       </p>
 
       {/* Winner */}
       <div className="flex items-center gap-1.5">
         <Trophy size={11} weight="fill" className="text-yellow-500 flex-shrink-0" />
-        <span className="text-xs font-semibold text-stone-900 whitespace-nowrap max-w-[120px] truncate">
+        <span className="text-xs font-semibold text-stone-900 dark:text-zinc-100 whitespace-nowrap max-w-[120px] truncate">
           {item.winnerName}
         </span>
       </div>
 
       {/* Divider */}
       <div className="my-1 flex items-center gap-1">
-        <div className="h-px flex-1 bg-stone-200" />
-        <Sword size={9} className="text-stone-300" />
-        <div className="h-px flex-1 bg-stone-200" />
+        <div className="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
+        <Sword size={9} className="text-stone-300 dark:text-zinc-600" />
+        <div className="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
       </div>
 
       {/* Loser */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-stone-400 whitespace-nowrap max-w-[120px] truncate">
+        <span className="text-xs text-stone-400 dark:text-zinc-500 whitespace-nowrap max-w-[120px] truncate">
           {item.loserName}
         </span>
       </div>

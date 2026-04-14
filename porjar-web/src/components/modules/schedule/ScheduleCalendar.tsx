@@ -159,18 +159,18 @@ export function ScheduleCalendar({
           size="sm"
           variant="ghost"
           onClick={prevMonth}
-          className="text-stone-500 hover:text-stone-700"
+          className="text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
         >
           <CaretLeft size={18} />
         </Button>
-        <h3 className="text-base font-semibold text-stone-900">
+        <h3 className="text-base font-semibold text-stone-900 dark:text-zinc-100">
           {MONTH_NAMES[currentMonth]} {currentYear}
         </h3>
         <Button
           size="sm"
           variant="ghost"
           onClick={nextMonth}
-          className="text-stone-500 hover:text-stone-700"
+          className="text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:text-zinc-300"
         >
           <CaretRight size={18} />
         </Button>
@@ -181,7 +181,7 @@ export function ScheduleCalendar({
         {DAY_LABELS.map((day) => (
           <div
             key={day}
-            className="py-2 text-center text-xs font-semibold uppercase tracking-wider text-stone-400"
+            className="py-2 text-center text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500"
           >
             {day}
           </div>
@@ -206,18 +206,18 @@ export function ScheduleCalendar({
               className={cn(
                 'relative flex min-h-[72px] flex-col items-center rounded-lg border p-1.5 text-sm transition-all',
                 dayInfo.isCurrentMonth
-                  ? 'bg-white border-stone-200 hover:bg-stone-50 cursor-pointer'
-                  : 'bg-stone-50 border-transparent text-stone-300 cursor-default',
-                isToday && 'ring-2 ring-porjar-red/60',
-                isSelected && 'bg-red-50/50 border-porjar-red/40'
+                  ? 'bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50 cursor-pointer'
+                  : 'bg-stone-50 dark:bg-zinc-800/50 border-transparent text-stone-300 dark:text-zinc-600 cursor-default',
+                isToday && 'ring-2 ring-esi-red/60',
+                isSelected && 'bg-red-50 dark:bg-red-950/30 border-esi-red/40'
               )}
             >
               {/* Date number */}
               <span
                 className={cn(
                   'text-xs font-medium',
-                  dayInfo.isCurrentMonth ? 'text-stone-700' : 'text-stone-300',
-                  isToday && 'text-porjar-red font-bold'
+                  dayInfo.isCurrentMonth ? 'text-stone-700 dark:text-zinc-300' : 'text-stone-300 dark:text-zinc-600',
+                  isToday && 'text-esi-red font-bold'
                 )}
               >
                 {dayInfo.date.getDate()}
@@ -247,7 +247,7 @@ export function ScheduleCalendar({
                           )}
                         />
                       ))}
-                      <span className="ml-0.5 text-[9px] font-bold text-stone-400">
+                      <span className="ml-0.5 text-[9px] font-bold text-stone-400 dark:text-zinc-500">
                         +{matchCount - 2}
                       </span>
                     </>
@@ -257,7 +257,7 @@ export function ScheduleCalendar({
 
               {/* Live indicator */}
               {hasLive && dayInfo.isCurrentMonth && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-porjar-red animate-pulse" />
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-esi-red animate-pulse" />
               )}
             </button>
           )
@@ -266,9 +266,9 @@ export function ScheduleCalendar({
 
       {/* Selected date detail panel */}
       {selectedDate && (
-        <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-stone-900">
+            <h4 className="text-sm font-semibold text-stone-900 dark:text-zinc-100">
               {new Date(selectedDate + 'T00:00:00').toLocaleDateString('id-ID', {
                 weekday: 'long',
                 day: 'numeric',
@@ -280,14 +280,14 @@ export function ScheduleCalendar({
               size="sm"
               variant="ghost"
               onClick={() => setSelectedDate(null)}
-              className="h-6 w-6 p-0 text-stone-400 hover:text-stone-600"
+              className="h-6 w-6 p-0 text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:text-zinc-400"
             >
               <X size={14} />
             </Button>
           </div>
 
           {selectedSchedules.length === 0 ? (
-            <p className="text-xs text-stone-400">Tidak ada jadwal pada tanggal ini.</p>
+            <p className="text-xs text-stone-400 dark:text-zinc-500">Tidak ada jadwal pada tanggal ini.</p>
           ) : (
             <div className="space-y-2">
               {selectedSchedules.map((schedule) => {
@@ -299,10 +299,10 @@ export function ScheduleCalendar({
                     key={schedule.id}
                     onClick={() => onScheduleClick?.(schedule)}
                     className={cn(
-                      'flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-stone-50',
+                      'flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50',
                       schedule.status === 'ongoing'
-                        ? 'border-porjar-red/40'
-                        : 'border-stone-200'
+                        ? 'border-esi-red/40'
+                        : 'border-stone-200 dark:border-zinc-700'
                     )}
                   >
                     {/* Game dot */}
@@ -315,19 +315,19 @@ export function ScheduleCalendar({
 
                     {/* Info */}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-stone-900">
+                      <p className="truncate text-sm font-medium text-stone-900 dark:text-zinc-100">
                         {schedule.title}
                       </p>
                       {schedule.team_a && schedule.team_b ? (
-                        <p className="truncate text-xs text-stone-500 font-medium">
+                        <p className="truncate text-xs text-stone-500 dark:text-zinc-400 font-medium">
                           {schedule.team_a.school_name ?? schedule.team_a.name}
                           {' '}
-                          <span className="text-stone-300">vs</span>
+                          <span className="text-stone-300 dark:text-zinc-600">vs</span>
                           {' '}
                           {schedule.team_b.school_name ?? schedule.team_b.name}
                         </p>
                       ) : (
-                        <p className="text-xs text-stone-400">
+                        <p className="text-xs text-stone-400 dark:text-zinc-500">
                           {new Date(schedule.scheduled_at).toLocaleTimeString('id-ID', {
                             hour: '2-digit',
                             minute: '2-digit',

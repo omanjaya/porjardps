@@ -73,8 +73,8 @@ export function BRResultTeamRow({
     <Fragment>
       <TableRow
         className={cn(
-          'border-stone-100 hover:bg-stone-50',
-          row.isWwcd && 'bg-amber-50/50',
+          'border-stone-100 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50',
+          row.isWwcd && 'bg-amber-50 dark:bg-amber-950/30',
           row.status === 'dnf' && 'opacity-60',
           row.status === 'dns' && 'opacity-40'
         )}
@@ -84,7 +84,7 @@ export function BRResultTeamRow({
           {teamInput?.players.length > 0 && (
             <button
               onClick={() => onToggleExpand(team.id)}
-              className="text-stone-400 hover:text-stone-600"
+              className="text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:text-zinc-400"
             >
               <CaretDown
                 size={14}
@@ -100,7 +100,7 @@ export function BRResultTeamRow({
             {row.isWwcd && (
               <Trophy size={14} weight="fill" className="text-amber-500 shrink-0" />
             )}
-            <span className="text-sm font-medium text-stone-900">{team.name}</span>
+            <span className="text-sm font-medium text-stone-900 dark:text-zinc-100">{team.name}</span>
           </div>
         </TableCell>
 
@@ -109,10 +109,10 @@ export function BRResultTeamRow({
           <select
             value={row.placement}
             onChange={(e) =>
-              onUpdateTeam(team.id, 'placement', parseInt(e.target.value) || 0)
+              onUpdateTeam(team.id, 'placement', e.target.value === '' ? 0 : parseInt(e.target.value))
             }
             disabled={row.status === 'dns'}
-            className="h-7 w-16 rounded border border-stone-300 bg-white text-center text-sm text-stone-900 mx-auto focus:border-porjar-red"
+            className="h-7 w-16 rounded border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-center text-sm text-stone-900 dark:text-zinc-100 mx-auto focus:border-esi-red"
           >
             <option value={0}>-</option>
             {Array.from({ length: teamsCount }, (_, i) => i + 1).map((n) => (
@@ -130,10 +130,10 @@ export function BRResultTeamRow({
             min={0}
             value={row.kills || ''}
             onChange={(e) =>
-              onUpdateTeam(team.id, 'kills', parseInt(e.target.value) || 0)
+              onUpdateTeam(team.id, 'kills', e.target.value === '' ? 0 : parseInt(e.target.value))
             }
             disabled={row.status === 'dns'}
-            className="mx-auto w-16 text-center bg-white border-stone-300 text-stone-900 h-7 text-sm focus:border-porjar-red"
+            className="mx-auto w-16 text-center bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 h-7 text-sm focus:border-esi-red"
           />
         </TableCell>
 
@@ -144,10 +144,10 @@ export function BRResultTeamRow({
             min={0}
             value={row.damage || ''}
             onChange={(e) =>
-              onUpdateTeam(team.id, 'damage', parseInt(e.target.value) || 0)
+              onUpdateTeam(team.id, 'damage', e.target.value === '' ? 0 : parseInt(e.target.value))
             }
             disabled={row.status === 'dns'}
-            className="mx-auto w-16 text-center bg-white border-stone-300 text-stone-900 h-7 text-sm focus:border-porjar-red"
+            className="mx-auto w-16 text-center bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 h-7 text-sm focus:border-esi-red"
           />
         </TableCell>
 
@@ -162,7 +162,7 @@ export function BRResultTeamRow({
                 e.target.value as 'normal' | 'dnf' | 'dns'
               )
             }
-            className="h-7 w-[72px] rounded border border-stone-300 bg-white text-center text-xs text-stone-900 focus:border-porjar-red"
+            className="h-7 w-[72px] rounded border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-center text-xs text-stone-900 dark:text-zinc-100 focus:border-esi-red"
           >
             <option value="normal">Normal</option>
             <option value="dnf">DNF</option>
@@ -171,12 +171,12 @@ export function BRResultTeamRow({
         </TableCell>
 
         {/* Placement pts */}
-        <TableCell className="text-right text-stone-500 tabular-nums text-sm">
+        <TableCell className="text-right text-stone-500 dark:text-zinc-400 tabular-nums text-sm">
           {row.placementPts}
         </TableCell>
 
         {/* Kill pts */}
-        <TableCell className="text-right text-stone-500 tabular-nums text-sm">
+        <TableCell className="text-right text-stone-500 dark:text-zinc-400 tabular-nums text-sm">
           {row.killPts}
         </TableCell>
 
@@ -196,21 +196,21 @@ export function BRResultTeamRow({
             min={0}
             value={row.penalty || ''}
             onChange={(e) =>
-              onUpdateTeam(team.id, 'penalty', parseInt(e.target.value) || 0)
+              onUpdateTeam(team.id, 'penalty', e.target.value === '' ? 0 : parseInt(e.target.value))
             }
-            className="mx-auto w-14 text-center bg-white border-stone-300 text-red-500 h-7 text-sm focus:border-porjar-red"
+            className="mx-auto w-14 text-center bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-red-500 h-7 text-sm focus:border-esi-red"
           />
         </TableCell>
 
         {/* Total */}
-        <TableCell className="text-right font-bold text-porjar-red tabular-nums">
+        <TableCell className="text-right font-bold text-esi-red tabular-nums">
           {row.total}
         </TableCell>
       </TableRow>
 
       {/* Expanded: per-player input */}
       {isExpanded && teamInput?.players.length > 0 && (
-        <TableRow className="border-stone-100">
+        <TableRow className="border-stone-100 dark:border-zinc-700">
           <TableCell colSpan={wwcdBonus > 0 ? 11 : 10} className="p-0">
             <BRResultPlayerDetail
               teamId={team.id}

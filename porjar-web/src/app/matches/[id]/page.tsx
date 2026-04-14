@@ -39,10 +39,24 @@ export default function MatchDetailPage() {
 
   const handleWSMessage = useCallback(
     (msg: WSMessage) => {
-      const update = msg.data as BracketMatch
-      if (update.id === params.id) {
-        setMatch(update)
-      }
+      const data = msg.data as Record<string, unknown> | undefined
+      const matchId = data?.match_id as string | undefined
+      if (matchId !== params.id) return
+
+      setMatch((prev) => {
+        if (!prev) return prev
+        if (msg.type === 'score_update') {
+          return {
+            ...prev,
+            score_a: (data?.score_a as number) ?? prev.score_a,
+            score_b: (data?.score_b as number) ?? prev.score_b,
+          }
+        }
+        if (msg.type === 'match_status') {
+          return { ...prev, status: (data?.status as BracketMatch['status']) ?? prev.status }
+        }
+        return prev
+      })
     },
     [params.id]
   )
@@ -51,15 +65,14 @@ export default function MatchDetailPage() {
     channels: [`match:${params.id}`],
     onMessage: handleWSMessage,
     messageTypes: ['score_update', 'match_status'],
-    autoConnect: match?.status === 'live',
   })
 
   if (loading) {
     return (
       <PublicLayout>
         <div className="space-y-4">
-          <Skeleton className="h-10 w-64 bg-stone-100" />
-          <Skeleton className="h-64 w-full bg-stone-100" />
+          <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
+          <Skeleton className="h-64 w-full bg-stone-100 dark:bg-zinc-800" />
         </div>
       </PublicLayout>
     )
@@ -68,7 +81,7 @@ export default function MatchDetailPage() {
   if (!match) {
     return (
       <PublicLayout>
-        <div className="py-16 text-center text-stone-500">Pertandingan tidak ditemukan.</div>
+        <div className="py-16 text-center text-stone-500 dark:text-zinc-400">Pertandingan tidak ditemukan.</div>
       </PublicLayout>
     )
   }
@@ -101,17 +114,17 @@ export default function MatchDetailPage() {
           {/* Main score card */}
           <div
             className={cn(
-              'anim-hero rounded-xl border bg-white p-6 shadow-sm',
-              isLive ? 'border-red-300 shadow-[0_0_25px_rgba(196,30,42,0.08)]' : 'border-stone-200'
+              'anim-hero rounded-xl border bg-white dark:bg-zinc-900 p-6 shadow-sm',
+              isLive ? 'border-red-300 shadow-[0_0_25px_rgba(196,30,42,0.08)]' : 'border-stone-200 dark:border-zinc-700'
             )}
           >
             {/* Red top accent */}
-            {isLive && <div className="absolute inset-x-0 top-0 h-1 bg-porjar-red rounded-t-xl" />}
+            {isLive && <div className="absolute inset-x-0 top-0 h-1 bg-esi-red rounded-t-xl" />}
 
             {/* Status row */}
             <div className="mb-6 flex items-center justify-center gap-3">
               <StatusBadge status={match.status} />
-              <span className="text-xs text-stone-400">
+              <span className="text-xs text-stone-400 dark:text-zinc-500">
                 BO{match.best_of} &middot; Round {match.round}
               </span>
             </div>
@@ -120,10 +133,10 @@ export default function MatchDetailPage() {
             <div className="flex items-center justify-center gap-8">
               {/* Team A */}
               <div className="flex flex-col items-center gap-2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-50 border border-stone-200">
-                  <Trophy size={28} className="text-stone-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-50 dark:bg-zinc-800/50 border border-stone-200 dark:border-zinc-700">
+                  <Trophy size={28} className="text-stone-400 dark:text-zinc-500" />
                 </div>
-                <span className="text-lg font-bold text-stone-900">
+                <span className="text-lg font-bold text-stone-900 dark:text-zinc-100">
                   {match.team_a?.name ?? 'TBD'}
                 </span>
               </div>
@@ -133,16 +146,16 @@ export default function MatchDetailPage() {
                 <span
                   className={cn(
                     'text-4xl font-black tabular-nums',
-                    match.score_a > match.score_b ? 'text-porjar-red' : 'text-stone-400'
+                    match.score_a > match.score_b ? 'text-esi-red' : 'text-stone-400 dark:text-zinc-500'
                   )}
                 >
                   {match.score_a}
                 </span>
-                <span className="text-lg font-bold text-stone-300">:</span>
+                <span className="text-lg font-bold text-stone-300 dark:text-zinc-600">:</span>
                 <span
                   className={cn(
                     'text-4xl font-black tabular-nums',
-                    match.score_b > match.score_a ? 'text-porjar-red' : 'text-stone-400'
+                    match.score_b > match.score_a ? 'text-esi-red' : 'text-stone-400 dark:text-zinc-500'
                   )}
                 >
                   {match.score_b}
@@ -151,17 +164,17 @@ export default function MatchDetailPage() {
 
               {/* Team B */}
               <div className="flex flex-col items-center gap-2">
-                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-50 border border-stone-200">
-                  <Trophy size={28} className="text-stone-400" />
+                <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-stone-50 dark:bg-zinc-800/50 border border-stone-200 dark:border-zinc-700">
+                  <Trophy size={28} className="text-stone-400 dark:text-zinc-500" />
                 </div>
-                <span className="text-lg font-bold text-stone-900">
+                <span className="text-lg font-bold text-stone-900 dark:text-zinc-100">
                   {match.team_b?.name ?? 'TBD'}
                 </span>
               </div>
             </div>
 
             {/* Meta info */}
-            <div className="mt-6 flex items-center justify-center gap-6 text-xs text-stone-500">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-6 text-xs text-stone-500 dark:text-zinc-400">
               {match.scheduled_at && (
                 <div className="flex items-center gap-1">
                   <Clock size={12} />
@@ -183,7 +196,7 @@ export default function MatchDetailPage() {
                   href={sanitizeUrl(match.stream_url)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-porjar-red hover:text-porjar-red-dark underline"
+                  className="text-esi-red hover:text-esi-red-dark underline"
                 >
                   Tonton Live
                 </a>
@@ -194,16 +207,16 @@ export default function MatchDetailPage() {
           {/* Game-by-game breakdown */}
           {match.games && match.games.length > 0 && (
             <div className="anim-section mt-6 space-y-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-stone-500 dark:text-zinc-400">
                 Detail Per Game
               </h2>
               <div className="space-y-2">
                 {match.games.map((game) => (
                   <div
                     key={game.game_number}
-                    className="anim-list-item flex items-center gap-4 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm"
+                    className="anim-list-item flex items-center gap-4 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 shadow-sm"
                   >
-                    <span className="w-20 text-xs font-semibold uppercase tracking-wider text-stone-400">
+                    <span className="w-20 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
                       Game {game.game_number}
                     </span>
 
@@ -211,23 +224,23 @@ export default function MatchDetailPage() {
                       <span
                         className={cn(
                           'text-sm font-bold tabular-nums',
-                          game.score_a > game.score_b ? 'text-green-600' : 'text-stone-400'
+                          game.score_a > game.score_b ? 'text-green-600' : 'text-stone-400 dark:text-zinc-500'
                         )}
                       >
                         {game.score_a}
                       </span>
-                      <span className="text-[10px] text-stone-300">-</span>
+                      <span className="text-[10px] text-stone-300 dark:text-zinc-600">-</span>
                       <span
                         className={cn(
                           'text-sm font-bold tabular-nums',
-                          game.score_b > game.score_a ? 'text-green-600' : 'text-stone-400'
+                          game.score_b > game.score_a ? 'text-green-600' : 'text-stone-400 dark:text-zinc-500'
                         )}
                       >
                         {game.score_b}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-stone-500">
+                    <div className="flex items-center gap-4 text-xs text-stone-500 dark:text-zinc-400">
                       {game.duration_minutes && (
                         <div className="flex items-center gap-1">
                           <Timer size={12} />
@@ -237,11 +250,11 @@ export default function MatchDetailPage() {
                       {game.mvp && (
                         <div className="flex items-center gap-1">
                           <User size={12} />
-                          <span className="text-porjar-red font-medium">MVP: {game.mvp}</span>
+                          <span className="text-esi-red font-medium">MVP: {game.mvp}</span>
                         </div>
                       )}
                       {game.map_name && (
-                        <span className="text-stone-400">{game.map_name}</span>
+                        <span className="text-stone-400 dark:text-zinc-500">{game.map_name}</span>
                       )}
                     </div>
                   </div>
@@ -267,7 +280,7 @@ export default function MatchDetailPage() {
 
       {/* Galeri Section */}
       <div className="anim-section mt-8">
-        <h2 className="mb-4 text-lg font-bold text-stone-900">Galeri</h2>
+        <h2 className="mb-4 text-lg font-bold text-stone-900 dark:text-zinc-100">Galeri</h2>
         <MediaGallery entityType="match" entityId={params.id} />
       </div>
       </div>

@@ -17,7 +17,6 @@ import {
   Crosshair,
 } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
-import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -39,9 +38,9 @@ const gameIcons: Record<GameSlug, Icon> = {
 }
 
 const roleBadge: Record<string, { label: string; color: string }> = {
-  player: { label: 'Player', color: 'bg-blue-50 text-blue-600 border-blue-200' },
-  admin: { label: 'Admin', color: 'bg-amber-50 text-amber-600 border-amber-200' },
-  superadmin: { label: 'Super Admin', color: 'bg-red-50 text-red-600 border-red-200' },
+  player: { label: 'Player', color: 'bg-blue-50 dark:bg-blue-950 text-blue-600 border-blue-200 dark:border-blue-800' },
+  admin: { label: 'Admin', color: 'bg-amber-50 dark:bg-amber-950 text-amber-600 border-amber-200 dark:border-amber-800' },
+  superadmin: { label: 'Super Admin', color: 'bg-red-50 dark:bg-red-950 text-red-600 border-red-200 dark:border-red-800' },
 }
 
 export default function PlayerProfilePage() {
@@ -70,29 +69,29 @@ export default function PlayerProfilePage() {
 
   if (loading) {
     return (
-      <PublicLayout>
+      <>
         <div className="space-y-6">
-          <Skeleton className="h-48 rounded-xl bg-stone-200" />
+          <Skeleton className="h-48 rounded-xl bg-stone-200 dark:bg-zinc-700" />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-24 rounded-xl bg-stone-200" />
+              <Skeleton key={i} className="h-24 rounded-xl bg-stone-200 dark:bg-zinc-700" />
             ))}
           </div>
-          <Skeleton className="h-60 rounded-xl bg-stone-200" />
+          <Skeleton className="h-60 rounded-xl bg-stone-200 dark:bg-zinc-700" />
         </div>
-      </PublicLayout>
+      </>
     )
   }
 
   if (error || !profile) {
     return (
-      <PublicLayout>
+      <>
         <EmptyState
           icon={WarningCircle}
           title={error ? 'Terjadi Kesalahan' : 'Pemain Tidak Ditemukan'}
           description={error ?? 'Pemain yang kamu cari tidak ada.'}
         />
-      </PublicLayout>
+      </>
     )
   }
 
@@ -103,7 +102,7 @@ export default function PlayerProfilePage() {
   )
 
   return (
-    <PublicLayout>
+    <>
       <PageHeader
         title=""
         breadcrumbs={[
@@ -113,7 +112,7 @@ export default function PlayerProfilePage() {
       />
 
       {/* Hero Section */}
-      <div className="mb-8 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <div className="mb-8 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start sm:gap-6">
           {/* Avatar */}
           <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-stone-100 to-stone-200 ring-2 ring-stone-300">
@@ -124,7 +123,7 @@ export default function PlayerProfilePage() {
                 className="h-24 w-24 rounded-full object-cover"
               />
             ) : (
-              <span className="text-3xl font-bold text-stone-500">
+              <span className="text-3xl font-bold text-stone-500 dark:text-zinc-400">
                 {user.full_name.charAt(0).toUpperCase()}
               </span>
             )}
@@ -132,14 +131,14 @@ export default function PlayerProfilePage() {
 
           <div className="flex-1 text-center sm:text-left">
             <div className="mb-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <h1 className="text-2xl font-bold text-stone-900">{user.full_name}</h1>
+              <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{user.full_name}</h1>
               <span
                 className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${role.color}`}
               >
                 {role.label}
               </span>
             </div>
-            <p className="text-sm text-stone-500">{user.email}</p>
+            <p className="text-sm text-stone-500 dark:text-zinc-400">{user.email}</p>
           </div>
         </div>
       </div>
@@ -174,8 +173,8 @@ export default function PlayerProfilePage() {
 
       {/* Per-Game Stats Tabs */}
       {profile.game_stats && profile.game_stats.length > 0 && (
-        <div className="mb-8 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-900">
+        <div className="mb-8 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+          <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-900 dark:text-zinc-100">
             <ChartBar size={20} weight="bold" />
             Statistik Per Game
           </h2>
@@ -193,8 +192,8 @@ export default function PlayerProfilePage() {
                   onClick={() => setActiveGameTab(slug)}
                   className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                     isActive
-                      ? `${config?.bgColor ?? 'bg-stone-100'} ${config?.color ?? 'text-stone-900'} ${config?.borderColor ?? 'border-stone-300'}`
-                      : 'border-stone-200 text-stone-500 hover:border-stone-300 hover:text-stone-700'
+                      ? `${config?.bgColor ?? 'bg-stone-100 dark:bg-zinc-800'} ${config?.color ?? 'text-stone-900 dark:text-zinc-100'} ${config?.borderColor ?? 'border-stone-300'}`
+                      : 'border-stone-200 dark:border-zinc-700 text-stone-500 dark:text-zinc-400 hover:border-stone-300 dark:hover:border-zinc-600 hover:text-stone-700 dark:text-zinc-300'
                   }`}
                 >
                   <GameIcon size={16} weight={isActive ? 'fill' : 'regular'} />
@@ -228,16 +227,16 @@ export default function PlayerProfilePage() {
       )}
 
       {/* Achievement Showcase */}
-      <div className="rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-900">
+      <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
+        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-900 dark:text-zinc-100">
           <Medal size={20} weight="bold" />
           Pencapaian
         </h2>
 
         {!profile.achievements || profile.achievements.length === 0 ? (
           <div className="flex flex-col items-center py-8 text-center">
-            <Medal size={36} weight="thin" className="mb-2 text-stone-300" />
-            <p className="text-sm text-stone-500">Belum ada pencapaian</p>
+            <Medal size={36} weight="thin" className="mb-2 text-stone-300 dark:text-zinc-600" />
+            <p className="text-sm text-stone-500 dark:text-zinc-400">Belum ada pencapaian</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
@@ -252,7 +251,7 @@ export default function PlayerProfilePage() {
           </div>
         )}
       </div>
-    </PublicLayout>
+    </>
   )
 }
 
@@ -268,21 +267,21 @@ function StatCard({
   color: string
 }) {
   return (
-    <div className="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 shadow-sm">
       <div className="mb-2 flex items-center gap-2">
         <IconComp size={18} weight="bold" className={color} />
-        <span className="text-xs font-medium text-stone-500">{label}</span>
+        <span className="text-xs font-medium text-stone-500 dark:text-zinc-400">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-stone-900">{value}</p>
+      <p className="text-2xl font-bold text-stone-900 dark:text-zinc-100">{value}</p>
     </div>
   )
 }
 
 function MiniStat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-porjar-bg px-3 py-2">
-      <p className="text-xs text-stone-400">{label}</p>
-      <p className="text-lg font-semibold text-stone-900">{value}</p>
+    <div className="rounded-lg border border-stone-200 dark:border-zinc-700 bg-esi-bg px-3 py-2">
+      <p className="text-xs text-stone-400 dark:text-zinc-500">{label}</p>
+      <p className="text-lg font-semibold text-stone-900 dark:text-zinc-100">{value}</p>
     </div>
   )
 }

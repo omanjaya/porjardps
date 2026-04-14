@@ -91,39 +91,39 @@ export default function ChangePasswordPage() {
       />
 
       <div className="mx-auto max-w-md">
-        <div className="rounded-xl border border-porjar-border bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-porjar-red/10">
-              <ShieldCheck size={28} weight="duotone" className="text-porjar-red" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-esi-red/10">
+              <ShieldCheck size={28} weight="duotone" className="text-esi-red" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-porjar-text">Keamanan Akun</h2>
-              <p className="text-xs text-porjar-muted">Pastikan password baru kamu kuat dan aman</p>
+              <h2 className="text-base font-bold text-esi-text">Keamanan Akun</h2>
+              <p className="text-xs text-esi-muted">Pastikan password baru kamu kuat dan aman</p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {errors.general && (
-              <div className="rounded-lg border-l-4 border-porjar-red bg-red-50 px-4 py-2.5 text-sm text-porjar-red">
+              <div className="rounded-lg border-l-4 border-esi-red bg-red-50 dark:bg-red-950/30 px-4 py-2.5 text-sm text-esi-red">
                 {errors.general}
               </div>
             )}
 
             {/* Current Password */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-porjar-text">Password Saat Ini</label>
+              <label className="text-sm font-medium text-esi-text">Password Saat Ini</label>
               <div className="relative">
                 <Input
                   type={showCurrent ? 'text' : 'password'}
                   placeholder="Masukkan password saat ini"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="border-porjar-border bg-white pr-10 text-porjar-text placeholder:text-porjar-muted/50 focus:border-porjar-red focus:ring-porjar-red/20"
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCurrent(!showCurrent)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-porjar-muted hover:text-porjar-text"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
                 >
                   {showCurrent ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
@@ -132,25 +132,25 @@ export default function ChangePasswordPage() {
                 <p className="text-xs text-amber-600">Gunakan NISN sebagai password default</p>
               )}
               {errors.currentPassword && (
-                <p className="text-xs text-porjar-red">{errors.currentPassword}</p>
+                <p className="text-xs text-esi-red">{errors.currentPassword}</p>
               )}
             </div>
 
             {/* New Password */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-porjar-text">Password Baru</label>
+              <label className="text-sm font-medium text-esi-text">Password Baru</label>
               <div className="relative">
                 <Input
                   type={showNew ? 'text' : 'password'}
                   placeholder="Minimal 8 karakter"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="border-porjar-border bg-white pr-10 text-porjar-text placeholder:text-porjar-muted/50 focus:border-porjar-red focus:ring-porjar-red/20"
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowNew(!showNew)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-porjar-muted hover:text-porjar-text"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
                 >
                   {showNew ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
@@ -162,34 +162,34 @@ export default function ChangePasswordPage() {
                       <div
                         key={i}
                         className={`h-1 flex-1 rounded-full transition-colors ${
-                          i <= strength.score ? strength.color : 'bg-stone-200'
+                          i <= strength.score ? strength.color : 'bg-stone-200 dark:bg-zinc-700'
                         }`}
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-porjar-muted">Kekuatan: {strength.label}</p>
+                  <p className="text-xs text-esi-muted">Kekuatan: {strength.label}</p>
                 </div>
               )}
               {errors.newPassword && (
-                <p className="text-xs text-porjar-red">{errors.newPassword}</p>
+                <p className="text-xs text-esi-red">{errors.newPassword}</p>
               )}
             </div>
 
             {/* Confirm Password */}
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-porjar-text">Konfirmasi Password Baru</label>
+              <label className="text-sm font-medium text-esi-text">Konfirmasi Password Baru</label>
               <div className="relative">
                 <Input
                   type={showConfirm ? 'text' : 'password'}
                   placeholder="Ulangi password baru"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="border-porjar-border bg-white pr-10 text-porjar-text placeholder:text-porjar-muted/50 focus:border-porjar-red focus:ring-porjar-red/20"
+                  className="border-esi-border bg-white dark:bg-zinc-800 pr-10 text-esi-text placeholder:text-esi-muted/50 focus:border-esi-red focus:ring-esi-red/20"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-porjar-muted hover:text-porjar-text"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-esi-muted hover:text-esi-text"
                 >
                   {showConfirm ? <EyeSlash size={18} /> : <Eye size={18} />}
                 </button>
@@ -200,13 +200,13 @@ export default function ChangePasswordPage() {
                 </p>
               )}
               {errors.confirmPassword && (
-                <p className="text-xs text-porjar-red">{errors.confirmPassword}</p>
+                <p className="text-xs text-esi-red">{errors.confirmPassword}</p>
               )}
             </div>
 
             <Button
               type="submit"
-              className="w-full bg-porjar-red text-white hover:brightness-110"
+              className="w-full bg-esi-red text-white hover:brightness-110"
               disabled={isLoading}
             >
               {isLoading ? (

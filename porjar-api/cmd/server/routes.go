@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,6 +11,7 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/config"
 	"github.com/porjar-denpasar/porjar-api/internal/handler"
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/cache"
 	"github.com/porjar-denpasar/porjar-api/internal/queue"
 	"github.com/porjar-denpasar/porjar-api/internal/repository"
@@ -69,11 +69,29 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Phase 5 repositories — media
 	mediaRepo := repository.NewMediaRepo(db)
 
+	// Referee system repositories
+	penaltyConfigRepo := repository.NewTournamentPenaltyConfigRepo(db)
+	refereeAssignmentRepo := repository.NewRefereeAssignmentRepo(db)
+	matchCardRepo := repository.NewMatchCardRepo(db)
+
 	// Game rules repository
 	gameRulesRepo := repository.NewGameRulesRepo(db)
 
+	// Event repository
+	eventRepo := repository.NewEventRepo(db)
+
+	// Event points repositories
+	eventPointRuleRepo := repository.NewEventPointRuleRepo(db)
+	eventRegistrationRepo := repository.NewEventRegistrationRepo(db)
+	eventTeamPointsRepo := repository.NewEventTeamPointsRepo(db)
+	eventUserPointsRepo := repository.NewEventUserPointsRepo(db)
+
 	// Event settings repository
 	eventSettingsRepo := repository.NewEventSettingsRepo(db)
+
+	// Site settings (global) repository + service
+	siteSettingsRepo := repository.NewSiteSettingsRepo(db)
+	siteSettingsService := service.NewSiteSettingsService(siteSettingsRepo)
 
 	// Prediction repository
 	predictionRepo := repository.NewPredictionRepo(db)
@@ -85,6 +103,18 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Phase 8 repositories — match submissions & coach
 	matchSubmissionRepo := repository.NewMatchSubmissionRepo(db)
 	coachSchoolRepo := repository.NewCoachSchoolRepo(db)
+
+	// Badge repository
+	badgeRepo := repository.NewBadgeRepo(db)
+
+	// Push notification repository
+	pushSubRepo := repository.NewPushSubscriptionRepo(db)
+
+	// Group stage repository
+	groupRepo := repository.NewGroupRepo(db)
+
+	// Stage repository
+	stageRepo := repository.NewStageRepo(db)
 
 	// Phase 7 repositories — webhooks
 	webhookRepo := repository.NewWebhookRepo(db)
@@ -108,11 +138,35 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	teamService.SetInviteRepo(teamInviteRepo)
 	teamService.SetSchoolRepo(schoolRepo)
 	teamService.SetUserRepo(userRepo)
+	teamService.SetRdb(rdb)
+	teamService.SetHub(hub)
+	emailService := service.NewEmailService(service.EmailConfig{
+		Enabled:   cfg.SMTPEnabled,
+		SMTPHost:  cfg.SMTPHost,
+		SMTPPort:  cfg.SMTPPort,
+		Username:  cfg.SMTPUsername,
+		Password:  cfg.SMTPPassword,
+		FromEmail: cfg.SMTPFromAddr,
+		FromName:  cfg.SMTPFromName,
+	})
+	teamService.SetEmailService(emailService)
 	tournamentService := service.NewTournamentService(tournamentRepo, tournamentTeamRepo, teamRepo, teamMemberRepo, gameRepo)
+	tournamentService.SetHub(hub)
+	tournamentService.SetSchoolRepo(schoolRepo)
+
+	// Event points service
+	eventPointsService := service.NewEventPointsService(
+		eventPointRuleRepo, eventTeamPointsRepo, eventUserPointsRepo,
+		eventRegistrationRepo, standingsRepo, tournamentRepo, tournamentTeamRepo,
+		teamMemberRepo, teamRepo, eventRepo,
+	)
+	tournamentService.SetPointDistributor(eventPointsService)
 	schoolService := service.NewSchoolService(schoolRepo)
+	schoolRequestRepo := repository.NewSchoolRequestRepo(db)
+	schoolRequestService := service.NewSchoolRequestService(schoolRequestRepo, schoolRepo)
 
 	// Phase 2 services — bracket & live score
-	bracketService := service.NewBracketService(bracketRepo, matchGameRepo, tournamentRepo, tournamentTeamRepo, teamRepo, standingsRepo, hub)
+	bracketService := service.NewBracketService(bracketRepo, matchGameRepo, tournamentRepo, tournamentTeamRepo, teamRepo, standingsRepo, hub, rdb)
 	bracketService.SetMemberRepo(teamMemberRepo)
 
 	// Phase 2 services — battle royale
@@ -127,14 +181,43 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Phase 2 services — standings
 	standingsService := service.NewStandingsService(standingsRepo, brResultRepo, brLobbyRepo, bracketRepo, brPenaltyRepo)
+	standingsService.SetHub(hub)
 
 	// Phase 3 services — schedule & audit
 	scheduleService := service.NewScheduleService(scheduleRepo)
 	_ = service.NewAuditService(activityLogRepo) // audit service available for injection into handlers as needed
+	// Initialize package-level audit helper for fire-and-forget logging
+	// from services/handlers without threading repo dependencies.
+	audit.Init(activityLogRepo)
 
 	// Phase 4 services — notifications
-	notificationService := service.NewNotificationService(notificationRepo, hub)
+	notificationService := service.NewNotificationService(notificationRepo, userRepo, hub)
 	bracketService.SetNotificationService(notificationService)
+	bracketService.SetGameRepo(gameRepo)
+	bracketService.SetTournamentService(tournamentService)
+
+	// Group stage service
+	groupService := service.NewGroupService(groupRepo, tournamentRepo, tournamentTeamRepo, teamRepo, rdb)
+	groupService.SetBracketRepo(bracketRepo)
+	groupService.SetGameRepo(gameRepo)
+	groupService.SetSubmissionRepo(matchSubmissionRepo)
+	groupService.SetHub(hub)
+
+	// Stage service
+	stageService := service.NewStageService(stageRepo, tournamentRepo, groupService, bracketService, tournamentTeamRepo, teamRepo)
+
+	// Group stage handler
+	groupHandler := handler.NewGroupHandler(groupService)
+
+	// Stage handler
+	stageHandler := handler.NewStageHandler(stageService)
+
+	// Referee service
+	refereeService := service.NewRefereeService(
+		matchCardRepo, refereeAssignmentRepo, penaltyConfigRepo,
+		tournamentRepo, teamRepo, bracketRepo, brLobbyRepo,
+		standingsRepo, brLobbyTeamRepo, groupRepo, hub,
+	)
 
 	// Prediction service
 	predictionService := service.NewPredictionService(predictionRepo, bracketRepo)
@@ -146,12 +229,26 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 		matchSubmissionRepo, schoolRepo, gameRepo, userRepo,
 	)
 
+	// Badge service
+	badgeService := service.NewBadgeService(badgeRepo)
+
+	// Wire badge hooks into auth and team services (fire-and-forget awards)
+	authService.SetBadgeService(badgeService)
+	teamService.SetBadgeService(badgeService)
+
 	// Phase 8 services — match submissions & coach
 	matchSubmissionService := service.NewMatchSubmissionService(
 		matchSubmissionRepo, bracketRepo, brLobbyRepo, brResultRepo, teamRepo,
 		teamMemberRepo, brLobbyTeamRepo, gameRepo, userRepo,
-		bracketService, brService, notificationService, hub,
+		bracketService, brService, notificationService, hub, rdb,
 	)
+	matchSubmissionService.SetTournamentRepo(tournamentRepo)
+	matchSubmissionService.SetGroupRepo(groupRepo)
+	matchSubmissionService.SetGroupService(groupService)
+
+	// Push notification handler (wired before SetPushSender below)
+	pushHandler := handler.NewPushHandler(pushSubRepo, cfg.VAPIDPublicKey, cfg.VAPIDPrivateKey, cfg.VAPIDSubject)
+	matchSubmissionService.SetPushSender(pushHandler)
 	coachService := service.NewCoachService(
 		coachSchoolRepo, teamRepo, schoolRepo, standingsRepo,
 		bracketRepo, brResultRepo, matchSubmissionRepo,
@@ -171,10 +268,12 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	teamHandler := handler.NewTeamHandler(teamService)
 	tournamentHandler := handler.NewTournamentHandler(tournamentService)
 	schoolHandler := handler.NewSchoolHandler(schoolService)
+	schoolRequestHandler := handler.NewSchoolRequestHandler(schoolRequestService)
 
 	// Phase 2 handlers — bracket & battle royale
 	bracketHandler := handler.NewBracketHandler(bracketService, tournamentService, hub)
 	brHandler := handler.NewBRHandler(brService, standingsService)
+	brHandler.SetTournamentRepo(tournamentRepo)
 	lobbyRotationHandler := handler.NewLobbyRotationHandler(lobbyRotationService, brService)
 
 	// standingsService used by brHandler
@@ -184,10 +283,14 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Phase 3 handlers — schedule & admin
 	scheduleHandler := handler.NewScheduleHandler(scheduleService)
-	adminHandler := handler.NewAdminHandler(userRepo, teamRepo, tournamentRepo, scheduleRepo, bracketRepo, activityLogRepo, gameRepo, schoolRepo)
+	adminHandler := handler.NewAdminHandler(userRepo, teamRepo, teamMemberRepo, tournamentRepo, scheduleRepo, bracketRepo, activityLogRepo, gameRepo, schoolRepo, rdb, cfg.JWTSecret)
+	adminExportHandler := handler.NewAdminExportHandler(db)
 
 	// Import handler
-	importHandler := handler.NewImportHandler(schoolRepo, teamRepo, teamMemberRepo, gameRepo, userRepo, rdb)
+	importHandler := handler.NewImportHandler(schoolRepo, teamRepo, teamMemberRepo, gameRepo, userRepo, rdb, cfg.JWTSecret)
+
+	// Challonge import handler
+	challongeHandler := handler.NewChallongeHandler(cfg.ChallongeAPIKey, bracketRepo, tournamentRepo, tournamentTeamRepo, db)
 
 	// Analytics handler
 	analyticsHandler := handler.NewAnalyticsHandler(userRepo, teamRepo, tournamentRepo, scheduleRepo, bracketRepo, gameRepo, schoolRepo, rdb)
@@ -204,22 +307,42 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Phase 6 handlers — player stats & achievements
 	playerHandler := handler.NewPlayerHandler(playerStatsService, playerDashboardService)
 
-	// Phase 8 handlers — match submissions & coach
-	// Attach the submission queue for async processing and start the worker pool.
-	matchSubmissionHandler := handler.NewMatchSubmissionHandler(matchSubmissionService).
-		WithQueue(submissionQueue)
+	// Referee handler
+	refereeHandler := handler.NewRefereeHandler(refereeService, userRepo, teamMemberRepo)
 
-	submissionWorker := queue.NewSubmissionWorker(submissionQueue, matchSubmissionService, cfg.SubmissionWorkers)
-	go submissionWorker.Start(serverCtx)
-	slog.Info("submission worker pool started", "workers", cfg.SubmissionWorkers)
+	// Phase 8 handlers — match submissions & coach
+	// Use synchronous processing — async queue caused silent failures where
+	// players saw "success" but the worker rejected the submission (e.g. wrong
+	// BO score). Synchronous mode returns validation errors directly to the user.
+	matchSubmissionHandler := handler.NewMatchSubmissionHandler(matchSubmissionService)
+	// Queue and workers are still available for future use if needed:
+	_ = submissionQueue
 
 	coachHandler := handler.NewCoachHandler(coachService)
 
 	// Game rules handler
 	gameRulesHandler := handler.NewGameRulesHandler(gameRulesRepo, gameRepo)
 
+	// Event handler
+	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
+
+	// Event points handler
+	eventPointsHandler := handler.NewEventPointsHandler(eventPointsService)
+
 	// Event settings handler
 	eventSettingsHandler := handler.NewEventSettingsHandler(eventSettingsRepo)
+	siteSettingsHandler := handler.NewSiteSettingsHandler(siteSettingsService, appCache)
+
+	// School standings (Juara Umum) handler
+	schoolStandingsHandler := handler.NewSchoolStandingsHandler(db)
+
+	// News handler
+	newsRepo := repository.NewNewsRepository(db)
+	newsService := service.NewNewsService(newsRepo)
+	newsHandler := handler.NewNewsHandler(newsService)
+
+	// Badge handler
+	badgeHandler := handler.NewBadgeHandler(badgeService)
 
 	// CSRF handler
 	csrfHandler := handler.NewCSRFHandler()
@@ -236,13 +359,17 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	adminMw := middleware.RoleMiddleware("admin", "superadmin")
 	superadminMw := middleware.RoleMiddleware("superadmin")
 	coachMw := middleware.RoleMiddleware("coach", "admin", "superadmin")
-	loginRL := middleware.LoginRateLimiter(rdb, cfg.RateLimitLogin)
-	registerRL := middleware.EndpointRateLimiter(rdb, "register_attempts", 20, 10*time.Minute)
-	forgotPasswordRL := middleware.EndpointRateLimiter(rdb, "forgot_password_attempts", 3, 10*time.Minute)
-	uploadRL := middleware.EndpointRateLimiter(rdb, "upload_attempts", 20, time.Minute)
-	bracketRL := middleware.EndpointRateLimiter(rdb, "bracket_attempts", 30, time.Minute)
-	matchSubmitRL := middleware.EndpointRateLimiter(rdb, "match_submit_attempts", 10, 5*time.Minute)
-	publicRL := middleware.EndpointRateLimiter(rdb, "public_api", 60, time.Minute)
+	refereeMw := middleware.RoleMiddleware("referee", "admin", "superadmin")
+	rlOff := cfg.RateLimitDisabled
+	loginRL := middleware.LoginRateLimiter(rdb, cfg.RateLimitLogin, rlOff)
+	registerRL := middleware.EndpointRateLimiter(rdb, "register_attempts", 30, 10*time.Minute, rlOff)
+	forgotPasswordRL := middleware.EndpointRateLimiter(rdb, "forgot_password_attempts", 5, 15*time.Minute, rlOff)
+	uploadRL := middleware.EndpointRateLimiter(rdb, "upload_attempts", 100, time.Minute, rlOff)
+	bracketRL := middleware.EndpointRateLimiter(rdb, "bracket_attempts", 120, time.Minute, rlOff)
+	matchSubmitRL := middleware.EndpointRateLimiter(rdb, "match_submit_attempts", 20, 5*time.Minute, rlOff)
+	publicRL := middleware.EndpointRateLimiter(rdb, "public_api", 200, time.Minute, rlOff)
+	createTeamRL := middleware.EndpointRateLimiter(rdb, "create_team", 20, 10*time.Minute, rlOff)
+	createTournamentRL := middleware.EndpointRateLimiter(rdb, "create_tournament", 10, 10*time.Minute, rlOff)
 
 	// ──────────────────────────────────────────────
 	// Route Registration
@@ -268,25 +395,38 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	api.Get("/games/:slug", gameHandler.GetGameBySlug)
 
 	// Phase 1 — Team, Tournament, School
-	teamHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL)
-	tournamentHandler.RegisterRoutes(api, authMw, adminMw, superadminMw)
-	schoolHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+	teamHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, createTeamRL)
+	tournamentHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, createTournamentRL)
+	schoolHandler.SetCoachService(coachService)
+	schoolHandler.RegisterRoutes(api, authMw, adminMw, publicRL, coachMw)
+	schoolRequestHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Phase 2 — Bracket & Live Score, Battle Royale
 	bracketHandler.RegisterRoutes(api, authMw, adminMw, bracketRL)
 	brHandler.RegisterRoutes(api, authMw, adminMw)
 	lobbyRotationHandler.RegisterRoutes(api, authMw, adminMw)
 
+	// Group Stage
+	groupHandler.RegisterRoutes(api, authMw, adminMw)
+
+	// Multi-stage / Swiss
+	stageHandler.RegisterRoutes(api, authMw, adminMw)
+
 	// Phase 3 — Schedule, Admin Dashboard, Analytics
 	scheduleHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
 	adminHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL)
+	adminExportHandler.RegisterRoutes(api, authMw, adminMw)
 	analyticsHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Bulk import routes
 	importHandler.RegisterRoutes(api, authMw, adminMw)
+	challongeHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Phase 4 — Notifications
 	notificationHandler.RegisterRoutes(api, authMw)
+
+	// Push notifications
+	pushHandler.RegisterRoutes(api, authMw)
 
 	// Phase 5 — Media
 	mediaHandler.RegisterRoutes(api, authMw, adminMw)
@@ -305,12 +445,51 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	matchSubmissionHandler.RegisterRoutes(api, authMw, adminMw, matchSubmitRL)
 	coachHandler.RegisterRoutes(api, authMw, coachMw, adminMw)
 
+	// Events (multi-event)
+	eventHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+
+	// Event Announcements
+	eventAnnouncementRepo := repository.NewEventAnnouncementRepository(db)
+	eventAnnouncementService := service.NewEventAnnouncementService(eventAnnouncementRepo)
+	eventAnnouncementHandler := handler.NewEventAnnouncementHandler(eventAnnouncementService, eventRepo)
+	eventAnnouncementHandler.RegisterRoutes(api, authMw, adminMw)
+
+	// Event Points & Leaderboards
+	eventPointsHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+
 	// Event Settings
 	eventSettingsHandler.RegisterRoutes(api, authMw, adminMw)
+	siteSettingsHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Game Rules CMS
 	gameRulesHandler.RegisterRoutes(api, authMw, adminMw)
 
+	// Referee system
+	refereeHandler.RegisterRoutes(api, authMw, refereeMw, adminMw)
+
+	// School Standings (Juara Umum)
+	schoolStandingsHandler.RegisterRoutes(api, publicRL)
+
+	// News
+	newsHandler.RegisterRoutes(api, authMw, adminMw)
+
+	// Badges
+	badgeHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+
+	// Match check-in (players) — POST /matches/:id/check-in
+	matchCheckinRepo := repository.NewMatchCheckinRepo(db)
+	matchCheckinService := service.NewMatchCheckinService(matchCheckinRepo, bracketRepo, teamMemberRepo)
+	matchCheckinHandler := handler.NewMatchCheckinHandler(matchCheckinService)
+	api.Post("/matches/:id/check-in", authMw, matchCheckinHandler.CheckIn)
+
 	// CSRF — public endpoint, sets token cookie and returns token in body
-	api.Get("/csrf-token", middleware.SetCSRFToken(), csrfHandler.GetToken)
+	api.Get("/csrf-token", middleware.SetCSRFToken(cfg.AppEnv == "production"), csrfHandler.GetToken)
+
+	// Observability — client error reporting + privacy-friendly analytics.
+	// Both endpoints are public but aggressively rate-limited per IP.
+	obsHandler := handler.NewObservabilityHandler()
+	errReportRL := middleware.EndpointRateLimiter(rdb, "err_report", 10, time.Minute, rlOff)
+	pageViewRL := middleware.EndpointRateLimiter(rdb, "pageview", 120, time.Minute, rlOff)
+	api.Post("/errors/report", errReportRL, obsHandler.ReportError)
+	api.Post("/analytics/pageview", pageViewRL, obsHandler.PageView)
 }

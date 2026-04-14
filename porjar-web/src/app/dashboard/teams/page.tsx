@@ -41,7 +41,7 @@ export default function MyTeamsPage() {
         description="Daftar tim yang kamu ikuti"
         actions={
           <Link href="/dashboard/teams/create">
-            <Button className="bg-porjar-red hover:bg-porjar-red-dark text-white">
+            <Button className="bg-esi-red hover:bg-esi-red-dark text-white">
               <Plus size={16} className="mr-1" />
               Buat Tim
             </Button>
@@ -52,7 +52,7 @@ export default function MyTeamsPage() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 rounded-lg bg-stone-200" />
+            <Skeleton key={i} className="h-20 rounded-lg bg-stone-200 dark:bg-zinc-700" />
           ))}
         </div>
       ) : teams.length === 0 ? (
@@ -71,11 +71,11 @@ export default function MyTeamsPage() {
             <Link
               key={team.id}
               href={`/dashboard/teams/${team.id}`}
-              className="block rounded-xl border border-stone-200 bg-white p-3 sm:p-4 shadow-sm transition-colors hover:bg-stone-50"
+              className="block rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-3 sm:p-4 shadow-sm transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800/50"
             >
               <div className="flex items-center gap-3 sm:gap-4">
                 {/* Logo */}
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-100">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-zinc-800">
                   {team.logo_url ? (
                     <img
                       src={mediaUrl(team.logo_url)!}
@@ -83,17 +83,17 @@ export default function MyTeamsPage() {
                       className="h-12 w-12 rounded-xl object-cover"
                     />
                   ) : (
-                    <GameController size={24} className="text-stone-400" />
+                    <GameController size={24} className="text-stone-400 dark:text-zinc-500" />
                   )}
                 </div>
 
                 {/* Info */}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-stone-900">{team.name}</h3>
+                    <h3 className="font-semibold text-stone-900 dark:text-zinc-100">{team.name}</h3>
                     <StatusBadge status={team.status} />
                   </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-400">
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-stone-400 dark:text-zinc-500">
                     <span>{team.game.name}</span>
                     {team.school && <span>{team.school.name}</span>}
                     <div className="flex items-center gap-1">
@@ -105,7 +105,7 @@ export default function MyTeamsPage() {
 
                 {/* Seed */}
                 {team.seed != null && (
-                  <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-bold text-amber-600 border border-amber-200">
+                  <span className="rounded-full bg-amber-50 dark:bg-amber-950/30 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
                     Seed #{team.seed}
                   </span>
                 )}

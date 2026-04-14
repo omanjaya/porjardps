@@ -31,6 +31,9 @@ interface BracketViewProps {
   isAdmin?: boolean
   tournamentName?: string
   gameLogoUrl?: string | null
+  swapMode?: boolean
+  swapSelectedTeamId?: string | null
+  onTeamClick?: (teamId: string, teamName: string, matchId: string) => void
 }
 
 export function BracketView({
@@ -42,6 +45,9 @@ export function BracketView({
   highlightTeamId,
   tournamentName,
   gameLogoUrl,
+  swapMode,
+  swapSelectedTeamId,
+  onTeamClick,
 }: BracketViewProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -68,15 +74,78 @@ export function BracketView({
     [matches, rounds]
   )
 
+  // Find the "final" match — either grand_final position or the single-elimination final.
+  // For SE: the final is the match with no next_match_id that receives feeders via
+  // next_match_id (as opposed to the third-place match which receives via loser_next_match_id).
+  const finalMatch = useMemo(() => {
+    // Try grand_final first (double elimination)
+    const gf = matches.find((m) => m.bracket_position === 'grand_final')
+    if (gf) return gf
+
+    // Single elimination: find terminal matches (no next_match_id)
+    const terminals = matches.filter((m) => !m.next_match_id && m.team_a && m.team_b)
+    if (terminals.length === 0) return null
+    if (terminals.length === 1) return terminals[0]
+
+    // Multiple terminals (final + third-place): the final is fed by winners (next_match_id),
+    // the third-place is fed by losers (loser_next_match_id).
+    // The final has feeder matches whose next_match_id points to it.
+    const feedCountByNext = new Map<string, number>()
+    for (const m of matches) {
+      if (m.next_match_id) feedCountByNext.set(m.next_match_id, (feedCountByNext.get(m.next_match_id) ?? 0) + 1)
+    }
+    const finalByFeeders = terminals.find((t) => (feedCountByNext.get(t.id) ?? 0) > 0)
+    return finalByFeeders ?? terminals.reduce((a, b) => a.round > b.round ? a : b)
+  }, [matches])
+
   // Grand final winner (for winner card)
   const grandFinalWinner = useMemo(() => {
-    const gf = matches.find((m) => m.bracket_position === 'grand_final' && m.winner)
-    return gf?.winner ?? null
-  }, [matches])
+    return finalMatch?.winner ?? null
+  }, [finalMatch])
+
+  // Podium placements (1st, 2nd, 3rd)
+  const podiumPlacements = useMemo(() => {
+    if (!finalMatch || finalMatch.status !== 'completed' || !finalMatch.winner) return null
+
+    const first = finalMatch.winner
+    // 2nd = final loser
+    const second = finalMatch.team_a?.id === finalMatch.winner.id ? finalMatch.team_b : finalMatch.team_a
+
+    // 3rd place
+    let third: typeof first | null = null
+    if (format === 'double_elimination') {
+      const lbMatches = matches.filter((m) => m.bracket_position === 'losers')
+      const lbFinal = lbMatches.sort((a, b) => b.round - a.round)[0]
+      if (lbFinal?.status === 'completed' && lbFinal.winner) {
+        third = lbFinal.team_a?.id === lbFinal.winner.id ? lbFinal.team_b ?? null : lbFinal.team_a ?? null
+      }
+    } else {
+      // Single elimination: check third-place match first
+      const thirdPlaceMatch = matches.find(
+        (m) => !m.next_match_id && m.id !== finalMatch.id && m.status === 'completed' && m.winner
+      )
+      if (thirdPlaceMatch) {
+        // Third-place match winner = 3rd place
+        third = thirdPlaceMatch.winner ?? null
+      } else {
+        // No third-place match: 3rd = first semi-final loser found
+        const finalRound = finalMatch.round
+        const semiFinals = matches.filter((m) => m.round === finalRound - 1 && m.status === 'completed')
+        for (const sf of semiFinals) {
+          if (sf.winner) {
+            const loser = sf.team_a?.id === sf.winner.id ? sf.team_b : sf.team_a
+            if (loser) { third = loser; break }
+          }
+        }
+      }
+    }
+
+    return { first, second: second ?? null, third }
+  }, [matches, format, finalMatch])
 
   // Winner card width: extra column after GF
   const WINNER_CARD_GAP = ROUND_GAP
-  const WINNER_CARD_WIDTH = 200
+  const WINNER_CARD_WIDTH = 340
 
   // Content bounds
   const contentWidth = useMemo(() => {
@@ -85,10 +154,22 @@ export function BracketView({
     return grandFinalWinner ? base + WINNER_CARD_GAP + WINNER_CARD_WIDTH + PADDING_X : base
   }, [positions, grandFinalWinner, WINNER_CARD_GAP, WINNER_CARD_WIDTH])
 
+  // Podium/winner card can extend well below the GF match position
+  // Estimate: podium header (~56px) + card content (~200px) + podium block (64px) = ~320px from top of card
+  // Card starts at y - 40, so bottom ≈ y + 280
+  const WINNER_CARD_HEIGHT = 320
+
   const contentHeight = useMemo(() => {
     if (positions.length === 0) return 0
-    return Math.max(...positions.map((p) => p.y)) + MATCH_HEIGHT + PADDING_Y * 2
-  }, [positions])
+    const matchBottom = Math.max(...positions.map((p) => p.y)) + MATCH_HEIGHT + PADDING_Y * 2
+    if (!grandFinalWinner) return matchBottom
+    // Find GF match y to calculate podium bottom
+    const gfPositions = positions.filter((p) => p.match.bracket_position === 'grand_final')
+    if (gfPositions.length === 0) return matchBottom
+    const gfY = gfPositions[0].y
+    const podiumBottom = gfY - 40 + WINNER_CARD_HEIGHT + PADDING_Y
+    return Math.max(matchBottom, podiumBottom)
+  }, [positions, grandFinalWinner])
 
   const {
     zoom,
@@ -285,8 +366,8 @@ export function BracketView({
     <div
       ref={containerRef}
       className={cn(
-        'relative overflow-hidden bg-porjar-bg select-none',
-        isFullscreen ? 'h-screen' : 'h-[calc(100vh-200px)] min-h-[400px] rounded-xl border border-stone-200',
+        'relative overflow-hidden bg-esi-bg select-none',
+        isFullscreen ? 'h-screen' : 'h-[calc(100vh-200px)] min-h-[400px] rounded-xl border border-stone-200 dark:border-zinc-700',
         isPanning ? 'cursor-grabbing' : 'cursor-grab'
       )}
       onMouseDown={handleMouseDown}
@@ -297,7 +378,7 @@ export function BracketView({
       <BracketBackground />
 
       {/* Round headers (sticky at top) */}
-      <div className="absolute top-0 left-0 right-0 z-20 bg-porjar-bg/80 backdrop-blur-sm border-b border-stone-200/50 py-2">
+      <div className="absolute top-0 left-0 right-0 z-20 bg-esi-bg/80 dark:bg-zinc-900/80 backdrop-blur-sm border-b border-stone-200/50 dark:border-zinc-700/50 py-2">
         <div
           style={{
             transform: `translateX(${panX}px) scale(${zoom})`,
@@ -332,13 +413,17 @@ export function BracketView({
         roundLabels={roundLabels}
         onMatchClick={onMatchClick}
         grandFinalWinner={grandFinalWinner}
+        podiumPlacements={podiumPlacements}
         tournamentName={tournamentName}
         gameLogoUrl={gameLogoUrl}
+        swapMode={swapMode}
+        swapSelectedTeamId={swapSelectedTeamId}
+        onTeamClick={onTeamClick}
       />
 
       {/* Mobile landscape hint — shown briefly at top-center, below round header */}
       <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 sm:hidden pointer-events-none">
-        <div className="rounded-full bg-white/90 border border-stone-200 px-3 py-1 text-[10px] text-stone-400">
+        <div className="rounded-full bg-white/90 dark:bg-zinc-800/90 border border-stone-200 dark:border-zinc-700 px-3 py-1 text-[10px] text-stone-400 dark:text-zinc-500">
           Cubit untuk zoom · seret untuk geser
         </div>
       </div>
@@ -364,8 +449,8 @@ export function BracketView({
             className={cn(
               'flex items-center gap-2 rounded-lg border px-3 py-1.5 text-[11px] font-medium shadow-sm transition-all backdrop-blur-sm',
               showLoserPaths
-                ? 'border-amber-300 bg-amber-50 text-amber-700'
-                : 'border-stone-200 bg-white/95 text-stone-500 hover:text-stone-700'
+                ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400'
+                : 'border-stone-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-800/95 text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:hover:text-zinc-200'
             )}
           >
             <svg width="16" height="8" className="flex-shrink-0">

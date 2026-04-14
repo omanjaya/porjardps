@@ -97,3 +97,31 @@ func (r *brLobbyTeamRepo) RemoveAll(ctx context.Context, lobbyID uuid.UUID) erro
 	}
 	return nil
 }
+
+// SwapTeams atomically moves teamA from lobbyA to lobbyB and teamB from lobbyB to lobbyA.
+func (r *brLobbyTeamRepo) SwapTeams(ctx context.Context, teamAID, lobbyAID, teamBID, lobbyBID uuid.UUID) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("SwapTeams begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx,
+		`UPDATE br_lobby_teams SET lobby_id = $1 WHERE lobby_id = $2 AND team_id = $3`,
+		lobbyBID, lobbyAID, teamAID)
+	if err != nil {
+		return fmt.Errorf("SwapTeams move A→B: %w", err)
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE br_lobby_teams SET lobby_id = $1 WHERE lobby_id = $2 AND team_id = $3`,
+		lobbyAID, lobbyBID, teamBID)
+	if err != nil {
+		return fmt.Errorf("SwapTeams move B→A: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("SwapTeams commit: %w", err)
+	}
+	return nil
+}

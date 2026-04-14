@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Image from 'next/image'
 import {
   Shield,
   Users,
@@ -210,9 +211,9 @@ export default function TeamManagePage() {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <Skeleton className="h-10 w-48 rounded-lg bg-stone-200" />
-          <Skeleton className="h-40 rounded-xl bg-stone-200" />
-          <Skeleton className="h-60 rounded-xl bg-stone-200" />
+          <Skeleton className="h-10 w-48 rounded-lg bg-stone-200 dark:bg-zinc-700" />
+          <Skeleton className="h-40 rounded-xl bg-stone-200 dark:bg-zinc-700" />
+          <Skeleton className="h-60 rounded-xl bg-stone-200 dark:bg-zinc-700" />
         </div>
       </DashboardLayout>
     )
@@ -250,22 +251,22 @@ export default function TeamManagePage() {
       />
 
       {/* Team Info Header */}
-      <div className="mb-6 rounded-xl border border-stone-200 bg-white p-6 shadow-sm">
+      <div className="mb-6 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
           {/* Logo */}
           <div className="relative shrink-0">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100 overflow-hidden">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100 dark:bg-zinc-800 overflow-hidden">
               {team.logo_url ? (
-                <img src={mediaUrl(team.logo_url)!} alt="" className="h-16 w-16 rounded-2xl object-cover" />
+                <Image src={mediaUrl(team.logo_url)!} alt={`${team.name} logo`} width={64} height={64} className="h-16 w-16 rounded-2xl object-cover" unoptimized />
               ) : (
-                <Shield size={32} weight="duotone" className="text-stone-400" />
+                <Shield size={32} weight="duotone" className="text-stone-400 dark:text-zinc-500" />
               )}
             </div>
             {isCaptain && (
               <button
                 onClick={() => logoInputRef.current?.click()}
                 disabled={uploadingLogo}
-                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-porjar-red text-white shadow hover:bg-porjar-red-dark disabled:opacity-50 transition-colors"
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-esi-red text-white shadow hover:bg-esi-red-dark disabled:opacity-50 transition-colors"
                 title="Ubah logo tim"
               >
                 <Camera size={12} />
@@ -281,7 +282,7 @@ export default function TeamManagePage() {
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="max-w-xs border-stone-300 bg-white text-stone-900 focus:border-porjar-red"
+                    className="max-w-xs border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-stone-900 dark:text-zinc-100 focus:border-esi-red"
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveTeamName()}
                     maxLength={50}
                   />
@@ -289,7 +290,7 @@ export default function TeamManagePage() {
                     size="sm"
                     onClick={handleSaveTeamName}
                     disabled={saving || editName.trim().length < 3 || editName.trim().length > 50}
-                    className="bg-porjar-red hover:bg-porjar-red-dark text-white"
+                    className="bg-esi-red hover:bg-esi-red-dark text-white"
                   >
                     Simpan
                   </Button>
@@ -300,7 +301,7 @@ export default function TeamManagePage() {
                       setEditing(false)
                       setEditName(team.name)
                     }}
-                    className="text-stone-500 hover:text-stone-700"
+                    className="text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:hover:text-zinc-200"
                   >
                     Batal
                   </Button>
@@ -314,12 +315,12 @@ export default function TeamManagePage() {
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <h1 className="text-xl font-bold text-stone-900">{team.name}</h1>
+                <h1 className="text-xl font-bold text-stone-900 dark:text-zinc-100">{team.name}</h1>
                 <StatusBadge status={team.status} />
                 {isCaptain && (
                   <button
                     onClick={() => setEditing(true)}
-                    className="rounded-md p-1 text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600"
+                    className="rounded-md p-1 text-stone-400 dark:text-zinc-500 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-600 dark:hover:text-zinc-300"
                   >
                     <PencilSimple size={16} />
                   </button>
@@ -327,9 +328,9 @@ export default function TeamManagePage() {
               </div>
             )}
 
-            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-500">
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-stone-500 dark:text-zinc-400">
               <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${gameConfig?.bgColor ?? 'bg-stone-100'} ${gameConfig?.color ?? 'text-stone-500'} border ${gameConfig?.borderColor ?? 'border-stone-200'}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${gameConfig?.bgColor ?? 'bg-stone-100 dark:bg-zinc-800'} ${gameConfig?.color ?? 'text-stone-500 dark:text-zinc-400'} border ${gameConfig?.borderColor ?? 'border-stone-200 dark:border-zinc-700'}`}
               >
                 <GameIcon size={12} weight="fill" />
                 {team.game.name}
@@ -343,6 +344,30 @@ export default function TeamManagePage() {
           </div>
         </div>
       </div>
+
+      {/* Status callout banner */}
+      {team.status === 'pending' && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border-2 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
+          <WarningCircle size={22} weight="bold" className="text-amber-700 dark:text-amber-300 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-amber-900 dark:text-amber-200">Tim menunggu persetujuan admin</p>
+            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+              Tim kamu akan bisa mengikuti turnamen setelah disetujui. Proses peninjauan biasanya memakan waktu 1x24 jam.
+            </p>
+          </div>
+        </div>
+      )}
+      {team.status === 'rejected' && (
+        <div className="mb-6 flex items-start gap-3 rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-4">
+          <WarningCircle size={22} weight="bold" className="text-red-700 dark:text-red-300 mt-0.5 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-red-900 dark:text-red-200">Tim ditolak</p>
+            <p className="mt-0.5 text-xs text-red-700 dark:text-red-300">
+              Tim ini tidak disetujui. Silakan hubungi admin atau perbaiki data tim lalu ajukan ulang.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Members Section */}
       <TeamMembersSection
@@ -391,7 +416,7 @@ export default function TeamManagePage() {
 
       {/* Danger zone — captain only */}
       {isCaptain && (
-        <div className="mt-6 rounded-xl border border-red-200 bg-red-50/50 p-5">
+        <div className="mt-6 rounded-xl border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/30 p-5">
           <h3 className="mb-1 text-sm font-semibold text-red-700">Zona Berbahaya</h3>
           <p className="mb-3 text-xs text-red-500">
             Menghapus tim bersifat permanen. Semua data anggota dan riwayat tim akan hilang.
@@ -410,31 +435,31 @@ export default function TeamManagePage() {
 
       {/* Delete team confirmation dialog */}
       <Dialog open={deleteConfirm} onOpenChange={(open) => { if (!open) { setDeleteConfirm(false); setDeleteInput('') } }}>
-        <DialogContent className="bg-white border-stone-200">
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700">
           <DialogHeader>
             <DialogTitle className="text-red-700">Hapus Tim</DialogTitle>
-            <DialogDescription className="text-stone-500">
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
               Tindakan ini <strong>tidak dapat dibatalkan</strong>. Semua data anggota, undangan, dan riwayat tim akan dihapus permanen.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
               <strong>{team.member_count} anggota</strong> aktif akan dikeluarkan dari tim ini.
             </div>
             <div>
-              <p className="mb-1.5 text-xs text-stone-600">
-                Ketik <strong className="text-stone-900">{team.name}</strong> untuk mengkonfirmasi:
+              <p className="mb-1.5 text-xs text-stone-600 dark:text-zinc-400">
+                Ketik <strong className="text-stone-900 dark:text-zinc-100">{team.name}</strong> untuk mengkonfirmasi:
               </p>
               <Input
                 value={deleteInput}
                 onChange={(e) => setDeleteInput(e.target.value)}
                 placeholder={team.name}
-                className="border-stone-200 focus:border-red-400"
+                className="border-stone-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 focus:border-red-400"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setDeleteConfirm(false); setDeleteInput('') }} className="border-stone-300">
+            <Button variant="outline" onClick={() => { setDeleteConfirm(false); setDeleteInput('') }} className="border-stone-300 dark:border-zinc-600">
               Batal
             </Button>
             <Button
@@ -450,21 +475,21 @@ export default function TeamManagePage() {
 
       {/* Confirm Register Tournament Dialog */}
       <Dialog open={!!registerConfirm} onOpenChange={(open) => !open && setRegisterConfirm(null)}>
-        <DialogContent className="bg-white border-stone-200 text-stone-900">
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100">
           <DialogHeader>
             <DialogTitle>Konfirmasi Pendaftaran</DialogTitle>
-            <DialogDescription className="text-stone-500">
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
               Daftarkan tim ke turnamen <strong>{registerConfirm?.tournamentName}</strong>? Tindakan ini tidak dapat dibatalkan.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRegisterConfirm(null)} className="border-stone-300">Batal</Button>
+            <Button variant="outline" onClick={() => setRegisterConfirm(null)} className="border-stone-300 dark:border-zinc-600">Batal</Button>
             <Button
               onClick={() => {
                 handleRegisterTournament(registerConfirm!.tournamentId)
                 setRegisterConfirm(null)
               }}
-              className="bg-porjar-red hover:bg-porjar-red-dark text-white"
+              className="bg-esi-red hover:bg-esi-red-dark text-white"
             >
               Ya, Daftarkan
             </Button>

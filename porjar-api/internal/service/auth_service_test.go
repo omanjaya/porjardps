@@ -220,7 +220,7 @@ func TestLogin_Success_ByEmail(t *testing.T) {
 
 	userRepo.On("FindByEmail", ctx, "player@example.com").Return(user, nil)
 
-	accessToken, refreshToken, returnedUser, err := svc.Login(ctx, "player@example.com", "CorrectPass1")
+	accessToken, refreshToken, returnedUser, err := svc.Login(ctx, "player@example.com", "CorrectPass1", "")
 
 	assert.NoError(t, err)
 	assert.NotEmpty(t, accessToken)
@@ -236,7 +236,7 @@ func TestLogin_Error_UserNotFound(t *testing.T) {
 
 	userRepo.On("FindByEmail", ctx, "nonexistent@example.com").Return(nil, errors.New("not found"))
 
-	_, _, _, err := svc.Login(ctx, "nonexistent@example.com", "Password123")
+	_, _, _, err := svc.Login(ctx, "nonexistent@example.com", "Password123", "")
 
 	assert.Error(t, err)
 	assert.Equal(t, apperror.ErrInvalidCredentials, err)
@@ -257,7 +257,7 @@ func TestLogin_Error_WrongPassword(t *testing.T) {
 
 	userRepo.On("FindByEmail", ctx, "player@example.com").Return(user, nil)
 
-	_, _, _, err := svc.Login(ctx, "player@example.com", "WrongPass999")
+	_, _, _, err := svc.Login(ctx, "player@example.com", "WrongPass999", "")
 
 	assert.Error(t, err)
 	assert.Equal(t, apperror.ErrInvalidCredentials, err)
@@ -271,7 +271,7 @@ func TestLogin_ByNISN_UserNotFound(t *testing.T) {
 	// Input without "@" triggers NISN lookup
 	userRepo.On("FindByNISN", ctx, "1234567890").Return(nil, errors.New("not found"))
 
-	_, _, _, err := svc.Login(ctx, "1234567890", "Password123")
+	_, _, _, err := svc.Login(ctx, "1234567890", "Password123", "")
 
 	assert.Error(t, err)
 	assert.Equal(t, apperror.ErrInvalidCredentials, err)

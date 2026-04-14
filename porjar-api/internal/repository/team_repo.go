@@ -23,9 +23,13 @@ func NewTeamRepo(db *pgxpool.Pool) model.TeamRepository {
 func (r *teamRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Team, error) {
 	t := &model.Team{}
 	err := r.db.QueryRow(ctx,
-		`SELECT id, name, school_id, game_id, captain_user_id, logo_url, status, seed, created_at, updated_at
-		 FROM teams WHERE id = $1`, id).
-		Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt)
+		`SELECT t.id, t.name, t.school_id, t.game_id, t.captain_user_id, t.logo_url, t.status, t.seed, t.created_at, t.updated_at,
+		        s.logo_url AS school_logo_url, s.name AS school_name, s.level AS school_level
+		 FROM teams t
+		 LEFT JOIN schools s ON s.id = t.school_id
+		 WHERE t.id = $1`, id).
+		Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt,
+			&t.SchoolLogoURL, &t.SchoolName, &t.SchoolLevel)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -41,7 +45,7 @@ func (r *teamRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.Tea
 	}
 	rows, err := r.db.Query(ctx,
 		`SELECT t.id, t.name, t.school_id, t.game_id, t.captain_user_id, t.logo_url, t.status, t.seed, t.created_at, t.updated_at,
-		        s.logo_url AS school_logo_url, s.name AS school_name
+		        s.logo_url AS school_logo_url, s.name AS school_name, s.level AS school_level
 		 FROM teams t
 		 LEFT JOIN schools s ON s.id = t.school_id
 		 WHERE t.id = ANY($1)`, ids)
@@ -53,7 +57,7 @@ func (r *teamRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.Tea
 	var teams []*model.Team
 	for rows.Next() {
 		t := &model.Team{}
-		if err := rows.Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt, &t.SchoolLogoURL, &t.SchoolName); err != nil {
+		if err := rows.Scan(&t.ID, &t.Name, &t.SchoolID, &t.GameID, &t.CaptainUserID, &t.LogoURL, &t.Status, &t.Seed, &t.CreatedAt, &t.UpdatedAt, &t.SchoolLogoURL, &t.SchoolName, &t.SchoolLevel); err != nil {
 			return nil, fmt.Errorf("FindByIDs scan: %w", err)
 		}
 		teams = append(teams, t)

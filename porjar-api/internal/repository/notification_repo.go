@@ -28,6 +28,30 @@ func (r *notificationRepo) Create(ctx context.Context, n *model.Notification) er
 	return nil
 }
 
+func (r *notificationRepo) BulkCreate(ctx context.Context, notifications []*model.Notification) error {
+	if len(notifications) == 0 {
+		return nil
+	}
+
+	query := `INSERT INTO notifications (id, user_id, type, title, message, data, is_read, created_at) VALUES `
+	args := make([]interface{}, 0, len(notifications)*8)
+	for i, n := range notifications {
+		if i > 0 {
+			query += ", "
+		}
+		base := i * 8
+		query += fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			base+1, base+2, base+3, base+4, base+5, base+6, base+7, base+8)
+		args = append(args, n.ID, n.UserID, n.Type, n.Title, n.Message, n.Data, n.IsRead, n.CreatedAt)
+	}
+
+	_, err := r.db.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("BulkCreate notifications: %w", err)
+	}
+	return nil
+}
+
 func (r *notificationRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Notification, error) {
 	n := &model.Notification{}
 	err := r.db.QueryRow(ctx,

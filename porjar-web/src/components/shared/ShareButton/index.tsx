@@ -12,22 +12,30 @@ import {
 import { ShareNetwork, Link as LinkIcon, WhatsappLogo, XLogo } from '@phosphor-icons/react'
 
 interface ShareButtonProps {
-  url: string
   title: string
-  description?: string
+  text: string
+  url?: string
+  className?: string
 }
 
-export function ShareButton({ url, title, description }: ShareButtonProps) {
+export function ShareButton({ title, text, url, className }: ShareButtonProps) {
   const [open, setOpen] = useState(false)
 
-  const fullUrl = url.startsWith('http') ? url : `${typeof window !== 'undefined' ? window.location.origin : ''}${url}`
-  const text = description ? `${title} - ${description}` : title
+  const fullUrl = url
+    ? url.startsWith('http')
+      ? url
+      : `${typeof window !== 'undefined' ? window.location.origin : ''}${url}`
+    : typeof window !== 'undefined'
+    ? window.location.href
+    : ''
+
+  const shareText = text
 
   async function handleShare() {
     // Try Web Share API first (primarily mobile)
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title, text: description, url: fullUrl })
+        await navigator.share({ title, text: shareText, url: fullUrl || undefined })
         return
       } catch {
         // User cancelled or API not available, fall through to dropdown
@@ -39,7 +47,7 @@ export function ShareButton({ url, title, description }: ShareButtonProps) {
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(fullUrl)
+      await navigator.clipboard.writeText(fullUrl || shareText)
       toast.success('Link berhasil disalin!')
     } catch {
       toast.error('Gagal menyalin link')
@@ -48,13 +56,16 @@ export function ShareButton({ url, title, description }: ShareButtonProps) {
   }
 
   function shareWhatsApp() {
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(`${text}\n${fullUrl}`)}`
+    const waText = fullUrl ? `${shareText}\n${fullUrl}` : shareText
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(waText)}`
     window.open(waUrl, '_blank', 'noopener,noreferrer')
     setOpen(false)
   }
 
   function shareTwitter() {
-    const twUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(fullUrl)}`
+    const twUrl = fullUrl
+      ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(fullUrl)}`
+      : `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`
     window.open(twUrl, '_blank', 'noopener,noreferrer')
     setOpen(false)
   }
@@ -65,12 +76,11 @@ export function ShareButton({ url, title, description }: ShareButtonProps) {
         render={
           <Button
             size="sm"
-            variant="outline"
+            variant="ghost"
             onClick={handleShare}
-            className="border-stone-200 text-stone-700 hover:text-stone-900"
+            className={className ?? 'text-stone-500 dark:text-zinc-400 hover:text-stone-700 dark:hover:text-zinc-300 h-8 w-8 p-0'}
           >
-            <ShareNetwork size={14} className="mr-1" />
-            Bagikan
+            <ShareNetwork size={16} />
           </Button>
         }
       />

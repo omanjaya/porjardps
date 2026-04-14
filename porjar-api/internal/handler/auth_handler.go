@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -12,12 +14,13 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/validator"
 	"github.com/porjar-denpasar/porjar-api/internal/service"
+	"github.com/redis/go-redis/v9"
 )
 
 // AuthServiceInterface defines the methods the auth handler needs from the service layer.
 type AuthServiceInterface interface {
 	Register(ctx context.Context, email, password, fullName, phone string) (*model.User, error)
-	Login(ctx context.Context, email, password string) (string, string, *model.User, error)
+	Login(ctx context.Context, email, password, clientIP string) (string, string, *model.User, error)
 	RefreshToken(ctx context.Context, refreshToken string) (string, string, error)
 	Logout(ctx context.Context, refreshToken string, accessToken string) error
 	GetProfile(ctx context.Context, userID uuid.UUID) (*model.User, error)
@@ -31,8 +34,9 @@ type AuthServiceInterface interface {
 }
 
 type AuthHandler struct {
-	authService AuthServiceInterface
+	authService  AuthServiceInterface
 	secureCookie bool // true in production (HTTPS), false in dev (HTTP)
+	redis        *redis.Client
 }
 
 func NewAuthHandler(authService *service.AuthService) *AuthHandler {
@@ -42,6 +46,11 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // NewAuthHandlerSecure creates an AuthHandler with secure cookie flag for production.
 func NewAuthHandlerSecure(authService *service.AuthService, secure bool) *AuthHandler {
 	return &AuthHandler{authService: authService, secureCookie: secure}
+}
+
+// NewAuthHandlerWithRedis creates an AuthHandler with Redis for in-handler rate limiting.
+func NewAuthHandlerWithRedis(authService *service.AuthService, secure bool, rdb *redis.Client) *AuthHandler {
+	return &AuthHandler{authService: authService, secureCookie: secure, redis: rdb}
 }
 
 // NewAuthHandlerWithInterface creates an AuthHandler with any AuthServiceInterface implementation.
@@ -146,7 +155,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
 
-	req.Email = validator.TrimString(req.Email)
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.FullName = validator.TrimString(req.FullName)
 	req.Phone = validator.TrimString(req.Phone)
 
@@ -189,12 +198,16 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
 
-	req.Email = validator.TrimString(req.Email)
+	// Normalize: trim whitespace and lowercase (only for email addresses; NISN inputs are digits)
+	req.Email = strings.TrimSpace(req.Email)
+	if strings.Contains(req.Email, "@") {
+		req.Email = strings.ToLower(req.Email)
+	}
 
 	errors := make(map[string]string)
 
 	if req.Email == "" {
-		errors["email"] = "Email atau NISN wajib diisi"
+		errors["email"] = "Email atau NIK wajib diisi"
 	}
 	if req.Password == "" {
 		errors["password"] = "Password wajib diisi"
@@ -204,7 +217,7 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		return response.Err(c, apperror.ValidationError(errors))
 	}
 
-	accessToken, refreshToken, user, err := h.authService.Login(c.Context(), req.Email, req.Password)
+	accessToken, refreshToken, user, err := h.authService.Login(c.Context(), req.Email, req.Password, c.IP())
 	if err != nil {
 		return response.HandleError(c, err)
 	}
@@ -333,6 +346,22 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	return response.OK(c, user.ToProfile())
 }
 
+// checkRedisRateLimit increments a Redis counter for the given key and returns true (rate limited)
+// when the count exceeds maxAttempts within the window. If Redis is unavailable it fails open.
+func (h *AuthHandler) checkRedisRateLimit(c *fiber.Ctx, key string, maxAttempts int, window time.Duration) bool {
+	if h.redis == nil {
+		return false
+	}
+	ctx := c.Context()
+	pipe := h.redis.Pipeline()
+	incrCmd := pipe.Incr(ctx, key)
+	pipe.ExpireNX(ctx, key, window)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return false // fail open when Redis is unavailable
+	}
+	return incrCmd.Val() > int64(maxAttempts)
+}
+
 func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 	var req forgotPasswordRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -378,6 +407,14 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 		return response.Err(c, apperror.ValidationError(errors))
 	}
 
+	// Rate limit: 5 attempts per token per 15 minutes
+	if req.Token != "" {
+		rlKey := fmt.Sprintf("reset_pw_attempts:%s", req.Token)
+		if h.checkRedisRateLimit(c, rlKey, 5, 15*time.Minute) {
+			return response.Err(c, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan reset password. Coba lagi nanti.", 429))
+		}
+	}
+
 	if err := h.authService.ResetPassword(c.Context(), req.Token, req.NewPassword); err != nil {
 		return response.HandleError(c, err)
 	}
@@ -389,6 +426,12 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 
 func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
+
+	// Rate limit: 10 attempts per userID per 15 minutes
+	rlKey := fmt.Sprintf("change_pw_attempts:%s", userID.String())
+	if h.checkRedisRateLimit(c, rlKey, 10, 15*time.Minute) {
+		return response.Err(c, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan ganti password. Coba lagi nanti.", 429))
+	}
 
 	var req changePasswordRequest
 	if err := c.BodyParser(&req); err != nil {
