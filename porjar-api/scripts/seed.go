@@ -1,9 +1,12 @@
+// Seed passwords default to dev values but can be overridden via env vars.
+// Set SEED_*_PASSWORD env vars for strong passwords in staging/prod seeding.
 package main
 
 import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,6 +14,16 @@ import (
 
 	"github.com/porjar-denpasar/porjar-api/internal/config"
 )
+
+// seedPasswordOrDefault returns the value of the given env var, or the provided
+// default if the env var is unset or empty. Used so dev seeding works out of the
+// box while staging/prod can inject strong passwords via env.
+func seedPasswordOrDefault(envVar, devDefault string) string {
+	if v := os.Getenv(envVar); v != "" {
+		return v
+	}
+	return devDefault
+}
 
 func main() {
 	cfg, err := config.Load()
@@ -200,14 +213,19 @@ func seedAchievements(ctx context.Context, db *pgxpool.Pool) {
 }
 
 func seedUsers(ctx context.Context, db *pgxpool.Pool) {
+	adminPassword := seedPasswordOrDefault("SEED_ADMIN_PASSWORD", "Admin1234")
+	superadminPassword := seedPasswordOrDefault("SEED_SUPERADMIN_PASSWORD", "Super1234")
+	playerPassword := seedPasswordOrDefault("SEED_PLAYER_PASSWORD", "Player1234")
+	refereePassword := seedPasswordOrDefault("SEED_REFEREE_PASSWORD", "Referee1234")
+
 	users := []struct {
 		email, password, name, role string
 	}{
-		{"admin@porjar.test", "Admin1234", "Admin Porjar", "admin"},
-		{"superadmin@porjar.test", "Super1234", "Super Admin Porjar", "superadmin"},
-		{"player1@porjar.test", "Player1234", "Player Satu", "player"},
-		{"player2@porjar.test", "Player1234", "Player Dua", "player"},
-		{"referee@porjar.test", "Referee1234", "Wasit Porjar", "referee"},
+		{"admin@porjar.test", adminPassword, "Admin Porjar", "admin"},
+		{"superadmin@porjar.test", superadminPassword, "Super Admin Porjar", "superadmin"},
+		{"player1@porjar.test", playerPassword, "Player Satu", "player"},
+		{"player2@porjar.test", playerPassword, "Player Dua", "player"},
+		{"referee@porjar.test", refereePassword, "Wasit Porjar", "referee"},
 	}
 
 	for _, u := range users {

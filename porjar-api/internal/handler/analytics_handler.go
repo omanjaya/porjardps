@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"time"
 
@@ -27,7 +28,21 @@ type AnalyticsHandler struct {
 }
 
 const analyticsCacheTTL = 5 * time.Minute
-const analyticsCacheKey = "analytics:dashboard"
+
+// analyticsCacheKey is namespaced per environment (e.g. "dev:analytics:dashboard",
+// "production:analytics:dashboard") so cache data from one env doesn't leak to
+// another when they happen to share a Redis instance.
+var analyticsCacheKey = cacheKeyWithEnv("analytics:dashboard")
+
+// cacheKeyWithEnv prefixes a Redis key with the current APP_ENV (falling back to
+// "default" when unset). Exported-ish helper so other handlers can stay consistent.
+func cacheKeyWithEnv(key string) string {
+	env := os.Getenv("APP_ENV")
+	if env == "" {
+		env = "default"
+	}
+	return fmt.Sprintf("%s:%s", env, key)
+}
 
 func NewAnalyticsHandler(
 	userRepo model.UserRepository,

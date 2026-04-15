@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
 
@@ -89,6 +90,20 @@ func (s *MatchSubmissionService) VerifySubmission(
 			}
 		}
 	}
+
+	// Fire-and-forget audit log for admin verification action.
+	adminIDCopy := adminID
+	audit.Log(ctx, audit.Entry{
+		UserID:     &adminIDCopy,
+		Action:     "submission_verified",
+		EntityType: "submission",
+		EntityID:   &submissionID,
+		Details: map[string]interface{}{
+			"status":           status,
+			"approved":         approved,
+			"rejection_reason": rejectionReason,
+		},
+	})
 
 	// Broadcast verification event to specific match/lobby room
 	verifyData := map[string]interface{}{

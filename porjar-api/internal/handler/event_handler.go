@@ -142,6 +142,9 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 	if !validator.ValidateStringLength(req.ShortName, 2, 20) {
 		details["short_name"] = "Nama singkat harus 2-20 karakter"
 	}
+	if req.Description != nil && len(*req.Description) > 5000 {
+		details["description"] = "Deskripsi terlalu panjang (maks 5000 karakter)"
+	}
 	if len(details) > 0 {
 		return response.Err(c, apperror.ValidationError(details))
 	}
@@ -207,6 +210,9 @@ func (h *EventHandler) Update(c *fiber.Ctx) error {
 	}
 	if !validator.ValidateStringLength(req.ShortName, 2, 20) {
 		details["short_name"] = "Nama singkat harus 2-20 karakter"
+	}
+	if req.Description != nil && len(*req.Description) > 5000 {
+		details["description"] = "Deskripsi terlalu panjang (maks 5000 karakter)"
 	}
 	if len(details) > 0 {
 		return response.Err(c, apperror.ValidationError(details))

@@ -67,6 +67,8 @@ type createTournamentRequest struct {
 	StartDate         *string `json:"start_date"`
 	EndDate           *string `json:"end_date"`
 	Rules             *string `json:"rules"`
+	PrizePool         *string `json:"prize_pool"`
+	PrizeDescription  *string `json:"prize_description"`
 }
 
 func (h *TournamentHandler) Create(c *fiber.Ctx) error {
@@ -103,16 +105,18 @@ func (h *TournamentHandler) Create(c *fiber.Ctx) error {
 	}
 
 	input := service.CreateTournamentInput{
-		EventID:        eventID,
-		GameID:         gameID,
-		Name:           validator.TrimString(req.Name),
-		Format:         req.Format,
-		Stage:          req.Stage,
-		BestOf:         req.BestOf,
-		MaxTeams:       req.MaxTeams,
-		SchoolLevel:    req.SchoolLevel,
-		DailyStartTime: req.DailyStartTime,
-		Rules:          req.Rules,
+		EventID:          eventID,
+		GameID:           gameID,
+		Name:             validator.TrimString(req.Name),
+		Format:           req.Format,
+		Stage:            req.Stage,
+		BestOf:           req.BestOf,
+		MaxTeams:         req.MaxTeams,
+		SchoolLevel:      req.SchoolLevel,
+		DailyStartTime:   req.DailyStartTime,
+		Rules:            req.Rules,
+		PrizePool:        req.PrizePool,
+		PrizeDescription: req.PrizeDescription,
 	}
 
 	if req.RegistrationStart != nil {
@@ -184,6 +188,8 @@ type updateTournamentRequest struct {
 	StartDate         *string  `json:"start_date"`
 	EndDate           *string  `json:"end_date"`
 	Rules             *string  `json:"rules"`
+	PrizePool         *string  `json:"prize_pool"`
+	PrizeDescription  *string  `json:"prize_description"`
 }
 
 func (h *TournamentHandler) Update(c *fiber.Ctx) error {
@@ -218,19 +224,21 @@ func (h *TournamentHandler) Update(c *fiber.Ctx) error {
 	}
 
 	input := service.UpdateTournamentInput{
-		EventID:         eventIDPtr,
-		Name:            req.Name,
-		Format:          req.Format,
-		Stage:           req.Stage,
-		BestOf:          req.BestOf,
-		MaxTeams:        req.MaxTeams,
-		Status:          req.Status,
-		SchoolLevel:     req.SchoolLevel,
-		DailyStartTime:  req.DailyStartTime,
-		DefaultNumMaps:  req.DefaultNumMaps,
-		DefaultMapNames: req.DefaultMapNames,
-		TiebreakerOrder: req.TiebreakerOrder,
-		Rules:           req.Rules,
+		EventID:          eventIDPtr,
+		Name:             req.Name,
+		Format:           req.Format,
+		Stage:            req.Stage,
+		BestOf:           req.BestOf,
+		MaxTeams:         req.MaxTeams,
+		Status:           req.Status,
+		SchoolLevel:      req.SchoolLevel,
+		DailyStartTime:   req.DailyStartTime,
+		DefaultNumMaps:   req.DefaultNumMaps,
+		DefaultMapNames:  req.DefaultMapNames,
+		TiebreakerOrder:  req.TiebreakerOrder,
+		Rules:            req.Rules,
+		PrizePool:        req.PrizePool,
+		PrizeDescription: req.PrizeDescription,
 	}
 
 	if req.RegistrationStart != nil {

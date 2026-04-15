@@ -1,3 +1,6 @@
+-- Phone numbers below are seed data only; update them via the admin UI at
+-- /admin/site-settings (API: /api/v1/admin/site-settings) rather than editing
+-- this migration. Editing the migration has no effect on existing deployments.
 CREATE TABLE site_settings (
   id INT PRIMARY KEY DEFAULT 1,
   faqs JSONB NOT NULL DEFAULT '[]'::jsonb,

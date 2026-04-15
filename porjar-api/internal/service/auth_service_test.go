@@ -94,6 +94,19 @@ func (m *MockUserRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model
 	return args.Get(0).([]*model.User), args.Error(1)
 }
 
+func (m *MockUserRepo) FindByEmailVerificationToken(ctx context.Context, token string) (*model.User, error) {
+	args := m.Called(ctx, token)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*model.User), args.Error(1)
+}
+
+func (m *MockUserRepo) ConsumeEmailVerificationToken(ctx context.Context, id uuid.UUID) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 // ---- Helper: create AuthService with a real Redis (mini-redis) or nil ----
 
 func newTestAuthService(userRepo model.UserRepository, redisClient *redis.Client) *AuthService {

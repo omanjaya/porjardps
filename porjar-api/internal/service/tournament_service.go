@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/ws"
 )
 
@@ -81,6 +82,8 @@ type CreateTournamentInput struct {
 	StartDate         *time.Time `json:"start_date"`
 	EndDate           *time.Time `json:"end_date"`
 	Rules             *string    `json:"rules"`
+	PrizePool         *string    `json:"prize_pool"`
+	PrizeDescription  *string    `json:"prize_description"`
 }
 
 type UpdateTournamentInput struct {
@@ -101,6 +104,8 @@ type UpdateTournamentInput struct {
 	StartDate         *time.Time `json:"start_date"`
 	EndDate           *time.Time `json:"end_date"`
 	Rules             *string    `json:"rules"`
+	PrizePool         *string    `json:"prize_pool"`
+	PrizeDescription  *string    `json:"prize_description"`
 }
 
 func (s *TournamentService) Create(ctx context.Context, input CreateTournamentInput) (*model.Tournament, error) {
@@ -145,6 +150,8 @@ func (s *TournamentService) Create(ctx context.Context, input CreateTournamentIn
 		StartDate:         input.StartDate,
 		EndDate:           input.EndDate,
 		Rules:             input.Rules,
+		PrizePool:         input.PrizePool,
+		PrizeDescription:  input.PrizeDescription,
 		CreatedAt:         now,
 		UpdatedAt:         now,
 	}
@@ -157,6 +164,18 @@ func (s *TournamentService) Create(ctx context.Context, input CreateTournamentIn
 	if err := s.tournamentRepo.Create(ctx, tournament); err != nil {
 		return nil, apperror.Wrap(err, "create tournament")
 	}
+
+	// Fire-and-forget audit log (never fail the mutation on audit issues).
+	audit.Log(ctx, audit.Entry{
+		Action:     "tournament_created",
+		EntityType: "tournament",
+		EntityID:   &tournament.ID,
+		Details: map[string]interface{}{
+			"name":    tournament.Name,
+			"game_id": tournament.GameID.String(),
+			"format":  tournament.Format,
+		},
+	})
 
 	return tournament, nil
 }
@@ -279,6 +298,12 @@ func (s *TournamentService) Update(ctx context.Context, id uuid.UUID, input Upda
 	}
 	if input.TiebreakerOrder != nil {
 		tournament.TiebreakerOrder = input.TiebreakerOrder
+	}
+	if input.PrizePool != nil {
+		tournament.PrizePool = input.PrizePool
+	}
+	if input.PrizeDescription != nil {
+		tournament.PrizeDescription = input.PrizeDescription
 	}
 
 	// BUG 4: Validate date ordering

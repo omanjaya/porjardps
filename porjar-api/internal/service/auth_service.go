@@ -31,6 +31,7 @@ type AuthService struct {
 	userRepo     model.UserRepository
 	consentRepo  model.ConsentRepository
 	badgeService *BadgeService
+	emailService *EmailService
 	redis        *redis.Client
 	config       AuthConfig
 }
@@ -51,6 +52,13 @@ func (s *AuthService) SetConsentRepo(repo model.ConsentRepository) {
 // SetBadgeService injects the badge service for fire-and-forget badge awards.
 func (s *AuthService) SetBadgeService(bs *BadgeService) {
 	s.badgeService = bs
+}
+
+// SetEmailService injects the email service for verification/reset emails.
+// When unset (or the service reports Enabled=false), registrations are
+// auto-verified so local/test environments without SMTP still work.
+func (s *AuthService) SetEmailService(es *EmailService) {
+	s.emailService = es
 }
 
 func (s *AuthService) Register(ctx context.Context, email, password, fullName, phone string) (*model.User, error) {
@@ -78,6 +86,25 @@ func (s *AuthService) Register(ctx context.Context, email, password, fullName, p
 		user.Phone = &phone
 	}
 
+	// Email verification: if SMTP is configured, generate a 24h token and send
+	// a verification email. Otherwise auto-verify so local/dev flows continue
+	// to work without SMTP.
+	smtpEnabled := s.emailService != nil && s.emailService.Enabled()
+	var verificationToken string
+	if smtpEnabled {
+		tokenBytes := make([]byte, 32)
+		if _, err := rand.Read(tokenBytes); err != nil {
+			return nil, apperror.ErrInternal
+		}
+		verificationToken = hex.EncodeToString(tokenBytes)
+		expiresAt := time.Now().Add(24 * time.Hour)
+		user.EmailVerificationToken = &verificationToken
+		user.EmailVerificationTokenExpiresAt = &expiresAt
+	} else {
+		now := time.Now()
+		user.EmailVerifiedAt = &now
+	}
+
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, apperror.ErrInternal
 	}
@@ -90,12 +117,59 @@ func (s *AuthService) Register(ctx context.Context, email, password, fullName, p
 		Details:    map[string]interface{}{"email": email, "full_name": fullName},
 	})
 
+	// Fire-and-forget: send verification email (best effort)
+	if smtpEnabled && verificationToken != "" {
+		go func(to, name, token string) {
+			// Use a detached background context: the caller's context may already
+			// be cancelled by the time the goroutine runs.
+			if err := s.emailService.SendVerification(context.Background(), to, name, token); err != nil {
+				slog.Warn("failed to send verification email", "email", to, "error", err)
+			}
+		}(user.Email, user.FullName, verificationToken)
+	}
+
 	// Fire-and-forget: award "first-login" badge
 	if s.badgeService != nil {
 		go s.badgeService.AwardIfEligible(ctx, user.ID, "first-login")
 	}
 
 	return user, nil
+}
+
+// VerifyEmail consumes the given verification token, marking the user's email
+// as verified. Returns a 400-style error when the token is unknown or expired.
+func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
+	if token == "" {
+		return apperror.New("VERIFICATION_TOKEN_INVALID", "Token verifikasi tidak valid", 400)
+	}
+
+	user, err := s.userRepo.FindByEmailVerificationToken(ctx, token)
+	if err != nil || user == nil {
+		return apperror.New("VERIFICATION_TOKEN_INVALID", "Link verifikasi tidak valid atau sudah kadaluarsa", 400)
+	}
+
+	// Already verified: treat as a successful no-op so retries from the UI
+	// (double-click, React StrictMode) don't surface as errors.
+	if user.EmailVerifiedAt != nil {
+		return nil
+	}
+
+	if user.EmailVerificationTokenExpiresAt != nil && time.Now().After(*user.EmailVerificationTokenExpiresAt) {
+		return apperror.New("VERIFICATION_TOKEN_INVALID", "Link verifikasi tidak valid atau sudah kadaluarsa", 400)
+	}
+
+	if err := s.userRepo.ConsumeEmailVerificationToken(ctx, user.ID); err != nil {
+		return apperror.ErrInternal
+	}
+
+	audit.Log(ctx, audit.Entry{
+		UserID:     &user.ID,
+		Action:     "email_verified",
+		EntityType: "user",
+		EntityID:   &user.ID,
+	})
+
+	return nil
 }
 
 // RecordConsent persists a 'personal_data' consent record for the given user (UU PDP Pasal 7).

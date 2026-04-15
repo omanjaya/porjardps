@@ -100,7 +100,9 @@ type publicStats struct {
 	CurrentYear          int `json:"current_year"`
 }
 
-const publicStatsCacheKey = "public_stats:v2"
+// publicStatsCacheKey is namespaced per APP_ENV to avoid cross-env Redis cache leakage.
+var publicStatsCacheKey = cacheKeyWithEnv("public_stats:v2")
+
 const publicStatsCacheTTL = 60 * time.Second
 
 func (h *AdminHandler) PublicStats(c *fiber.Ctx) error {

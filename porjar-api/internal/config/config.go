@@ -73,6 +73,9 @@ type Config struct {
 	SMTPFromAddr string `env:"SMTP_FROM_ADDR" envDefault:"noreply@esidenpasar.com"`
 	SMTPFromName string `env:"SMTP_FROM_NAME" envDefault:"ESI Denpasar"`
 
+	// Public web app base URL, used to build links in transactional emails.
+	AppURL string `env:"APP_URL" envDefault:"https://esidenpasar.com"`
+
 	// Push notifications (VAPID)
 	VAPIDPrivateKey string `env:"VAPID_PRIVATE_KEY"`
 	VAPIDPublicKey  string `env:"VAPID_PUBLIC_KEY"`

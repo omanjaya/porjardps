@@ -18,6 +18,7 @@ type EmailService struct {
 	password  string
 	fromEmail string
 	fromName  string
+	appURL    string
 }
 
 type EmailConfig struct {
@@ -28,6 +29,7 @@ type EmailConfig struct {
 	Password  string
 	FromEmail string
 	FromName  string
+	AppURL    string
 }
 
 func NewEmailService(cfg EmailConfig) *EmailService {
@@ -39,7 +41,14 @@ func NewEmailService(cfg EmailConfig) *EmailService {
 		password:  cfg.Password,
 		fromEmail: cfg.FromEmail,
 		fromName:  cfg.FromName,
+		appURL:    cfg.AppURL,
 	}
+}
+
+// Enabled reports whether SMTP delivery is active. When false, callers should
+// treat email delivery as a no-op (e.g. auto-verify on register).
+func (s *EmailService) Enabled() bool {
+	return s.enabled
 }
 
 // SendTeamApproved notifies the captain that their team has been approved.
@@ -67,6 +76,19 @@ func (s *EmailService) SendMatchReminder(ctx context.Context, email, playerName,
 func (s *EmailService) SendPasswordReset(ctx context.Context, email, resetToken string) error {
 	subject := "Reset Password - ESI Denpasar"
 	body := fmt.Sprintf(`<p>Gunakan token berikut untuk mereset password Anda:</p><p><b>%s</b></p>`, resetToken)
+	return s.sendHTML(ctx, email, subject, body)
+}
+
+// SendVerification sends an email verification link to the user.
+// The link points at the web app's /verify-email/{token} page.
+func (s *EmailService) SendVerification(ctx context.Context, email, fullName, token string) error {
+	appURL := s.appURL
+	if appURL == "" {
+		appURL = "https://esidenpasar.com"
+	}
+	url := fmt.Sprintf("%s/verify-email/%s", appURL, token)
+	subject := "Verifikasi Email - ESI Denpasar"
+	body := templateVerifyEmail(fullName, url)
 	return s.sendHTML(ctx, email, subject, body)
 }
 
@@ -136,6 +158,21 @@ func templateTeamRejected(captainName, teamName, reason string) string {
 		<p><b>Alasan:</b> %s</p>
 		<p>Silakan perbaiki data tim dan daftarkan ulang.</p>
 	`, captainName, teamName, reason)
+	return fmt.Sprintf(emailBase, inner)
+}
+
+func templateVerifyEmail(fullName, url string) string {
+	if fullName == "" {
+		fullName = "Peserta"
+	}
+	inner := fmt.Sprintf(`
+		<h2 style="color:#C41E2A">Verifikasi Email Kamu</h2>
+		<p>Halo, <b>%s</b>.</p>
+		<p>Terima kasih sudah mendaftar di ESI Denpasar. Klik tombol di bawah ini untuk memverifikasi alamat email kamu:</p>
+		<p><a href="%s" style="display:inline-block;padding:10px 20px;background:#C41E2A;color:#fff;text-decoration:none;border-radius:6px">Verifikasi Email</a></p>
+		<p>Atau salin link berikut ke browser:<br><code style="word-break:break-all">%s</code></p>
+		<p style="font-size:12px;color:#6b7280">Link ini berlaku 24 jam. Jika kamu tidak melakukan pendaftaran, abaikan email ini.</p>
+	`, fullName, url, url)
 	return fmt.Sprintf(emailBase, inner)
 }
 

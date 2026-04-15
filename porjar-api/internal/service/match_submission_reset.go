@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 )
 
 // DisputeSubmission marks a submission as disputed.
@@ -23,6 +24,16 @@ func (s *MatchSubmissionService) DisputeSubmission(ctx context.Context, submissi
 	if err := s.submissionRepo.UpdateStatus(ctx, submissionID, "disputed", nil, nil, &notes); err != nil {
 		return apperror.Wrap(err, "dispute submission")
 	}
+
+	// Fire-and-forget audit log.
+	audit.Log(ctx, audit.Entry{
+		Action:     "submission_disputed",
+		EntityType: "submission",
+		EntityID:   &submissionID,
+		Details: map[string]interface{}{
+			"reason": reason,
+		},
+	})
 
 	return nil
 }

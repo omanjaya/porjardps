@@ -11,6 +11,7 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/audit"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -269,8 +270,12 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 		return response.HandleError(c, apperror.NotFound("USER"))
 	}
 
+	// Track which fields are being changed for audit logging.
+	changedFields := make(map[string]interface{})
+
 	// Update fields that are provided
-	if req.FullName != nil && *req.FullName != "" {
+	if req.FullName != nil && *req.FullName != "" && *req.FullName != user.FullName {
+		changedFields["full_name"] = map[string]string{"from": user.FullName, "to": *req.FullName}
 		user.FullName = *req.FullName
 	}
 	if req.Email != nil && *req.Email != "" {
@@ -280,19 +285,24 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 			if existing != nil {
 				return response.Err(c, apperror.Conflict("EMAIL_ALREADY_EXISTS", "Email sudah terdaftar"))
 			}
+			changedFields["email"] = map[string]string{"from": user.Email, "to": newEmail}
 			user.Email = newEmail
 		}
 	}
 	if req.Phone != nil {
+		changedFields["phone"] = true
 		user.Phone = req.Phone
 	}
 	if req.Tingkat != nil {
+		changedFields["tingkat"] = true
 		user.Tingkat = req.Tingkat
 	}
 	if req.NISN != nil {
+		changedFields["nisn"] = true
 		user.NISN = req.NISN
 	}
 	if req.NomorPertandingan != nil {
+		changedFields["nomor_pertandingan"] = true
 		// Empty string → clear field (set to nil)
 		if *req.NomorPertandingan == "" {
 			user.NomorPertandingan = nil
@@ -306,6 +316,19 @@ func (h *AdminHandler) UpdateUser(c *fiber.Ctx) error {
 	if err := h.userRepo.Update(c.Context(), user); err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "update user"))
 	}
+
+	// Fire-and-forget audit log of the admin update, including changed fields.
+	adminID := middleware.GetUserID(c)
+	audit.Log(c.Context(), audit.Entry{
+		UserID:     &adminID,
+		Action:     "user_updated",
+		EntityType: "user",
+		EntityID:   &user.ID,
+		Details: map[string]interface{}{
+			"target_user_id": user.ID.String(),
+			"changed_fields": changedFields,
+		},
+	})
 
 	return response.OK(c, user)
 }

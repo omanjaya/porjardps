@@ -24,22 +24,26 @@ func ValidatePhone(phone string) bool {
 }
 
 // ValidatePassword checks password strength:
-// min 8 chars, at least 1 lowercase, 1 number
+// min 8 chars, at least 1 lowercase, 1 uppercase, 1 number
 func ValidatePassword(password string) bool {
 	if len(password) < 8 {
 		return false
 	}
 	hasLower := false
+	hasUpper := false
 	hasNumber := false
 	for _, ch := range password {
 		if unicode.IsLower(ch) {
 			hasLower = true
 		}
+		if unicode.IsUpper(ch) {
+			hasUpper = true
+		}
 		if unicode.IsDigit(ch) {
 			hasNumber = true
 		}
 	}
-	return hasLower && hasNumber
+	return hasLower && hasUpper && hasNumber
 }
 
 // ValidateStringLength checks min/max length after trim

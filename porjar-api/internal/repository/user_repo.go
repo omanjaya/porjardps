@@ -20,22 +20,27 @@ func NewUserRepo(db *pgxpool.Pool) model.UserRepository {
 	return &userRepo{db: db}
 }
 
-const userColumns = `id, email, password_hash, full_name, phone, role, avatar_url, nisn, tingkat, nomor_pertandingan, needs_password_change, created_at, updated_at`
+const userColumns = `id, email, password_hash, full_name, phone, role, avatar_url, nisn, tingkat, nomor_pertandingan, needs_password_change, email_verified_at, email_verification_token, email_verification_token_expires_at, created_at, updated_at`
 
 // userColumnsAliased returns the user columns prefixed with a table alias (e.g. "u.id, u.email, ...").
 func userColumnsAliased(alias string) string {
-	cols := []string{"id", "email", "password_hash", "full_name", "phone", "role", "avatar_url", "nisn", "tingkat", "nomor_pertandingan", "needs_password_change", "created_at", "updated_at"}
+	cols := []string{"id", "email", "password_hash", "full_name", "phone", "role", "avatar_url", "nisn", "tingkat", "nomor_pertandingan", "needs_password_change", "email_verified_at", "email_verification_token", "email_verification_token_expires_at", "created_at", "updated_at"}
 	for i, c := range cols {
 		cols[i] = alias + "." + c
 	}
 	return strings.Join(cols, ", ")
 }
 
+func scanUserRow(dst *model.User, row pgx.Row) error {
+	return row.Scan(&dst.ID, &dst.Email, &dst.PasswordHash, &dst.FullName, &dst.Phone, &dst.Role, &dst.AvatarURL,
+		&dst.NISN, &dst.Tingkat, &dst.NomorPertandingan, &dst.NeedsPasswordChange,
+		&dst.EmailVerifiedAt, &dst.EmailVerificationToken, &dst.EmailVerificationTokenExpiresAt,
+		&dst.CreatedAt, &dst.UpdatedAt)
+}
+
 func scanUser(row pgx.Row) (*model.User, error) {
 	u := &model.User{}
-	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Phone, &u.Role, &u.AvatarURL,
-		&u.NISN, &u.Tingkat, &u.NomorPertandingan, &u.NeedsPasswordChange, &u.CreatedAt, &u.UpdatedAt)
-	if err != nil {
+	if err := scanUserRow(u, row); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
@@ -67,8 +72,7 @@ func (r *userRepo) FindByIDs(ctx context.Context, ids []uuid.UUID) ([]*model.Use
 	var users []*model.User
 	for rows.Next() {
 		u := &model.User{}
-		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Phone, &u.Role, &u.AvatarURL,
-			&u.NISN, &u.Tingkat, &u.NomorPertandingan, &u.NeedsPasswordChange, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := scanUserRow(u, rows); err != nil {
 			return nil, fmt.Errorf("FindByIDs scan: %w", err)
 		}
 		users = append(users, u)
@@ -99,10 +103,12 @@ func (r *userRepo) FindByNISN(ctx context.Context, nisn string) (*model.User, er
 
 func (r *userRepo) Create(ctx context.Context, u *model.User) error {
 	_, err := r.db.Exec(ctx,
-		`INSERT INTO users (id, email, password_hash, full_name, phone, role, avatar_url, nisn, tingkat, nomor_pertandingan, needs_password_change, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		`INSERT INTO users (id, email, password_hash, full_name, phone, role, avatar_url, nisn, tingkat, nomor_pertandingan, needs_password_change, email_verified_at, email_verification_token, email_verification_token_expires_at, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
 		u.ID, u.Email, u.PasswordHash, u.FullName, u.Phone, u.Role, u.AvatarURL,
-		u.NISN, u.Tingkat, u.NomorPertandingan, u.NeedsPasswordChange, u.CreatedAt, u.UpdatedAt)
+		u.NISN, u.Tingkat, u.NomorPertandingan, u.NeedsPasswordChange,
+		u.EmailVerifiedAt, u.EmailVerificationToken, u.EmailVerificationTokenExpiresAt,
+		u.CreatedAt, u.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
 	}
@@ -112,12 +118,38 @@ func (r *userRepo) Create(ctx context.Context, u *model.User) error {
 func (r *userRepo) Update(ctx context.Context, u *model.User) error {
 	_, err := r.db.Exec(ctx,
 		`UPDATE users SET email = $2, full_name = $3, phone = $4, avatar_url = $5, password_hash = $6,
-		 nisn = $7, tingkat = $8, nomor_pertandingan = $9, needs_password_change = $10, updated_at = $11
+		 nisn = $7, tingkat = $8, nomor_pertandingan = $9, needs_password_change = $10,
+		 email_verified_at = $11, email_verification_token = $12, email_verification_token_expires_at = $13,
+		 updated_at = $14
 		 WHERE id = $1`,
 		u.ID, u.Email, u.FullName, u.Phone, u.AvatarURL, u.PasswordHash,
-		u.NISN, u.Tingkat, u.NomorPertandingan, u.NeedsPasswordChange, u.UpdatedAt)
+		u.NISN, u.Tingkat, u.NomorPertandingan, u.NeedsPasswordChange,
+		u.EmailVerifiedAt, u.EmailVerificationToken, u.EmailVerificationTokenExpiresAt,
+		u.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
+	}
+	return nil
+}
+
+func (r *userRepo) FindByEmailVerificationToken(ctx context.Context, token string) (*model.User, error) {
+	u, err := scanUser(r.db.QueryRow(ctx,
+		`SELECT `+userColumns+` FROM users WHERE email_verification_token = $1`, token))
+	if err != nil {
+		return nil, fmt.Errorf("FindByEmailVerificationToken: %w", err)
+	}
+	return u, nil
+}
+
+func (r *userRepo) ConsumeEmailVerificationToken(ctx context.Context, id uuid.UUID) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE users SET email_verified_at = NOW(),
+		 email_verification_token = NULL,
+		 email_verification_token_expires_at = NULL,
+		 updated_at = NOW()
+		 WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("ConsumeEmailVerificationToken: %w", err)
 	}
 	return nil
 }
@@ -207,8 +239,7 @@ func (r *userRepo) List(ctx context.Context, filter model.UserFilter) ([]*model.
 	var users []*model.User
 	for rows.Next() {
 		u := &model.User{}
-		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Phone, &u.Role, &u.AvatarURL,
-			&u.NISN, &u.Tingkat, &u.NomorPertandingan, &u.NeedsPasswordChange, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := scanUserRow(u, rows); err != nil {
 			return nil, 0, fmt.Errorf("List scan: %w", err)
 		}
 		users = append(users, u)
@@ -256,8 +287,7 @@ func (r *userRepo) ListByNISN(ctx context.Context, filter model.UserNISNFilter) 
 	var users []*model.User
 	for rows.Next() {
 		u := &model.User{}
-		if err := rows.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Phone, &u.Role, &u.AvatarURL,
-			&u.NISN, &u.Tingkat, &u.NomorPertandingan, &u.NeedsPasswordChange, &u.CreatedAt, &u.UpdatedAt); err != nil {
+		if err := scanUserRow(u, rows); err != nil {
 			return nil, fmt.Errorf("ListByNISN scan: %w", err)
 		}
 		users = append(users, u)

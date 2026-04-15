@@ -34,6 +34,8 @@ type Tournament struct {
 	ChampionTeamID         *uuid.UUID `json:"champion_team_id,omitempty" db:"champion_team_id"`
 	ChampionTeamName       *string    `json:"champion_team_name,omitempty" db:"champion_team_name"`
 	ChampionTeamLogo       *string    `json:"champion_team_logo,omitempty" db:"champion_team_logo"`
+	PrizePool              *string    `json:"prize_pool,omitempty" db:"prize_pool"`
+	PrizeDescription       *string    `json:"prize_description,omitempty" db:"prize_description"`
 	CreatedAt              time.Time  `json:"created_at"`
 	UpdatedAt              time.Time  `json:"updated_at"`
 

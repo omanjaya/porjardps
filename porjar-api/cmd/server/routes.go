@@ -319,6 +319,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	_ = submissionQueue
 
 	coachHandler := handler.NewCoachHandler(coachService)
+	coachHandler.SetRepositories(userRepo, schoolRepo, coachSchoolRepo)
 
 	// Game rules handler
 	gameRulesHandler := handler.NewGameRulesHandler(gameRulesRepo, gameRepo)

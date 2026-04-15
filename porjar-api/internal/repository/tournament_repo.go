@@ -33,6 +33,7 @@ func (r *tournamentRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Tou
 		        COALESCE(default_num_maps, 1), COALESCE(default_map_names, '{}'),
 		        COALESCE(tiebreaker_order, '{wwcd,placement_points,kills,best_placement}'),
 		        champion_team_id, champion_team_name, champion_team_logo,
+		        prize_pool, prize_description,
 		        created_at, updated_at
 		 FROM tournaments WHERE id = $1`, id).
 		Scan(&t.ID, &t.EventID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
@@ -43,6 +44,7 @@ func (r *tournamentRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Tou
 			&t.DefaultNumMaps, &t.DefaultMapNames,
 			&t.TiebreakerOrder,
 			&t.ChampionTeamID, &t.ChampionTeamName, &t.ChampionTeamLogo,
+			&t.PrizePool, &t.PrizeDescription,
 			&t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -64,13 +66,15 @@ func (r *tournamentRepo) Create(ctx context.Context, t *model.Tournament) error 
 		        kill_point_value, wwcd_bonus, qualification_threshold, max_lobby_teams,
 		        school_level, daily_start_time, default_num_maps, default_map_names, tiebreaker_order,
 		        champion_team_id, champion_team_name, champion_team_logo,
+		        prize_pool, prize_description,
 		        created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::TIME, $21, $22, $23, $24, $25, $26, $27, $28)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::TIME, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
 		t.ID, t.EventID, t.GameID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams, t.Status,
 		t.RegistrationStart, t.RegistrationEnd, t.StartDate, t.EndDate, t.Rules,
 		t.KillPointValue, t.WWCDBonus, t.QualificationThreshold, t.MaxLobbyTeams,
 		t.SchoolLevel, dailyStartTime, t.DefaultNumMaps, t.DefaultMapNames, t.TiebreakerOrder,
 		t.ChampionTeamID, t.ChampionTeamName, t.ChampionTeamLogo,
+		t.PrizePool, t.PrizeDescription,
 		t.CreatedAt, t.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
@@ -90,7 +94,8 @@ func (r *tournamentRepo) Update(ctx context.Context, t *model.Tournament) error 
 		        school_level = $18, daily_start_time = $19::TIME,
 		        default_num_maps = $20, default_map_names = $21, tiebreaker_order = $22,
 		        champion_team_id = $23, champion_team_name = $24, champion_team_logo = $25,
-		        updated_at = $26
+		        prize_pool = $26, prize_description = $27,
+		        updated_at = $28
 		 WHERE id = $1`,
 		t.ID, t.EventID, t.Name, t.Format, t.Stage, t.BestOf, t.MaxTeams,
 		t.Status, t.RegistrationStart, t.RegistrationEnd, t.StartDate, t.EndDate, t.Rules,
@@ -98,6 +103,7 @@ func (r *tournamentRepo) Update(ctx context.Context, t *model.Tournament) error 
 		t.SchoolLevel, dailyStartTime,
 		t.DefaultNumMaps, t.DefaultMapNames, t.TiebreakerOrder,
 		t.ChampionTeamID, t.ChampionTeamName, t.ChampionTeamLogo,
+		t.PrizePool, t.PrizeDescription,
 		t.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
@@ -173,6 +179,7 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 		        COALESCE(default_num_maps, 1), COALESCE(default_map_names, '{}'),
 		        COALESCE(tiebreaker_order, '{wwcd,placement_points,kills,best_placement}'),
 		        champion_team_id, champion_team_name, champion_team_logo,
+		        prize_pool, prize_description,
 		        created_at, updated_at,
 		        COUNT(*) OVER() AS total_count
 		 FROM tournaments%s
@@ -198,6 +205,7 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 			&t.DefaultNumMaps, &t.DefaultMapNames,
 			&t.TiebreakerOrder,
 			&t.ChampionTeamID, &t.ChampionTeamName, &t.ChampionTeamLogo,
+			&t.PrizePool, &t.PrizeDescription,
 			&t.CreatedAt, &t.UpdatedAt, &total); err != nil {
 			return nil, 0, fmt.Errorf("List scan: %w", err)
 		}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -86,8 +87,28 @@ func main() {
 	app.Use(middleware.Logger())
 	app.Use(middleware.SecurityHeaders())
 	app.Use(middleware.CORS(cfg.CORSAllowedOrigins))
+
+	// Panic recovery — placed after CORS/logging so panics still get observability,
+	// but before auth/route handlers so handler panics cannot crash the process.
+	app.Use(recover.New(recover.Config{
+		EnableStackTrace: true,
+		StackTraceHandler: func(c *fiber.Ctx, e interface{}) {
+			slog.Error("panic recovered",
+				"error", e,
+				"path", c.Path(),
+				"method", c.Method(),
+			)
+		},
+	}))
+
 	app.Use(middleware.RateLimiter(rdb, cfg.RateLimitGlobal, cfg.RateLimitDisabled))
 	app.Use(middleware.PrometheusMetrics())
+
+	// Ensure uploads dir exists with restrictive perms (owner-only).
+	// Best-effort — failure is logged but non-fatal (may already exist with different perms).
+	if err := os.MkdirAll(cfg.UploadDir, 0o700); err != nil {
+		slog.Warn("failed to ensure uploads dir", "dir", cfg.UploadDir, "error", err)
+	}
 
 	// Health check
 	app.Get("/health", func(c *fiber.Ctx) error {
