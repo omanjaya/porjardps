@@ -1,5 +1,6 @@
 'use client'
 
+import DOMPurify from 'dompurify'
 import { BookOpen } from '@phosphor-icons/react'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
 
@@ -30,7 +31,7 @@ export function RulesTabContent({ rulesLoading, rulesContent }: Props) {
             prose-strong:text-stone-800 dark:prose-strong:text-zinc-200
             prose-table:border-collapse prose-th:border prose-th:border-stone-200 dark:prose-th:border-zinc-700 prose-th:bg-stone-50 dark:prose-th:bg-zinc-800/50 prose-th:px-3 prose-th:py-2
             prose-td:border prose-td:border-stone-200 dark:prose-td:border-zinc-700 prose-td:px-3 prose-td:py-2"
-          dangerouslySetInnerHTML={{ __html: rulesContent }}
+          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(rulesContent) }}
         />
       </div>
     )

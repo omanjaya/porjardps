@@ -9,6 +9,7 @@ export function useSchoolRequests(reload: () => Promise<void>) {
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
+  const [submittingReject, setSubmittingReject] = useState(false)
 
   async function approveRequest(requestId: string) {
     setApprovingId(requestId)
@@ -34,6 +35,7 @@ export function useSchoolRequests(reload: () => Promise<void>) {
       toast.error('Alasan penolakan wajib diisi')
       return
     }
+    setSubmittingReject(true)
     try {
       await api.post(`/admin/school-requests/${rejectingId}/reject`, { reason: rejectReason.trim() })
       toast.success('Permintaan ditolak')
@@ -43,6 +45,8 @@ export function useSchoolRequests(reload: () => Promise<void>) {
       await reload()
     } catch {
       toast.error('Gagal menolak permintaan')
+    } finally {
+      setSubmittingReject(false)
     }
   }
 
@@ -53,6 +57,7 @@ export function useSchoolRequests(reload: () => Promise<void>) {
     setRejectReason,
     rejectDialogOpen,
     setRejectDialogOpen,
+    submittingReject,
     approveRequest,
     openReject,
     rejectRequest,

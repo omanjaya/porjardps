@@ -39,7 +39,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash, Archive } from '@phosphor-icons/react'
+import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash, Archive, Rows, UsersThree, UploadSimple, X, Image as ImageIcon } from '@phosphor-icons/react'
+import { resolveMediaUrl } from '@/lib/api'
+import { useLogoUpload } from '@/app/admin/schools/hooks/useLogoUpload'
 import type { Event } from '@/types'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
@@ -56,6 +58,7 @@ interface EventFormData {
   secondary_color: string
   logo_url: string
   banner_url: string
+  poster_url: string
   // Jadwal
   start_date: string
   end_date: string
@@ -90,6 +93,7 @@ const emptyForm: EventFormData = {
   secondary_color: '#1f2937',
   logo_url: '',
   banner_url: '',
+  poster_url: '',
   start_date: '',
   end_date: '',
   registration_start: '',
@@ -182,6 +186,11 @@ export default function AdminEventsPage() {
   // Archive state
   const [archivingId, setArchivingId] = useState<string | null>(null)
 
+  // Image upload hooks for Tampilan section
+  const logoUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, logo_url: url })) })
+  const bannerUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, banner_url: url })) })
+  const posterUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, poster_url: url })) })
+
   const loadEvents = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
     try {
@@ -234,6 +243,7 @@ export default function AdminEventsPage() {
       secondary_color: event.secondary_color || '#1f2937',
       logo_url: event.logo_url || '',
       banner_url: event.banner_url || '',
+      poster_url: event.poster_url || '',
       start_date: toDateTimeLocal(event.start_date),
       end_date: toDateTimeLocal(event.end_date),
       registration_start: toDateTimeLocal(event.registration_start),
@@ -309,6 +319,7 @@ export default function AdminEventsPage() {
         secondary_color: form.secondary_color || null,
         logo_url: form.logo_url || null,
         banner_url: form.banner_url || null,
+        poster_url: form.poster_url || null,
         start_date: fromDateTimeLocal(form.start_date),
         end_date: fromDateTimeLocal(form.end_date),
         registration_start: fromDateTimeLocal(form.registration_start),
@@ -404,6 +415,7 @@ export default function AdminEventsPage() {
         secondary_color: event.secondary_color || null,
         logo_url: event.logo_url || null,
         banner_url: event.banner_url || null,
+        poster_url: event.poster_url || null,
         start_date: event.start_date,
         end_date: event.end_date,
         registration_start: event.registration_start,
@@ -459,7 +471,7 @@ export default function AdminEventsPage() {
         <EmptyState
           icon={Trophy}
           title="Belum ada event"
-          description="Buat event pertama untuk memulai"
+          description="Buat event pertama untuk memulai pengelolaan turnamen esport."
         />
       ) : (
         <div className={`rounded-xl border border-esi-border bg-white dark:bg-zinc-900 overflow-hidden ${selectedIds.length > 0 ? 'mb-32 sm:mb-24' : ''}`}>
@@ -530,6 +542,16 @@ export default function AdminEventsPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <Link href={`/admin/events/${event.id}/sections`}>
+                        <Button variant="ghost" size="sm" title="Sections">
+                          <Rows size={16} />
+                        </Button>
+                      </Link>
+                      <Link href={`/admin/events/${event.id}/admins`}>
+                        <Button variant="ghost" size="sm" title="Admin Event">
+                          <UsersThree size={16} />
+                        </Button>
+                      </Link>
                       <Link href={`/admin/events/${event.id}/point-rules`}>
                         <Button variant="ghost" size="sm" title="Point Rules">
                           <Medal size={16} />
@@ -704,14 +726,111 @@ export default function AdminEventsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="logo_url">URL Logo</Label>
-                  <Input id="logo_url" name="logo_url" type="url" value={form.logo_url} onChange={handleChange} placeholder="https://..." />
+              {/* Logo URL */}
+              <div>
+                <Label htmlFor="logo_url">Logo Event</Label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); logoUpload.setDragOver(true) }}
+                  onDragLeave={() => logoUpload.setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); logoUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) logoUpload.upload(f) }}
+                  onClick={() => logoUpload.inputRef.current?.click()}
+                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${logoUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
+                >
+                  {logoUpload.uploading ? (
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
+                  ) : form.logo_url ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <img src={resolveMediaUrl(form.logo_url) ?? form.logo_url} alt="Logo preview" className="h-14 w-14 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
+                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
+                      <UploadSimple size={22} />
+                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload logo</p>
+                    </div>
+                  )}
+                  <input ref={logoUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) logoUpload.upload(f); e.target.value = '' }} />
                 </div>
-                <div>
-                  <Label htmlFor="banner_url">URL Banner</Label>
-                  <Input id="banner_url" name="banner_url" type="url" value={form.banner_url} onChange={handleChange} placeholder="https://..." />
+                <div className="flex items-center gap-2">
+                  <Input id="logo_url" name="logo_url" type="url" value={form.logo_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
+                  {form.logo_url ? (
+                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, logo_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Banner URL */}
+              <div>
+                <Label htmlFor="banner_url">Banner Event</Label>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); bannerUpload.setDragOver(true) }}
+                  onDragLeave={() => bannerUpload.setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); bannerUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) bannerUpload.upload(f) }}
+                  onClick={() => bannerUpload.inputRef.current?.click()}
+                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${bannerUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
+                >
+                  {bannerUpload.uploading ? (
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
+                  ) : form.banner_url ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <img src={resolveMediaUrl(form.banner_url) ?? form.banner_url} alt="Banner preview" className="h-12 w-32 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
+                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
+                      <UploadSimple size={22} />
+                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload banner</p>
+                      <p className="text-[10px]">Rasio 16:9 disarankan</p>
+                    </div>
+                  )}
+                  <input ref={bannerUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) bannerUpload.upload(f); e.target.value = '' }} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input id="banner_url" name="banner_url" type="url" value={form.banner_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
+                  {form.banner_url ? (
+                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, banner_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
+                  )}
+                </div>
+              </div>
+
+              {/* Poster URL */}
+              <div>
+                <Label htmlFor="poster_url">Poster Event</Label>
+                <p className="text-xs text-stone-500 dark:text-zinc-400 mb-2">Gambar vertikal untuk promosi (rasio 2:3 atau 9:16)</p>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); posterUpload.setDragOver(true) }}
+                  onDragLeave={() => posterUpload.setDragOver(false)}
+                  onDrop={(e) => { e.preventDefault(); posterUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) posterUpload.upload(f) }}
+                  onClick={() => posterUpload.inputRef.current?.click()}
+                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${posterUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
+                >
+                  {posterUpload.uploading ? (
+                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
+                  ) : form.poster_url ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <img src={resolveMediaUrl(form.poster_url) ?? form.poster_url} alt="Poster preview" className="h-24 w-16 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
+                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
+                      <UploadSimple size={22} />
+                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload poster</p>
+                      <p className="text-[10px]">Rasio 2:3 atau 9:16 (format vertikal)</p>
+                    </div>
+                  )}
+                  <input ref={posterUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) posterUpload.upload(f); e.target.value = '' }} />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input id="poster_url" name="poster_url" type="url" value={form.poster_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
+                  {form.poster_url ? (
+                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, poster_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
+                  )}
                 </div>
               </div>
             </Section>

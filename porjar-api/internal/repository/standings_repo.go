@@ -177,7 +177,8 @@ func (r *standingsRepo) ListByTournamentAndGroup(ctx context.Context, tournament
 		        rounds_won, rounds_lost, total_points, total_kills, total_placement_points,
 		        best_placement, avg_placement, rank_position, is_eliminated, penalty_points, wwcd_count
 		 FROM standings WHERE tournament_id = $1 AND group_name = $2
-		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, wwcd_count DESC, total_placement_points DESC, total_kills DESC`, tournamentID, groupName)
+		 ORDER BY rank_position ASC NULLS LAST, total_points DESC, wwcd_count DESC, total_placement_points DESC, total_kills DESC
+		 LIMIT 500`, tournamentID, groupName)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournamentAndGroup: %w", err)
 	}
@@ -306,6 +307,21 @@ func (r *standingsRepo) DeleteByTournament(ctx context.Context, tournamentID uui
 	_, err := r.db.Exec(ctx, `DELETE FROM standings WHERE tournament_id = $1`, tournamentID)
 	if err != nil {
 		return fmt.Errorf("DeleteByTournament: %w", err)
+	}
+	return nil
+}
+
+// BulkMarkEliminated sets is_eliminated = true for all given teamIDs in a single UPDATE.
+func (r *standingsRepo) BulkMarkEliminated(ctx context.Context, tournamentID uuid.UUID, teamIDs []uuid.UUID) error {
+	if len(teamIDs) == 0 {
+		return nil
+	}
+	_, err := r.db.Exec(ctx,
+		`UPDATE standings SET is_eliminated = true
+		 WHERE tournament_id = $1 AND team_id = ANY($2)`,
+		tournamentID, teamIDs)
+	if err != nil {
+		return fmt.Errorf("BulkMarkEliminated: %w", err)
 	}
 	return nil
 }

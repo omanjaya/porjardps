@@ -150,6 +150,31 @@ func (r *brLobbyRepo) ListScheduledBefore(ctx context.Context, before time.Time)
 	return lobbies, nil
 }
 
+func (r *brLobbyRepo) FindScheduledAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BRLobby, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),
+		        COALESCE(map_names, '{}'), room_id, room_password, status, scheduled_at, started_at, completed_at
+		 FROM br_lobbies
+		 WHERE status = 'scheduled'
+		 ORDER BY scheduled_at ASC NULLS LAST
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("FindScheduledAcrossAllTournaments: %w", err)
+	}
+	defer rows.Close()
+
+	var lobbies []*model.BRLobby
+	for rows.Next() {
+		l := &model.BRLobby{}
+		if err := rows.Scan(&l.ID, &l.TournamentID, &l.LobbyName, &l.LobbyNumber, &l.DayNumber, &l.NumMaps,
+			&l.MapNames, &l.RoomID, &l.RoomPassword, &l.Status, &l.ScheduledAt, &l.StartedAt, &l.CompletedAt); err != nil {
+			return nil, fmt.Errorf("FindScheduledAcrossAllTournaments scan: %w", err)
+		}
+		lobbies = append(lobbies, l)
+	}
+	return lobbies, nil
+}
+
 func (r *brLobbyRepo) FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BRLobby, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, lobby_name, lobby_number, day_number, COALESCE(num_maps, 1),

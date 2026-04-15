@@ -43,8 +43,8 @@ export default function AdminRotationPage() {
   if (loading) {
     return (
       <AdminLayout>
-        <Skeleton className="h-10 w-64 bg-slate-800" />
-        <Skeleton className="mt-4 h-96 w-full bg-slate-800" />
+        <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
+        <Skeleton className="mt-4 h-96 w-full bg-stone-100 dark:bg-zinc-800" />
       </AdminLayout>
     )
   }
@@ -52,7 +52,7 @@ export default function AdminRotationPage() {
   if (!tournament) {
     return (
       <AdminLayout>
-        <div className="py-16 text-center text-slate-400">Turnamen tidak ditemukan.</div>
+        <div className="py-16 text-center text-stone-400">Turnamen tidak ditemukan.</div>
       </AdminLayout>
     )
   }
@@ -76,12 +76,12 @@ export default function AdminRotationPage() {
       />
 
       <Tabs value={activeDay} onValueChange={setActiveDay}>
-        <TabsList className="bg-slate-800 border border-slate-700/50">
+        <TabsList className="bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-stone-700/50">
           {dayNumbers.map((day) => (
             <TabsTrigger
               key={day}
               value={String(day)}
-              className="text-slate-300 data-active:text-slate-50"
+              className="text-stone-600 dark:text-stone-300 data-[state=active]:text-stone-900 dark:data-[state=active]:text-stone-50"
             >
               Hari {day}
             </TabsTrigger>

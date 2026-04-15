@@ -7,6 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+// Role constants for user roles used throughout the application.
+const (
+	RolePlayer     = "player"
+	RoleCoach      = "coach"
+	RoleReferee    = "referee"
+	RoleAdmin      = "admin"
+	RoleSuperAdmin = "superadmin"
+)
+
 type User struct {
 	ID                              uuid.UUID  `json:"id"`
 	Email                           string     `json:"email"`

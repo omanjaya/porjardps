@@ -12,6 +12,7 @@ import {
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Newspaper, PencilSimple, Trash } from '@phosphor-icons/react'
 import type { News } from '@/types'
+import { formatDateShort } from '@/lib/relativeTime'
 
 interface NewsTableProps {
   news: News[]
@@ -27,12 +28,6 @@ interface NewsTableProps {
   onToggleAll: () => void
 }
 
-function formatDate(iso: string): string {
-  if (!iso) return '-'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return '-'
-  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-}
 
 export function NewsTable({
   news,
@@ -116,7 +111,7 @@ export function NewsTable({
                       </span>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell text-sm text-stone-500 dark:text-zinc-400">
-                      {formatDate(item.published_at)}
+                      {item.published_at ? formatDateShort(item.published_at) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">

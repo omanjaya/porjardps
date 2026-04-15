@@ -86,6 +86,7 @@ export function PushNotifyButton() {
       onClick={toggle}
       disabled={loading}
       title={subscribed ? 'Matikan notifikasi hasil pertandingan' : 'Aktifkan notifikasi hasil pertandingan'}
+      aria-label={subscribed ? 'Matikan notifikasi' : 'Aktifkan notifikasi'}
       className="rounded-lg p-2 text-stone-500 dark:text-zinc-400 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-100 disabled:opacity-50"
     >
       {subscribed

@@ -71,6 +71,7 @@ type BracketRepository interface {
 	UpdateBestOfByTournamentAndRound(ctx context.Context, tournamentID uuid.UUID, round int, bestOf int) (int64, error)
 	ListScheduledBefore(ctx context.Context, before time.Time) ([]*BracketMatch, error)
 	FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*BracketMatch, error)
+	FindScheduledAcrossAllTournaments(ctx context.Context, limit int) ([]*BracketMatch, error)
 	FindRecentCompleted(ctx context.Context, limit int) ([]*BracketMatch, error)
 	ResetResultsByTournament(ctx context.Context, tournamentID uuid.UUID) error
 }

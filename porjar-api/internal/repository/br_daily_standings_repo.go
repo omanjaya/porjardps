@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 )
@@ -15,6 +16,36 @@ type brDailyStandingsRepo struct {
 
 func NewBRDailyStandingsRepo(db *pgxpool.Pool) model.BRDailyStandingsRepository {
 	return &brDailyStandingsRepo{db: db}
+}
+
+// BulkUpsert inserts or updates multiple daily standings in a single pgx batch.
+func (r *brDailyStandingsRepo) BulkUpsert(ctx context.Context, standings []*model.BRDailyStanding) error {
+	if len(standings) == 0 {
+		return nil
+	}
+
+	const q = `INSERT INTO br_daily_standings (id, tournament_id, team_id, day_number, total_points, total_kills, rank_position, is_qualified)
+	 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	 ON CONFLICT (tournament_id, team_id, day_number) DO UPDATE SET
+	        total_points = EXCLUDED.total_points,
+	        total_kills = EXCLUDED.total_kills,
+	        rank_position = EXCLUDED.rank_position,
+	        is_qualified = EXCLUDED.is_qualified`
+
+	batch := &pgx.Batch{}
+	for _, s := range standings {
+		batch.Queue(q, s.ID, s.TournamentID, s.TeamID, s.DayNumber, s.TotalPoints, s.TotalKills, s.RankPosition, s.IsQualified)
+	}
+
+	br := r.db.SendBatch(ctx, batch)
+	defer br.Close()
+
+	for range standings {
+		if _, err := br.Exec(); err != nil {
+			return fmt.Errorf("BulkUpsert: %w", err)
+		}
+	}
+	return nil
 }
 
 func (r *brDailyStandingsRepo) Upsert(ctx context.Context, s *model.BRDailyStanding) error {

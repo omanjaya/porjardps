@@ -10,6 +10,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const maxExportRows = 10000
+
+// escapeCSV prevents CSV injection by escaping values that could be interpreted
+// as spreadsheet formulas (starting with =, +, -, @, tab, carriage return).
+func escapeCSV(val string) string {
+	if len(val) == 0 {
+		return val
+	}
+	first := val[0]
+	if first == '=' || first == '+' || first == '-' || first == '@' || first == '\t' || first == '\r' {
+		return "'" + val
+	}
+	return val
+}
+
 // AdminExportHandler handles CSV export of participants, teams, and schools
 // for admin reporting. Uses streaming writes to stdlib encoding/csv to keep
 // memory usage bounded even for large datasets.
@@ -79,17 +94,24 @@ func (h *AdminExportHandler) ExportParticipants(c *fiber.Ctx) error {
 		return err
 	}
 
+	rowCount := 0
 	for rows.Next() {
+		rowCount++
+		if rowCount > maxExportRows {
+			slog.Warn("export participants: exceeded max rows, truncating")
+			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		}
 		var (
 			nisn, fullName, email, school, phone, team string
 			createdAt                                  time.Time
 		)
 		if err := rows.Scan(&nisn, &fullName, &email, &school, &phone, &team, &createdAt); err != nil {
 			slog.Error("export participants: scan failed", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+			return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
 		}
 		if err := w.Write([]string{
-			nisn, fullName, email, school, phone, team,
+			escapeCSV(nisn), escapeCSV(fullName), escapeCSV(email),
+			escapeCSV(school), escapeCSV(phone), escapeCSV(team),
 			createdAt.Format(time.RFC3339),
 		}); err != nil {
 			return err
@@ -145,7 +167,13 @@ func (h *AdminExportHandler) ExportTeams(c *fiber.Ctx) error {
 		return err
 	}
 
+	rowCount := 0
 	for rows.Next() {
+		rowCount++
+		if rowCount > maxExportRows {
+			slog.Warn("export teams: exceeded max rows, truncating")
+			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		}
 		var (
 			id, name, game, school, captain, status string
 			membersCount                            int
@@ -153,12 +181,12 @@ func (h *AdminExportHandler) ExportTeams(c *fiber.Ctx) error {
 		)
 		if err := rows.Scan(&id, &name, &game, &school, &captain, &membersCount, &status, &createdAt); err != nil {
 			slog.Error("export teams: scan failed", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+			return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
 		}
 		if err := w.Write([]string{
-			id, name, game, school, captain,
+			id, escapeCSV(name), escapeCSV(game), escapeCSV(school), escapeCSV(captain),
 			fmt.Sprintf("%d", membersCount),
-			status,
+			escapeCSV(status),
 			createdAt.Format(time.RFC3339),
 		}); err != nil {
 			return err
@@ -212,17 +240,23 @@ func (h *AdminExportHandler) ExportSchools(c *fiber.Ctx) error {
 		return err
 	}
 
+	rowCount := 0
 	for rows.Next() {
+		rowCount++
+		if rowCount > maxExportRows {
+			slog.Warn("export schools: exceeded max rows, truncating")
+			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		}
 		var (
 			id, name, level, address, city, coachPhone string
 			teamsCount                                 int
 		)
 		if err := rows.Scan(&id, &name, &level, &address, &city, &coachPhone, &teamsCount); err != nil {
 			slog.Error("export schools: scan failed", "error", err)
-		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+			return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
 		}
 		if err := w.Write([]string{
-			id, name, level, address, city, coachPhone,
+			id, escapeCSV(name), escapeCSV(level), escapeCSV(address), escapeCSV(city), escapeCSV(coachPhone),
 			fmt.Sprintf("%d", teamsCount),
 		}); err != nil {
 			return err

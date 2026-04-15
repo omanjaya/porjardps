@@ -22,10 +22,10 @@ function StatCard({
   sub?: string
 }) {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800/50 p-4">
-      <p className="text-sm text-slate-400">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-100">{value}</p>
-      {sub && <p className="text-xs text-slate-500">{sub}</p>}
+    <div className="rounded-lg border border-stone-700 bg-zinc-800/50 p-4">
+      <p className="text-sm text-stone-400">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-stone-100">{value}</p>
+      {sub && <p className="text-xs text-stone-500">{sub}</p>}
     </div>
   )
 }
@@ -37,7 +37,7 @@ interface ReportStatsCardsProps {
 export function ReportStatsCards({ statistics: stats }: ReportStatsCardsProps) {
   return (
     <div className="print-section">
-      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-200">
+      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-200">
         <ChartBar className="h-5 w-5" />
         Ringkasan Statistik
       </h3>

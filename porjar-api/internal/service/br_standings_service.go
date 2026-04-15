@@ -15,10 +15,10 @@ import (
 // recalculateStandings aggregates all lobby results per team and updates standings.
 // For multi-map lobbies, all maps within a lobby are summed and counted as one "match played".
 func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.UUID) error {
-	// Get all lobbies for this tournament
-	lobbies, err := s.lobbyRepo.ListByTournament(ctx, tournamentID)
+	// Fetch all results for the tournament in a single query (avoids N+1 per lobby).
+	allResults, err := s.resultRepo.ListByTournament(ctx, tournamentID)
 	if err != nil {
-		return fmt.Errorf("list lobbies: %w", err)
+		return fmt.Errorf("list lobby results for tournament: %w", err)
 	}
 
 	// Aggregate results per team.
@@ -35,32 +35,25 @@ func (s *BRService) recalculateStandings(ctx context.Context, tournamentID uuid.
 	}
 	agg := make(map[uuid.UUID]*teamAgg)
 
-	for _, lobby := range lobbies {
-		results, err := s.resultRepo.ListByLobby(ctx, lobby.ID)
-		if err != nil {
-			return fmt.Errorf("list lobby results: %w", err)
+	for _, r := range allResults {
+		a, ok := agg[r.TeamID]
+		if !ok {
+			a = &teamAgg{bestPlacement: math.MaxInt32, lobbies: make(map[uuid.UUID]bool)}
+			agg[r.TeamID] = a
 		}
-
-		for _, r := range results {
-			a, ok := agg[r.TeamID]
-			if !ok {
-				a = &teamAgg{bestPlacement: math.MaxInt32, lobbies: make(map[uuid.UUID]bool)}
-				agg[r.TeamID] = a
-			}
-			a.totalPoints += r.TotalPoints
-			a.totalKills += r.Kills
-			a.totalPlacementPoints += r.PlacementPoints
-			a.lobbies[r.LobbyID] = true
-			a.mapCount++
-			if r.Placement == 1 {
-				a.wwcdCount++
-			}
-			// For best/avg placement, track per-map placements
-			if r.Placement < a.bestPlacement {
-				a.bestPlacement = r.Placement
-			}
-			a.sumPlacement += r.Placement
+		a.totalPoints += r.TotalPoints
+		a.totalKills += r.Kills
+		a.totalPlacementPoints += r.PlacementPoints
+		a.lobbies[r.LobbyID] = true
+		a.mapCount++
+		if r.Placement == 1 {
+			a.wwcdCount++
 		}
+		// For best/avg placement, track per-map placements
+		if r.Placement < a.bestPlacement {
+			a.bestPlacement = r.Placement
+		}
+		a.sumPlacement += r.Placement
 	}
 
 	// Deduct penalties from standings totals
@@ -163,38 +156,44 @@ func (s *BRService) CalculateDailyStandings(ctx context.Context, tournamentID uu
 		return apperror.BusinessRule("NOT_CONFIGURED", "Daily standings belum dikonfigurasi")
 	}
 
-	// Get all lobbies for this tournament on this day
+	// Get all lobbies for this tournament to filter by day and build a lobby-day index.
 	lobbies, err := s.lobbyRepo.ListByTournament(ctx, tournamentID)
 	if err != nil {
 		return apperror.Wrap(err, "list lobbies")
 	}
 
-	// Aggregate results per team for this day only
+	// Build a set of lobby IDs that belong to the requested day.
+	dayLobbySet := make(map[uuid.UUID]struct{})
+	for _, lobby := range lobbies {
+		if lobby.DayNumber == dayNumber {
+			dayLobbySet[lobby.ID] = struct{}{}
+		}
+	}
+
+	// Fetch all results for the tournament in one query (avoids N+1 per lobby).
+	allResults, err := s.resultRepo.ListByTournament(ctx, tournamentID)
+	if err != nil {
+		return apperror.Wrap(err, "list lobby results for tournament")
+	}
+
+	// Aggregate results per team for this day only.
 	type teamAgg struct {
 		totalPoints int
 		totalKills  int
 	}
 	agg := make(map[uuid.UUID]*teamAgg)
 
-	for _, lobby := range lobbies {
-		if lobby.DayNumber != dayNumber {
+	for _, r := range allResults {
+		if _, onDay := dayLobbySet[r.LobbyID]; !onDay {
 			continue
 		}
-
-		results, err := s.resultRepo.ListByLobby(ctx, lobby.ID)
-		if err != nil {
-			return apperror.Wrap(err, "list lobby results")
+		a, ok := agg[r.TeamID]
+		if !ok {
+			a = &teamAgg{}
+			agg[r.TeamID] = a
 		}
-
-		for _, r := range results {
-			a, ok := agg[r.TeamID]
-			if !ok {
-				a = &teamAgg{}
-				agg[r.TeamID] = a
-			}
-			a.totalPoints += r.TotalPoints
-			a.totalKills += r.Kills
-		}
+		a.totalPoints += r.TotalPoints
+		a.totalKills += r.Kills
 	}
 
 	// Deduct penalties from daily standings totals (mirrors recalculateStandings logic)
@@ -209,15 +208,7 @@ func (s *BRService) CalculateDailyStandings(ctx context.Context, tournamentID uu
 			if p.LobbyID == nil {
 				continue // Tournament-wide penalties only apply to overall standings
 			}
-			// Check if this penalty's lobby is on the current day
-			lobbyOnDay := false
-			for _, lobby := range lobbies {
-				if lobby.ID == *p.LobbyID && lobby.DayNumber == dayNumber {
-					lobbyOnDay = true
-					break
-				}
-			}
-			if !lobbyOnDay {
+			if _, onDay := dayLobbySet[*p.LobbyID]; !onDay {
 				continue
 			}
 			a, ok := agg[p.TeamID]
@@ -227,19 +218,20 @@ func (s *BRService) CalculateDailyStandings(ctx context.Context, tournamentID uu
 		}
 	}
 
-	// Upsert daily standings for each team
+	// Bulk-upsert daily standings for all teams in a single pgx batch.
+	standingsToUpsert := make([]*model.BRDailyStanding, 0, len(agg))
 	for teamID, a := range agg {
-		standing := &model.BRDailyStanding{
+		standingsToUpsert = append(standingsToUpsert, &model.BRDailyStanding{
 			ID:           uuid.New(),
 			TournamentID: tournamentID,
 			TeamID:       teamID,
 			DayNumber:    dayNumber,
 			TotalPoints:  a.totalPoints,
 			TotalKills:   a.totalKills,
-		}
-		if err := s.dailyStandingsRepo.Upsert(ctx, standing); err != nil {
-			return apperror.Wrap(err, "upsert daily standing")
-		}
+		})
+	}
+	if err := s.dailyStandingsRepo.BulkUpsert(ctx, standingsToUpsert); err != nil {
+		return apperror.Wrap(err, "bulk upsert daily standings")
 	}
 
 	// Update rank positions for this day
@@ -327,13 +319,16 @@ func (s *BRService) AdvanceToFinals(ctx context.Context, tournamentID uuid.UUID,
 		qualifiedSet[id] = true
 	}
 
-	// Mark eliminated teams in standings
+	// Collect team IDs to eliminate, then update in a single batch query.
+	var eliminatedIDs []uuid.UUID
 	for _, standing := range standings {
 		if !qualifiedSet[standing.TeamID] {
-			standing.IsEliminated = true
-			if err := s.standingsRepo.Update(ctx, standing); err != nil {
-				return apperror.Wrap(err, "update standing eliminated")
-			}
+			eliminatedIDs = append(eliminatedIDs, standing.TeamID)
+		}
+	}
+	if len(eliminatedIDs) > 0 {
+		if err := s.standingsRepo.BulkMarkEliminated(ctx, tournamentID, eliminatedIDs); err != nil {
+			return apperror.Wrap(err, "bulk mark eliminated standings")
 		}
 	}
 
@@ -357,12 +352,17 @@ func (s *BRService) AdvanceToFinals(ctx context.Context, tournamentID uuid.UUID,
 			if err != nil {
 				slog.Error("failed to get daily standings for qualification update", "error", err)
 			} else {
+				// Mark qualified teams in a single batch upsert instead of one-by-one.
+				var toUpdate []*model.BRDailyStanding
 				for _, ds := range dailyStandings {
 					if qualifiedSet[ds.TeamID] {
 						ds.IsQualified = true
-						if err := s.dailyStandingsRepo.Upsert(ctx, ds); err != nil {
-							slog.Error("failed to update daily standing qualification", "error", err)
-						}
+						toUpdate = append(toUpdate, ds)
+					}
+				}
+				if len(toUpdate) > 0 {
+					if err := s.dailyStandingsRepo.BulkUpsert(ctx, toUpdate); err != nil {
+						slog.Error("failed to bulk update daily standing qualification", "error", err)
 					}
 				}
 			}

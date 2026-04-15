@@ -86,6 +86,10 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	eventTeamPointsRepo := repository.NewEventTeamPointsRepo(db)
 	eventUserPointsRepo := repository.NewEventUserPointsRepo(db)
 
+	// Event admin and section repositories
+	eventAdminRepo := repository.NewEventAdminRepo(db)
+	eventSectionRepo := repository.NewEventSectionRepo(db)
+
 	// Event settings repository
 	eventSettingsRepo := repository.NewEventSettingsRepo(db)
 
@@ -327,6 +331,15 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Event handler
 	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
 
+	// Event sections handler
+	eventSectionHandler := handler.NewEventSectionHandler(eventRepo, eventSectionRepo)
+
+	// Event admins handler
+	eventAdminHandler := handler.NewEventAdminHandler(eventRepo, eventAdminRepo)
+
+	// Calendar handler
+	calendarHandler := handler.NewCalendarHandler(eventRepo, tournamentRepo)
+
 	// Event points handler
 	eventPointsHandler := handler.NewEventPointsHandler(eventPointsService)
 
@@ -448,6 +461,15 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Events (multi-event)
 	eventHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+
+	// Event Sections
+	eventSectionHandler.RegisterRoutes(api, authMw, adminMw)
+
+	// Event Admins
+	eventAdminHandler.RegisterRoutes(api, authMw, adminMw)
+
+	// Calendar
+	calendarHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Event Announcements
 	eventAnnouncementRepo := repository.NewEventAnnouncementRepository(db)

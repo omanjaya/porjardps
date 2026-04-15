@@ -354,7 +354,7 @@ export function SubmissionDetailSheet({
                     />
                     <div className="flex gap-2">
                       <Button size="sm" onClick={handleReject} disabled={processing} className="bg-red-600 text-white hover:bg-red-700">
-                        Kirim Penolakan
+                        {processing ? 'Memproses...' : 'Kirim Penolakan'}
                       </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setShowRejectForm(false); setRejectReason('') }}>
                         Batal

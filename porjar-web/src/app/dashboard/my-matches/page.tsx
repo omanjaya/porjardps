@@ -16,7 +16,7 @@ import { useAuthStore } from '@/store/auth-store'
 import { api } from '@/lib/api'
 import { getLiveScoreClient } from '@/lib/ws'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { BracketMatch, TeamMember } from '@/types'
 import {
   PlayerHeader,
@@ -57,7 +57,7 @@ export default function MyMatchesPage() {
     const ws = getLiveScoreClient()
     // P2: Capture userId in closure to prevent subscription leak on user change
     const userId = user.id
-    const room = `user:${userId}`
+    const room = `user#${userId}`
     ws.connect()
     ws.subscribe(room)
 
@@ -110,8 +110,25 @@ export default function MyMatchesPage() {
   return (
     <DashboardLayout>
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <LoadingSpinner size="lg" />
+        <div className="space-y-6">
+          {/* Skeleton breadcrumb */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-20 rounded" />
+            <Skeleton className="h-4 w-2 rounded" />
+            <Skeleton className="h-4 w-24 rounded" />
+          </div>
+          {/* Skeleton match cards */}
+          {[1, 2, 3].map(i => (
+            <div key={i} className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 sm:p-6 space-y-4">
+              <Skeleton className="h-5 w-40 rounded" />
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-full" />
+                <Skeleton className="h-4 w-32 rounded" />
+              </div>
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-3/4 rounded" />
+            </div>
+          ))}
         </div>
       ) : (
         <div className="space-y-6">

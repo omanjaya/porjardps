@@ -48,7 +48,7 @@ export const HeroSection = forwardRef<HTMLDivElement, HeroSectionProps>(function
           <span aria-hidden="true" className="bg-gradient-to-r from-stone-900 via-esi-red to-stone-800 dark:from-white dark:via-red-400 dark:to-zinc-200 bg-clip-text text-transparent">
             ESI KOTA
           </span>
-          <div className="relative mt-1 inline-block -skew-x-3 px-4 sm:px-6 py-1" style={{ background: RED }}>
+          <div className="relative mt-1 inline-block -skew-x-3 px-4 sm:px-6 py-1 bg-esi-red">
             <span className="inline-block skew-x-3 text-3xl sm:text-4xl md:text-5xl font-black tracking-wide text-white">
               DENPASAR
             </span>
@@ -80,8 +80,7 @@ export const HeroSection = forwardRef<HTMLDivElement, HeroSectionProps>(function
             <>
               <Link
                 href={`/events/${activeEvent.slug}`}
-                className="inline-flex min-h-[48px] sm:min-h-[52px] items-center justify-center gap-2 rounded-xl px-8 text-base font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:shadow-xl hover:shadow-red-500/30 hover:brightness-110"
-                style={{ background: RED }}
+                className="inline-flex min-h-[48px] sm:min-h-[52px] items-center justify-center gap-2 rounded-xl bg-esi-red px-8 text-base font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:shadow-xl hover:shadow-red-500/30 hover:brightness-110"
               >
                 Masuk ke Event
                 <ArrowRight size={18} weight="bold" />
@@ -97,8 +96,7 @@ export const HeroSection = forwardRef<HTMLDivElement, HeroSectionProps>(function
           ) : (
             <Link
               href="/cara-bertanding"
-              className="inline-flex min-h-[48px] sm:min-h-[52px] items-center justify-center gap-2 rounded-xl px-8 text-base font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:shadow-xl hover:shadow-red-500/30 hover:brightness-110"
-              style={{ background: RED }}
+              className="inline-flex min-h-[48px] sm:min-h-[52px] items-center justify-center gap-2 rounded-xl bg-esi-red px-8 text-base font-bold text-white shadow-lg shadow-red-500/20 transition-all hover:shadow-xl hover:shadow-red-500/30 hover:brightness-110"
             >
               Cara Bertanding
               <ArrowRight size={18} weight="bold" />

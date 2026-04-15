@@ -290,6 +290,39 @@ func (r *bracketRepo) FindLiveAcrossAllTournaments(ctx context.Context, limit in
 	return matches, nil
 }
 
+func (r *bracketRepo) FindScheduledAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BracketMatch, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, tournament_id, round, match_number, bracket_position,
+		        team_a_id, team_b_id, winner_id, loser_id, score_a, score_b,
+		        status, scheduled_at, started_at, completed_at,
+		        next_match_id, loser_next_match_id, stream_url, notes,
+		        COALESCE(best_of, 1)
+		 FROM bracket_matches
+		 WHERE status = 'scheduled' AND team_a_id IS NOT NULL AND team_b_id IS NOT NULL
+		 ORDER BY scheduled_at ASC NULLS LAST, updated_at DESC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("FindScheduledAcrossAllTournaments: %w", err)
+	}
+	defer rows.Close()
+
+	var matches []*model.BracketMatch
+	for rows.Next() {
+		m := &model.BracketMatch{}
+		if err := rows.Scan(&m.ID, &m.TournamentID, &m.Round, &m.MatchNumber, &m.BracketPosition,
+			&m.TeamAID, &m.TeamBID, &m.WinnerID, &m.LoserID, &m.ScoreA, &m.ScoreB,
+			&m.Status, &m.ScheduledAt, &m.StartedAt, &m.CompletedAt,
+			&m.NextMatchID, &m.LoserNextMatchID, &m.StreamURL, &m.Notes, &m.BestOf); err != nil {
+			return nil, fmt.Errorf("FindScheduledAcrossAllTournaments scan: %w", err)
+		}
+		matches = append(matches, m)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("FindScheduledAcrossAllTournaments rows: %w", err)
+	}
+	return matches, nil
+}
+
 func (r *bracketRepo) FindRecentCompleted(ctx context.Context, limit int) ([]*model.BracketMatch, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, round, match_number, bracket_position,

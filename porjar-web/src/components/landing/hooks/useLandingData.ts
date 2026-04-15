@@ -73,18 +73,18 @@ export function useLandingData(): LandingData {
       .catch(() => setGalleryMedia([]))
 
     try {
-      api.get<any[]>('/news?per_page=4')
+      api.get<Record<string, unknown>[]>('/news?per_page=4')
         .then(list => {
           const arr = Array.isArray(list) ? list : []
           setNews(
-            arr.map((n: any) => ({
-              id: n?.id ?? '',
+            arr.map((n) => ({
+              id: (n?.id as number | string) ?? '',
               title: String(n?.title ?? ''),
               excerpt: String(n?.excerpt ?? n?.summary ?? ''),
               date: String(n?.date ?? n?.published_at ?? n?.created_at ?? ''),
-              category: n?.category,
-              href: n?.href ?? n?.url,
-              imageUrl: n?.image_url ?? n?.imageUrl,
+              category: n?.category as string | undefined,
+              href: (n?.href ?? n?.url) as string | undefined,
+              imageUrl: (n?.image_url ?? n?.imageUrl) as string | undefined,
             }))
           )
         })
@@ -93,7 +93,7 @@ export function useLandingData(): LandingData {
       setNews([])
     }
 
-    api.get<any>('/stats/public')
+    api.get<Record<string, unknown>>('/stats/public')
       .then(data => {
         if (!data || typeof data !== 'object') { setStats(null); return }
         setStats({

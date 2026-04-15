@@ -199,6 +199,7 @@ interface NavbarProps {
 export function Navbar({ position = 'sticky' }: NavbarProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const { isAuthenticated, user } = useAuthStore()
   const { isDark, toggle: toggleTheme } = useThemeStore()
   const themeMounted = useThemeHydrated()
@@ -220,25 +221,50 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
           <Image src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" width={36} height={36} className="h-9 w-9 object-contain" />
           <div className="ml-1 flex flex-col leading-none">
             <span className="text-sm font-bold tracking-tight text-esi-red">ESI</span>
-            <span className="text-[10px] font-medium text-stone-500 tracking-wider">KOTA DENPASAR</span>
+            <span className="text-[10px] font-medium text-stone-600 tracking-wider">KOTA DENPASAR</span>
           </div>
         </Link>
 
         {/* Center nav links with dropdowns */}
-        <div className="hidden md:flex items-center gap-6 text-[13px] font-semibold text-stone-500">
+        <div className="hidden md:flex items-center gap-6 text-[13px] font-semibold text-stone-600">
           {NAV_LINKS.map((link) =>
             link.children ? (
               <div key={link.href} className="group relative">
-                <button className="flex items-center gap-1 transition hover:text-esi-red">
+                <button
+                  className="flex items-center gap-1 transition hover:text-esi-red"
+                  aria-haspopup="true"
+                  aria-expanded={openDropdown === link.href}
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'Enter') {
+                      e.preventDefault()
+                      setOpenDropdown(openDropdown === link.href ? null : link.href)
+                    }
+                    if (e.key === 'Escape') {
+                      setOpenDropdown(null)
+                    }
+                  }}
+                  onClick={() => setOpenDropdown(openDropdown === link.href ? null : link.href)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node)) {
+                      setOpenDropdown(null)
+                    }
+                  }}
+                >
                   {link.label}
-                  <CaretDown size={12} weight="bold" className="transition-transform group-hover:rotate-180" />
+                  <CaretDown size={12} weight="bold" className={cn('transition-transform', openDropdown === link.href ? 'rotate-180' : 'group-hover:rotate-180')} />
                 </button>
-                <div className="pointer-events-none absolute left-1/2 top-full pt-2 opacity-0 transition-all group-hover:pointer-events-auto group-hover:opacity-100 -translate-x-1/2">
+                <div className={cn(
+                  'absolute left-1/2 top-full pt-2 -translate-x-1/2 transition-all',
+                  openDropdown === link.href
+                    ? 'pointer-events-auto opacity-100'
+                    : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100'
+                )}>
                   <div className="min-w-[180px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-1.5 shadow-lg">
                     {link.children.map((child) => (
                       <Link
                         key={child.href}
                         href={child.href}
+                        onClick={() => setOpenDropdown(null)}
                         className={cn(
                           'flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-stone-600 dark:text-zinc-400 transition-colors hover:bg-stone-50 dark:hover:bg-zinc-800 hover:text-esi-red',
                           child.label === 'Live Match' && 'text-red-500',
@@ -268,7 +294,7 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
         <div className="hidden md:flex items-center gap-3">
           <button
             onClick={toggleTheme}
-            className="rounded-lg p-2 text-stone-500 dark:text-zinc-400 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-100"
+            className="rounded-lg p-2 text-stone-600 dark:text-zinc-400 transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800 hover:text-stone-800 dark:hover:text-zinc-100"
             aria-label={isDark ? 'Mode terang' : 'Mode gelap'}
           >
             {themeMounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} />}
@@ -276,12 +302,17 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
           <PushNotifyButton />
           <NotificationBell />
           {isAuthenticated ? (
-            <Link href="/dashboard" className="rounded-lg bg-esi-red px-4 py-1.5 text-[13px] font-bold text-white transition hover:brightness-110">
+            <Link href={
+              user?.role === 'admin' || user?.role === 'superadmin' ? '/admin'
+              : user?.role === 'coach' ? '/coach'
+              : user?.role === 'referee' ? '/referee'
+              : '/dashboard'
+            } className="rounded-lg bg-esi-red px-4 py-1.5 text-[13px] font-bold text-white transition hover:brightness-110">
               Dashboard
             </Link>
           ) : (
             <>
-              <Link href="/login" className="text-[13px] font-medium text-stone-500 transition hover:text-stone-800">
+              <Link href="/login" className="text-[13px] font-medium text-stone-600 transition hover:text-stone-800">
                 Masuk
               </Link>
               <Link href="/register" className="rounded-lg bg-esi-red px-4 py-1.5 text-[13px] font-bold text-white transition hover:brightness-110">
@@ -295,14 +326,14 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
         <div className="flex items-center gap-1 md:hidden">
           <button
             onClick={toggleTheme}
-            className="rounded-lg p-2 text-stone-500 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800"
+            className="rounded-lg p-2 text-stone-600 dark:text-zinc-400 hover:bg-stone-100 dark:hover:bg-zinc-800"
             aria-label={isDark ? 'Mode terang' : 'Mode gelap'}
           >
             {themeMounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} />}
           </button>
           <NotificationBell />
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger className="inline-flex items-center justify-center rounded-lg p-2.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
+          <SheetTrigger className="inline-flex items-center justify-center rounded-lg p-2.5 text-stone-600 hover:bg-stone-100 hover:text-stone-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200">
             <ListIcon size={24} />
             <span className="sr-only">Menu</span>
           </SheetTrigger>
@@ -319,7 +350,16 @@ export function Navbar({ position = 'sticky' }: NavbarProps) {
                 {/* Auth — always visible at top */}
                 {isAuthenticated ? (
                   <button
-                    onClick={() => { setMobileMenuOpen(false); router.push('/dashboard') }}
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      const role = user?.role
+                      router.push(
+                        role === 'admin' || role === 'superadmin' ? '/admin'
+                        : role === 'coach' ? '/coach'
+                        : role === 'referee' ? '/referee'
+                        : '/dashboard'
+                      )
+                    }}
                     className="flex items-center gap-1.5 rounded-lg bg-esi-red px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 transition-all"
                   >
                     Dashboard

@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Crown, Trophy, ArrowRight } from '@phosphor-icons/react'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { formatDateLong } from '@/lib/relativeTime'
 
 export type PastWinner = {
   tournamentId: number
@@ -23,17 +24,6 @@ interface PastWinnersSectionProps {
   pastWinners: PastWinner[]
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return iso
-  }
-}
 
 export function PastWinnersSection({ pastWinners }: PastWinnersSectionProps) {
   const winners = pastWinners.slice(0, 6)
@@ -111,7 +101,7 @@ export function PastWinnersSection({ pastWinners }: PastWinnersSectionProps) {
                         {w.winnerTeamName}
                       </div>
                       <div className="truncate text-xs text-stone-500 dark:text-zinc-400">
-                        Juara — {formatDate(w.completedAt)}
+                        Juara — {formatDateLong(w.completedAt)}
                       </div>
                     </div>
                   </div>

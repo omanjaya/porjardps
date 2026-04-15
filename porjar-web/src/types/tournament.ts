@@ -28,6 +28,9 @@ export interface Tournament {
   tiebreaker_order: string[]
   prize_pool?: string | null
   prize_description?: string | null
+  champion_team_id?: string | null
+  champion_team_name?: string | null
+  champion_team_logo?: string | null
 }
 
 export type TournamentFormat =

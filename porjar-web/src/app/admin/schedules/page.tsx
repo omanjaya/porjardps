@@ -287,6 +287,7 @@ export default function AdminSchedulesPage() {
     }
 
     let shifted = 0
+    let failed = 0
     for (const s of targetSchedules) {
       try {
         const newStart = new Date(new Date(s.scheduled_at).getTime() + mins * 60_000)
@@ -304,10 +305,13 @@ export default function AdminSchedulesPage() {
           } catch {}
         }
         shifted++
-      } catch {}
+      } catch {
+        failed++
+      }
     }
 
-    toast.success(`${shifted} jadwal digeser ${mins > 0 ? '+' : ''}${mins} menit`)
+    if (shifted > 0) toast.success(`${shifted} jadwal digeser ${mins > 0 ? '+' : ''}${mins} menit`)
+    if (failed > 0) toast.error(`${failed} jadwal gagal digeser`)
     setShiftOpen(false)
     setShiftMinutes('')
     setShifting(false)

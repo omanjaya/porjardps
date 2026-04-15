@@ -41,7 +41,7 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   live: {
     label: 'Live',
-    className: 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800',
+    className: 'bg-esi-red/10 dark:bg-red-950/30 text-esi-red dark:text-red-400 border-esi-red/20 dark:border-red-800',
   },
   completed: {
     label: 'Selesai',
@@ -65,11 +65,11 @@ const statusConfig: Record<StatusType, { label: string; className: string }> = {
   },
   cancelled: {
     label: 'Dibatalkan',
-    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   },
   bye: {
     label: 'BYE',
-    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   },
   postponed: {
     label: 'Ditunda',
@@ -94,7 +94,7 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, label, className }: StatusBadgeProps) {
   const config = statusConfig[status as StatusType] ?? {
     label: status,
-    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
+    className: 'bg-stone-100 dark:bg-zinc-800 text-stone-600 dark:text-zinc-400 border-stone-200 dark:border-zinc-700',
   }
 
   return (
@@ -106,10 +106,13 @@ export function StatusBadge({ status, label, className }: StatusBadgeProps) {
       )}
     >
       {status === 'live' && (
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
-        </span>
+        <>
+          <span className="relative flex h-2 w-2" aria-hidden="true">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+          </span>
+          <span className="sr-only">Live</span>
+        </>
       )}
       {label ?? config.label}
     </span>

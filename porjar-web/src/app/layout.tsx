@@ -79,8 +79,14 @@ export default function RootLayout({
             pass it through next/headers to Script/style tags instead. */}
       </head>
       <body className={`${rajdhani.variable} ${orbitron.variable} font-sans antialiased bg-esi-bg text-esi-text`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[9999] focus:rounded-lg focus:bg-esi-red focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white focus:shadow-lg"
+        >
+          Lewati ke konten utama
+        </a>
         <TooltipProvider>
-          {children}
+          <div id="main-content">{children}</div>
           <Toaster position="top-right" richColors />
           <PwaProvider />
           <SessionWatcher />

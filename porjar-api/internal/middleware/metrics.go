@@ -48,6 +48,16 @@ var (
 		Name: "db_pool_open_connections",
 		Help: "Number of open connections in the database connection pool.",
 	})
+
+	// SubmissionJobsTotal counts submission queue jobs by final outcome.
+	// Labels: type ("bracket"|"br_lobby"|"group"), result ("success"|"failed"|"dlq").
+	SubmissionJobsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "submission_jobs_total",
+			Help: "Total submission queue jobs by type and result (success, failed, dlq).",
+		},
+		[]string{"type", "result"},
+	)
 )
 
 // PrometheusMetrics returns a Fiber middleware that records per-request metrics.

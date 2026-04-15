@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { CaretLeft, Trophy, CalendarBlank, CaretRight } from '@phosphor-icons/react'
 import { StatusBadge } from '@/components/shared/StatusBadge'
-import { formatDateShort } from '@/lib/relativeTime'
+import { formatDateRange } from '@/lib/relativeTime'
 
 interface EventBreadcrumbProps {
   eventSlug: string
@@ -14,19 +14,6 @@ interface EventBreadcrumbProps {
   currentPage?: string
 }
 
-function formatDateRange(start?: string | null, end?: string | null): string | null {
-  if (!start && !end) return null
-  if (start && end) {
-    const s = new Date(start)
-    const e = new Date(end)
-    const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
-    if (sameMonth) {
-      return `${s.getDate()}-${e.getDate()} ${e.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`
-    }
-    return `${formatDateShort(s)} - ${formatDateShort(e)}`
-  }
-  return formatDateShort((start ?? end) as string)
-}
 
 export function EventBreadcrumb({
   eventSlug,
@@ -58,7 +45,7 @@ export function EventBreadcrumb({
             className="flex items-center gap-1.5 font-semibold text-stone-800 dark:text-zinc-200 transition-colors hover:text-[var(--event-primary)]"
           >
             <Trophy size={14} weight="fill" className="text-[var(--event-primary)]" />
-            <span className="truncate max-w-[200px]">{eventName}</span>
+            <span className="truncate max-w-[120px] sm:max-w-[200px]">{eventName}</span>
           </Link>
 
           <StatusBadge status={eventStatus} />
@@ -106,7 +93,7 @@ export function EventBreadcrumb({
               className="flex items-center gap-1 font-semibold text-stone-800 dark:text-zinc-200"
             >
               <Trophy size={12} weight="fill" className="text-[var(--event-primary)]" />
-              <span className="truncate max-w-[140px]">{eventName}</span>
+              <span className="truncate max-w-[90px] sm:max-w-[140px]">{eventName}</span>
             </Link>
             <StatusBadge status={eventStatus} className="text-[10px] px-2 py-0" />
             {dateRange && (

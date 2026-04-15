@@ -30,7 +30,7 @@ export default function Error({
             Terjadi kesalahan
           </h2>
           <p className="mt-3 text-base sm:text-lg text-stone-600 dark:text-zinc-400">
-            Terjadi kesalahan. Tim kami sudah diberitahu.
+            Muat ulang halaman atau kembali ke beranda untuk melanjutkan.
           </p>
           {error?.digest && (
             <p className="mt-2 text-xs font-mono text-stone-400 dark:text-zinc-600">

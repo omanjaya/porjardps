@@ -19,7 +19,7 @@ import (
 // SearchPlayers returns a list of players (role=player) with minimal info.
 // Supports ?search=<q>&not_in_game_id=<uuid> for assign-player UI.
 func (h *AdminHandler) SearchPlayers(c *fiber.Ctx) error {
-	role := "player"
+	role := model.RolePlayer
 	filter := model.UserFilter{
 		Role:  &role,
 		Page:  1,
@@ -120,7 +120,7 @@ func (h *AdminHandler) ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	// Validate role value
-	validRoles := map[string]bool{"player": true, "coach": true, "referee": true, "admin": true, "superadmin": true}
+	validRoles := map[string]bool{model.RolePlayer: true, model.RoleCoach: true, model.RoleReferee: true, model.RoleAdmin: true, model.RoleSuperAdmin: true}
 	if !validRoles[req.Role] {
 		return response.Err(c, apperror.ValidationError(map[string]string{
 			"role": "Role harus salah satu dari: player, coach, referee, admin, superadmin",
@@ -128,7 +128,7 @@ func (h *AdminHandler) ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	// Only superadmins can promote to superadmin
-	if req.Role == "superadmin" && middleware.GetUserRole(c) != "superadmin" {
+	if req.Role == model.RoleSuperAdmin && middleware.GetUserRole(c) != model.RoleSuperAdmin {
 		return response.Err(c, apperror.New("FORBIDDEN", "Hanya superadmin yang dapat mempromosikan ke superadmin", 403))
 	}
 
@@ -145,7 +145,7 @@ func (h *AdminHandler) ChangeUserRole(c *fiber.Ctx) error {
 	}
 
 	// Can't demote last superadmin — use a Redis lock to prevent TOCTOU race.
-	if targetUser.Role == "superadmin" && req.Role != "superadmin" {
+	if targetUser.Role == model.RoleSuperAdmin && req.Role != model.RoleSuperAdmin {
 		lockVal := uuid.New().String()
 		set, err := h.rdb.SetNX(c.Context(), superadminLockKey, lockVal, superadminLockTTL).Result()
 		if err != nil || !set {
@@ -158,7 +158,7 @@ func (h *AdminHandler) ChangeUserRole(c *fiber.Ctx) error {
 				h.rdb.Del(c.Context(), superadminLockKey)
 			}
 		}()
-		count, err := h.userRepo.CountByRole(c.Context(), "superadmin")
+		count, err := h.userRepo.CountByRole(c.Context(), model.RoleSuperAdmin)
 		if err != nil {
 			return response.HandleError(c, apperror.Wrap(err, "count superadmins"))
 		}
@@ -201,7 +201,7 @@ func (h *AdminHandler) CreateUser(c *fiber.Ctx) error {
 	if len(req.Password) < 8 {
 		errs["password"] = "Password minimal 8 karakter"
 	}
-	validRoles := map[string]bool{"player": true, "coach": true, "referee": true, "admin": true}
+	validRoles := map[string]bool{model.RolePlayer: true, model.RoleCoach: true, model.RoleReferee: true, model.RoleAdmin: true}
 	if !validRoles[req.Role] {
 		errs["role"] = "Role harus salah satu dari: player, coach, referee, admin"
 	}
@@ -352,7 +352,7 @@ func (h *AdminHandler) DeleteUser(c *fiber.Ctx) error {
 	}
 
 	// Don't allow deleting superadmin accounts
-	if targetUser.Role == "superadmin" {
+	if targetUser.Role == model.RoleSuperAdmin {
 		return response.Err(c, apperror.BusinessRule("CANNOT_DELETE_SUPERADMIN", "Tidak dapat menghapus akun superadmin"))
 	}
 

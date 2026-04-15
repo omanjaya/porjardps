@@ -4,6 +4,7 @@ import {
   Trophy,
   UserCircle,
   GraduationCap,
+  Bell,
 } from '@phosphor-icons/react'
 import type { LayoutConfig } from './types'
 
@@ -18,6 +19,7 @@ export const coachConfig: LayoutConfig = {
     { label: 'Tim Saya', href: '/coach/teams', icon: Users },
     { label: 'Hasil', href: '/coach/results', icon: Trophy },
     { label: 'Sekolah', href: '/coach/school', icon: GraduationCap },
-    { label: 'Profil', href: '/dashboard/profile', icon: UserCircle },
+    { label: 'Notifikasi', href: '/coach/notifications', icon: Bell },
+    { label: 'Profil', href: '/coach/profile', icon: UserCircle },
   ],
 }

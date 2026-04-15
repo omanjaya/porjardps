@@ -10,17 +10,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Trophy, CalendarBlank, MapPin, ArrowRight, Lightning, Buildings, Users, Crown } from '@phosphor-icons/react'
 import type { Event } from '@/types'
-
-function formatDateRange(start?: string, end?: string): string {
-  if (!start) return ''
-  const s = new Date(start)
-  const e = end ? new Date(end) : null
-  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
-  if (!e) return s.toLocaleDateString('id-ID', opts)
-  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
-  if (sameMonth) return `${s.getDate()}-${e.getDate()} ${e.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`
-  return `${s.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${e.toLocaleDateString('id-ID', opts)}`
-}
+import { formatDateRange } from '@/lib/relativeTime'
 
 export default function EventsListPage() {
   const [events, setEvents] = useState<Event[]>([])

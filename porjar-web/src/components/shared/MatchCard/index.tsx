@@ -6,6 +6,7 @@ import { Printer } from '@phosphor-icons/react'
 import type { BracketMatch } from '@/types'
 import type { Tournament } from '@/types/tournament'
 import type { Event } from '@/types/common'
+import { formatDateFull, formatTime } from '@/lib/relativeTime'
 
 interface MatchCardProps {
   match: BracketMatch
@@ -15,28 +16,7 @@ interface MatchCardProps {
   showPrintButton?: boolean
 }
 
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return 'TBD'
-  try {
-    return new Date(iso).toLocaleDateString('id-ID', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return 'TBD'
-  }
-}
 
-function formatTime(iso: string | null | undefined): string {
-  if (!iso) return '--:--'
-  try {
-    return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-  } catch {
-    return '--:--'
-  }
-}
 
 function checkInTime(iso: string | null | undefined): string {
   if (!iso) return '--:--'
@@ -94,7 +74,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
             </div>
           </div>
           <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wider text-stone-500">Match ID</div>
+            <div className="text-xs uppercase tracking-wider text-stone-500">Match ID</div>
             <div className="font-mono text-lg font-bold text-stone-900">#{match.id.slice(0, 8).toUpperCase()}</div>
           </div>
         </div>
@@ -105,7 +85,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
             <div className="font-bold text-stone-900">{roundLabel(match)}</div>
             <div className="text-stone-600">
               {tournament?.name ?? match.tournament?.name ?? 'Tournament'}
-              {tournament?.game?.name && <span className="text-stone-400"> · {tournament.game.name}</span>}
+              {tournament?.game?.name && <span className="text-stone-600 dark:text-zinc-400"> · {tournament.game.name}</span>}
             </div>
           </div>
           {match.bracket_position && (
@@ -134,7 +114,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
           {/* VS divider */}
           <div className="flex flex-col items-center">
             <div className="text-3xl font-black text-esi-red">VS</div>
-            <div className="mt-1 rounded-full bg-stone-900 px-2 py-0.5 text-[10px] font-bold text-white">
+            <div className="mt-1 rounded-full bg-stone-900 px-2 py-0.5 text-xs font-bold text-white">
               BO{match.best_of}
             </div>
           </div>
@@ -159,15 +139,15 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
           <div className="flex items-start gap-2">
             <Calendar size={16} className="mt-0.5 text-esi-red shrink-0" />
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-stone-500">Tanggal</div>
-              <div className="font-semibold">{formatDate(match.scheduled_at)}</div>
-              <div className="text-stone-600">Pukul {formatTime(match.scheduled_at)} WITA</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500">Tanggal</div>
+              <div className="font-semibold">{match.scheduled_at ? formatDateFull(match.scheduled_at) : 'TBD'}</div>
+              <div className="text-stone-600">Pukul {match.scheduled_at ? formatTime(match.scheduled_at) : '--:--'} WITA</div>
             </div>
           </div>
           <div className="flex items-start gap-2">
             <MapPin size={16} className="mt-0.5 text-esi-red shrink-0" />
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-stone-500">Venue</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500">Venue</div>
               <div className="font-semibold">{venue}</div>
               {event?.city && <div className="text-stone-600">{event.city}</div>}
             </div>
@@ -175,7 +155,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
           <div className="flex items-start gap-2">
             <Clock size={16} className="mt-0.5 text-esi-red shrink-0" />
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-stone-500">Check-in</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500">Check-in</div>
               <div className="font-semibold">{checkInTime(match.scheduled_at)} WITA</div>
               <div className="text-stone-600">15 menit sebelum match</div>
             </div>
@@ -183,7 +163,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
           <div className="flex items-start gap-2">
             <GameController size={16} className="mt-0.5 text-esi-red shrink-0" />
             <div>
-              <div className="text-[10px] uppercase tracking-wider text-stone-500">Format</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500">Format</div>
               <div className="font-semibold">Best of {match.best_of}</div>
               <div className="text-stone-600">{tournament?.format ?? 'Tournament'}</div>
             </div>
@@ -192,7 +172,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
             <div className="col-span-2 flex items-start gap-2">
               <User size={16} className="mt-0.5 text-esi-red shrink-0" />
               <div>
-                <div className="text-[10px] uppercase tracking-wider text-stone-500">Referee</div>
+                <div className="text-xs uppercase tracking-wider text-stone-500">Referee</div>
                 <div className="font-semibold">{refereeName}</div>
               </div>
             </div>
@@ -201,7 +181,7 @@ export function MatchCard({ match, tournament, event, refereeName, showPrintButt
 
         {/* Footer */}
         <div className="mt-4 flex items-end justify-between border-t border-stone-200 pt-3">
-          <div className="text-[10px] text-stone-500">
+          <div className="text-xs text-stone-500">
             <div className="font-bold text-stone-700">{eventName}</div>
             <div>{event?.organizer ?? 'ESI Denpasar'}</div>
             <div className="mt-1 max-w-[260px] break-all">{matchUrl}</div>

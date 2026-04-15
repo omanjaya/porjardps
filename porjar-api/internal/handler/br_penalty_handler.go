@@ -58,7 +58,14 @@ func (h *BRHandler) ApplyPenalty(c *fiber.Ctx) error {
 	}
 
 	// Get admin user ID from context
-	appliedBy, _ := uuid.Parse(c.Locals("userID").(string))
+	userIDStr, ok := c.Locals("userID").(string)
+	if !ok || userIDStr == "" {
+		return response.Err(c, apperror.ErrUnauthorized)
+	}
+	appliedBy, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return response.Err(c, apperror.ErrUnauthorized)
+	}
 
 	if svcErr := h.brService.ApplyPenalty(c.Context(), tournamentID, teamID, lobbyID, req.Type, req.Points, req.Reason, appliedBy); svcErr != nil {
 		return response.HandleError(c, svcErr)

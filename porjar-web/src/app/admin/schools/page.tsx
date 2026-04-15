@@ -124,6 +124,7 @@ export default function AdminSchoolsPage() {
         reason={requests.rejectReason}
         onReasonChange={requests.setRejectReason}
         onConfirm={requests.rejectRequest}
+        submitting={requests.submittingReject}
       />
 
       <SchoolFilterBar

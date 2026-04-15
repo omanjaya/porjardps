@@ -142,7 +142,7 @@ func (h *AnalyticsHandler) GetAnalytics(c *fiber.Ctx) error {
 	startDate := time.Now().AddDate(0, 0, -daysBack)
 
 	// 1. Total players (users with role "player")
-	playerRole := "player"
+	playerRole := model.RolePlayer
 	_, totalPlayers, err := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, Page: 1, Limit: 1})
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "count players"))
@@ -209,7 +209,7 @@ func (h *AnalyticsHandler) buildRegistrationsByDate(ctx context.Context, startDa
 	teams, _, _ := h.teamRepo.List(ctx, model.TeamFilter{Page: 1, Limit: 10000})
 
 	// Fetch all players
-	playerRole := "player"
+	playerRole := model.RolePlayer
 	users, _, _ := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, Page: 1, Limit: 10000})
 
 	// Build date buckets

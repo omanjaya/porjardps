@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -186,8 +187,16 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		return response.HandleError(c, err)
 	}
 
+	slog.Info("user registered",
+		"user_id", user.ID,
+		"email", user.Email,
+		"operation", "register",
+	)
+
 	// Record UU PDP consent after successful registration (best-effort, non-blocking)
-	h.authService.RecordConsent(c.Context(), user.ID, c.IP(), string(c.Request().Header.UserAgent()))
+	userAgent := strings.ReplaceAll(string(c.Request().Header.UserAgent()), "\n", " ")
+	userAgent = strings.ReplaceAll(userAgent, "\r", " ")
+	h.authService.RecordConsent(c.Context(), user.ID, c.IP(), userAgent)
 
 	return response.Created(c, user.ToProfile())
 }
@@ -221,6 +230,12 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	if err != nil {
 		return response.HandleError(c, err)
 	}
+
+	slog.Info("user logged in",
+		"user_id", user.ID,
+		"role", user.Role,
+		"operation", "login",
+	)
 
 	// Set HttpOnly cookies for web clients
 	h.setAuthCookies(c, accessToken, refreshToken)
@@ -409,7 +424,7 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 
 	// Rate limit: 5 attempts per token per 15 minutes
 	if req.Token != "" {
-		rlKey := fmt.Sprintf("reset_pw_attempts:%s", req.Token)
+		rlKey := fmt.Sprintf("rl:reset_pw:%s", req.Token)
 		if h.checkRedisRateLimit(c, rlKey, 5, 15*time.Minute) {
 			return response.Err(c, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan reset password. Coba lagi nanti.", 429))
 		}
@@ -418,6 +433,8 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	if err := h.authService.ResetPassword(c.Context(), req.Token, req.NewPassword); err != nil {
 		return response.HandleError(c, err)
 	}
+
+	slog.Info("password reset completed", "operation", "reset_password")
 
 	return response.OK(c, fiber.Map{
 		"message": "Password berhasil direset",
@@ -428,7 +445,7 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
 
 	// Rate limit: 10 attempts per userID per 15 minutes
-	rlKey := fmt.Sprintf("change_pw_attempts:%s", userID.String())
+	rlKey := fmt.Sprintf("rl:change_pw:%s", userID.String())
 	if h.checkRedisRateLimit(c, rlKey, 10, 15*time.Minute) {
 		return response.Err(c, apperror.New("TOO_MANY_ATTEMPTS", "Terlalu banyak percobaan ganti password. Coba lagi nanti.", 429))
 	}
@@ -454,6 +471,8 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	if err := h.authService.ChangePassword(c.Context(), userID, req.OldPassword, req.NewPassword); err != nil {
 		return response.HandleError(c, err)
 	}
+
+	slog.Info("password changed", "user_id", userID, "operation", "change_password")
 
 	return response.OK(c, fiber.Map{
 		"message": "Password berhasil diubah",

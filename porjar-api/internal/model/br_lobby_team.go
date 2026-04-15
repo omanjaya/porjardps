@@ -33,6 +33,7 @@ type BRLobbyTeamRepository interface {
 
 type BRDailyStandingsRepository interface {
 	Upsert(ctx context.Context, s *BRDailyStanding) error
+	BulkUpsert(ctx context.Context, standings []*BRDailyStanding) error
 	FindByTournamentAndDay(ctx context.Context, tournamentID uuid.UUID, dayNumber int) ([]*BRDailyStanding, error)
 	UpdateRanks(ctx context.Context, tournamentID uuid.UUID, dayNumber int) error
 }

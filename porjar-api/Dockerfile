@@ -14,7 +14,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /porjar-api ./cmd/server && \
 FROM alpine:3.19
 
 RUN apk --no-cache add ca-certificates tzdata wget
+
 ENV TZ=Asia/Makassar
+
+RUN addgroup -S porjar && adduser -S -G porjar porjar
 
 WORKDIR /app
 
@@ -22,7 +25,9 @@ COPY --from=builder /porjar-api .
 COPY --from=builder /porjar-migrate .
 COPY --from=builder /app/migrations ./migrations
 
-RUN mkdir -p /app/storage/uploads
+RUN mkdir -p /app/storage/uploads && chown -R porjar:porjar /app
+
+USER porjar
 
 EXPOSE 8080
 

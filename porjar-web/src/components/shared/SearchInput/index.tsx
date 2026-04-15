@@ -50,6 +50,7 @@ export function SearchInput({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
+        aria-label="Cari"
         className="pl-9 pr-8 bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 placeholder:text-stone-400 dark:placeholder:text-zinc-500 focus-visible:border-esi-red focus-visible:ring-esi-red/20"
       />
       {value && (

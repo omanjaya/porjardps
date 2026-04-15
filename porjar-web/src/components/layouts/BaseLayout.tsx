@@ -119,26 +119,36 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto space-y-1 p-3">
-          {navItems.map((item) => {
+        <nav className="flex-1 overflow-y-auto p-3">
+          {navItems.map((item, idx) => {
             const isActive = isItemActive(item.href)
             const IconComp = item.icon
+            const showSection = item.section && (idx === 0 || item.section !== navItems[idx - 1].section)
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
-                  isActive
-                    ? 'border-l-3 border-esi-red bg-red-50 dark:bg-red-950 text-esi-red'
-                    : 'text-esi-muted hover:bg-esi-bg hover:text-esi-text'
+              <div key={item.href}>
+                {showSection && (
+                  <div className={cn('flex items-center gap-2 px-2 pb-1 pt-1', idx > 0 && 'mt-3')}>
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">
+                      {item.section}
+                    </span>
+                    <div className="flex-1 h-px bg-stone-200 dark:bg-zinc-700/60" />
+                  </div>
                 )}
-              >
-                <IconComp size={20} weight={isActive ? 'fill' : 'regular'} />
-                {item.label}
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200',
+                    isActive
+                      ? 'border-l-3 border-esi-red bg-red-50 dark:bg-red-950 text-esi-red'
+                      : 'text-esi-muted hover:bg-esi-bg hover:text-esi-text'
+                  )}
+                >
+                  <IconComp size={20} weight={isActive ? 'fill' : 'regular'} />
+                  {item.label}
+                </Link>
+              </div>
             )
           })}
         </nav>
@@ -179,6 +189,17 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
             <span className="hidden sm:inline text-sm text-esi-muted truncate">
               {user?.full_name ?? defaultUserLabel}
             </span>
+            {user?.role && (
+              <span className={cn(
+                'hidden sm:inline shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white',
+                user.role === 'admin' || user.role === 'superadmin' ? 'bg-red-600'
+                : user.role === 'coach' ? 'bg-blue-600'
+                : user.role === 'referee' ? 'bg-yellow-500'
+                : 'bg-green-600'
+              )}>
+                {user.role === 'superadmin' ? 'superadmin' : user.role}
+              </span>
+            )}
             <Button
               variant="ghost"
               size="sm"

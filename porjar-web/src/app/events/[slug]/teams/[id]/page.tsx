@@ -68,7 +68,7 @@ export default function EventTeamDetailPage() {
         <EmptyState
           icon={Users}
           title="Tim tidak ditemukan"
-          description="Tim yang kamu cari tidak ada"
+          description="Tim yang kamu cari tidak ada atau sudah tidak aktif."
         />
       </div>
     )

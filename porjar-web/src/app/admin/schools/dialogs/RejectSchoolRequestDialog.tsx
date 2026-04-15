@@ -9,9 +9,10 @@ interface Props {
   reason: string
   onReasonChange: (v: string) => void
   onConfirm: () => void
+  submitting?: boolean
 }
 
-export function RejectSchoolRequestDialog({ open, onOpenChange, reason, onReasonChange, onConfirm }: Props) {
+export function RejectSchoolRequestDialog({ open, onOpenChange, reason, onReasonChange, onConfirm, submitting = false }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onConfirm()
@@ -25,6 +26,7 @@ export function RejectSchoolRequestDialog({ open, onOpenChange, reason, onReason
       onSubmit={handleSubmit}
       submitLabel="Tolak"
       submitVariant="destructive"
+      submitting={submitting}
       maxWidth="sm"
     >
       <div>

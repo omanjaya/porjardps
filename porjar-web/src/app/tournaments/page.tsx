@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { TournamentsClient } from './TournamentsClient'
@@ -5,6 +6,18 @@ import type { Tournament, Game, GameSlug, ApiResponse } from '@/types'
 
 // Revalidate cached data every 60 seconds (ISR)
 export const revalidate = 60
+
+export const metadata: Metadata = {
+  title: 'Turnamen Esport',
+  description: 'Daftar semua turnamen esport pelajar ESI Kota Denpasar — Mobile Legends, Free Fire, PUBG Mobile, eFootball, Honor of Kings.',
+  keywords: ['turnamen esport denpasar', 'bracket esport pelajar', 'ml tournament denpasar', 'ff tournament bali'],
+  openGraph: {
+    title: 'Turnamen Esport | ESI Denpasar',
+    description: 'Daftar semua turnamen esport pelajar ESI Kota Denpasar — Mobile Legends, Free Fire, PUBG Mobile, eFootball, Honor of Kings.',
+    images: [{ url: '/api/og?title=Turnamen+Esport&subtitle=ESI+Denpasar', width: 1200, height: 630 }],
+  },
+  alternates: { canonical: 'https://esidenpasar.com/tournaments' },
+}
 
 async function fetchTournaments(): Promise<Tournament[]> {
   const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090/api/v1'

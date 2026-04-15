@@ -26,7 +26,7 @@ export function ReportMatchHistory({ matches }: ReportMatchHistoryProps) {
 
   return (
     <div className="print-section">
-      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-200">
+      <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-200">
         <Trophy className="h-5 w-5" />
         Hasil Pertandingan
       </h3>
@@ -38,21 +38,21 @@ export function ReportMatchHistory({ matches }: ReportMatchHistoryProps) {
           const roundMatches = matches.filter((m) => m.round === round)
           return (
             <div key={round} className="mb-4">
-              <h4 className="mb-2 text-sm font-semibold text-slate-400">
+              <h4 className="mb-2 text-sm font-semibold text-stone-400">
                 Round {round}
               </h4>
               <div className="grid gap-2 sm:grid-cols-2">
                 {roundMatches.map((m) => (
                   <div
                     key={m.id}
-                    className="flex items-center justify-between rounded-lg border border-slate-700 p-3"
+                    className="flex items-center justify-between rounded-lg border border-stone-700 p-3"
                   >
                     <div className="flex-1">
                       <span
                         className={
                           m.winner_name === m.team_a_name
                             ? 'font-bold text-green-400'
-                            : 'text-slate-300'
+                            : 'text-stone-300'
                         }
                       >
                         {m.team_a_name || 'TBD'}
@@ -60,11 +60,11 @@ export function ReportMatchHistory({ matches }: ReportMatchHistoryProps) {
                     </div>
                     <div className="mx-3 text-center">
                       {m.status === 'completed' ? (
-                        <span className="font-mono text-sm font-bold text-slate-200">
+                        <span className="font-mono text-sm font-bold text-stone-200">
                           {m.score_a ?? 0} - {m.score_b ?? 0}
                         </span>
                       ) : (
-                        <Badge variant="outline" className="border-slate-600 text-xs text-slate-500">
+                        <Badge variant="outline" className="border-stone-600 text-xs text-stone-500">
                           {m.status === 'live' ? 'LIVE' : m.status === 'bye' ? 'BYE' : 'Pending'}
                         </Badge>
                       )}
@@ -74,7 +74,7 @@ export function ReportMatchHistory({ matches }: ReportMatchHistoryProps) {
                         className={
                           m.winner_name === m.team_b_name
                             ? 'font-bold text-green-400'
-                            : 'text-slate-300'
+                            : 'text-stone-300'
                         }
                       >
                         {m.team_b_name || 'TBD'}

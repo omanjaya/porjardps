@@ -106,6 +106,14 @@ func (m *MockBracketRepo) FindLiveAcrossAllTournaments(ctx context.Context, limi
 	return args.Get(0).([]*model.BracketMatch), args.Error(1)
 }
 
+func (m *MockBracketRepo) FindScheduledAcrossAllTournaments(ctx context.Context, limit int) ([]*model.BracketMatch, error) {
+	args := m.Called(ctx, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]*model.BracketMatch), args.Error(1)
+}
+
 func (m *MockBracketRepo) FindRecentCompleted(ctx context.Context, limit int) ([]*model.BracketMatch, error) {
 	args := m.Called(ctx, limit)
 	if args.Get(0) == nil {

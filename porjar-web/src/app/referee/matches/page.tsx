@@ -12,6 +12,8 @@ import {
   Broadcast,
   ArrowsClockwise,
   CaretRight,
+  Play,
+  Clock,
 } from '@phosphor-icons/react'
 import { RefereeLayout } from '@/components/layouts/RefereeLayout'
 import { Button } from '@/components/ui/button'
@@ -31,6 +33,7 @@ import type { LiveMatch } from '@/types'
 
 type CardType = 'yellow' | 'red'
 type MatchFilter = 'all' | 'bracket' | 'br' | 'group'
+type PageTab = 'live' | 'scheduled'
 
 interface IssueCardForm {
   team_id: string
@@ -59,7 +62,9 @@ function getMatchTeams(match: LiveMatch): { id: string; name: string }[] {
 }
 
 export default function RefereeMatchesPage() {
-  const [matches, setMatches] = useState<LiveMatch[]>([])
+  const [tab, setTab] = useState<PageTab>('live')
+  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([])
+  const [scheduledMatches, setScheduledMatches] = useState<LiveMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<MatchFilter>('all')
   const [refreshing, setRefreshing] = useState(false)
@@ -76,12 +81,19 @@ export default function RefereeMatchesPage() {
   const [issuingCard, setIssuingCard] = useState(false)
   const [confirmStep, setConfirmStep] = useState(false)
 
+  // Set live state
+  const [settingLive, setSettingLive] = useState<string | null>(null)
+
   const loadMatches = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true)
     else setLoading(true)
     try {
-      const data = await api.get<LiveMatch[]>('/referee/matches')
-      setMatches(data ?? [])
+      const [liveData, scheduledData] = await Promise.all([
+        api.get<LiveMatch[]>('/referee/matches'),
+        api.get<LiveMatch[]>('/referee/matches/scheduled'),
+      ])
+      setLiveMatches(liveData ?? [])
+      setScheduledMatches(scheduledData ?? [])
     } catch (err) {
       console.error('Gagal memuat pertandingan:', err)
       toast.error('Gagal memuat pertandingan')
@@ -97,12 +109,10 @@ export default function RefereeMatchesPage() {
     return () => clearInterval(interval)
   }, [loadMatches])
 
-  // Get unique tournament names for filter display
+  const matches = tab === 'live' ? liveMatches : scheduledMatches
   const tournaments = Array.from(new Set(matches.map((m) => m.tournament_name))).filter(Boolean)
-
   const filtered = filter === 'all' ? matches : matches.filter((m) => m.type === filter)
 
-  // Count by type
   const bracketCount = matches.filter((m) => m.type === 'bracket').length
   const brCount = matches.filter((m) => m.type === 'br').length
   const groupCount = matches.filter((m) => m.type === 'group').length
@@ -116,6 +126,21 @@ export default function RefereeMatchesPage() {
 
   function selectTeam(teamId: string, teamName: string) {
     setCardForm((prev) => ({ ...prev, team_id: teamId, team_name: teamName }))
+  }
+
+  async function handleSetLive(match: LiveMatch) {
+    const key = `${match.type}-${match.match_id}`
+    setSettingLive(key)
+    try {
+      await api.put(`/referee/matches/${match.type}/${match.match_id}/live`, {})
+      toast.success('Pertandingan dimulai')
+      await loadMatches(true)
+      setTab('live')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal memulai pertandingan')
+    } finally {
+      setSettingLive(null)
+    }
   }
 
   async function handleIssueCard() {
@@ -181,10 +206,9 @@ export default function RefereeMatchesPage() {
               <Broadcast size={18} weight="duotone" className="text-green-600" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-esi-text sm:text-xl">Pertandingan Live</h1>
+              <h1 className="text-lg font-bold text-esi-text sm:text-xl">Pertandingan</h1>
               <p className="text-[11px] text-esi-muted">
-                {matches.length} match aktif
-                {tournaments.length > 0 && ` di ${tournaments.length} turnamen`}
+                {liveMatches.length} live · {scheduledMatches.length} terjadwal
               </p>
             </div>
           </div>
@@ -194,15 +218,50 @@ export default function RefereeMatchesPage() {
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-esi-muted transition-all active:scale-95 hover:text-esi-text disabled:opacity-50"
             aria-label="Refresh"
           >
-            <ArrowsClockwise
-              size={18}
-              className={refreshing ? 'animate-spin' : ''}
-            />
+            <ArrowsClockwise size={18} className={refreshing ? 'animate-spin' : ''} />
+          </button>
+        </div>
+
+        {/* Live / Scheduled tabs */}
+        <div className="mt-3 flex gap-1.5">
+          <button
+            onClick={() => { setTab('live'); setFilter('all') }}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all',
+              tab === 'live'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'bg-white dark:bg-zinc-800 text-esi-muted border border-stone-200 dark:border-zinc-700 hover:text-esi-text'
+            )}
+          >
+            <span className={cn('h-1.5 w-1.5 rounded-full', tab === 'live' ? 'bg-white animate-pulse' : 'bg-green-500')} />
+            Live
+            {liveMatches.length > 0 && (
+              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums', tab === 'live' ? 'bg-white/20 text-white' : 'bg-stone-100 dark:bg-zinc-700 text-esi-muted')}>
+                {liveMatches.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => { setTab('scheduled'); setFilter('all') }}
+            className={cn(
+              'flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all',
+              tab === 'scheduled'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white dark:bg-zinc-800 text-esi-muted border border-stone-200 dark:border-zinc-700 hover:text-esi-text'
+            )}
+          >
+            <Clock size={12} />
+            Terjadwal
+            {scheduledMatches.length > 0 && (
+              <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums', tab === 'scheduled' ? 'bg-white/20 text-white' : 'bg-stone-100 dark:bg-zinc-700 text-esi-muted')}>
+                {scheduledMatches.length}
+              </span>
+            )}
           </button>
         </div>
 
         {/* Filter tabs */}
-        <div className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
           {filterButtons.map((f) => (
             <button
               key={f.key}
@@ -241,94 +300,116 @@ export default function RefereeMatchesPage() {
         </div>
       ) : filtered.length > 0 ? (
         <div className="space-y-3">
-          {filtered.map((match) => (
-            <div
-              key={`${match.type}-${match.match_id}`}
-              className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden"
-            >
-              {/* Match header bar */}
-              <div className="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/30 px-4 py-2">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:text-green-300">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
-                    Live
-                  </span>
-                  <span className="rounded bg-stone-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-esi-muted">
-                    {getMatchTypeLabel(match.type)}
-                  </span>
+          {filtered.map((match) => {
+            const matchKey = `${match.type}-${match.match_id}`
+            const isSettingThisLive = settingLive === matchKey
+            return (
+              <div
+                key={matchKey}
+                className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden"
+              >
+                {/* Match header bar */}
+                <div className="flex items-center justify-between border-b border-stone-100 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/30 px-4 py-2">
+                  <div className="flex items-center gap-2">
+                    {tab === 'live' ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:text-green-300">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-500" />
+                        Live
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700 dark:text-blue-300">
+                        <Clock size={10} />
+                        Terjadwal
+                      </span>
+                    )}
+                    <span className="rounded bg-stone-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-esi-muted">
+                      {getMatchTypeLabel(match.type)}
+                    </span>
+                  </div>
+                  {match.round != null && (
+                    <span className="text-[11px] text-esi-muted">
+                      R{match.round}
+                      {match.match_number != null && match.type !== 'br' && ` #${match.match_number}`}
+                    </span>
+                  )}
                 </div>
-                {match.round != null && (
-                  <span className="text-[11px] text-esi-muted">
-                    R{match.round}
-                    {match.match_number != null && match.type !== 'br' && ` #${match.match_number}`}
-                  </span>
-                )}
-              </div>
 
-              {/* Match body */}
-              <div className="p-4">
-                {match.type === 'br' ? (
-                  /* Battle Royale layout */
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
-                      <Lightning size={24} weight="duotone" className="text-purple-600" />
+                {/* Match body */}
+                <div className="p-4">
+                  {match.type === 'br' ? (
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-100 dark:bg-purple-900/30">
+                        <Lightning size={24} weight="duotone" className="text-purple-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-base font-bold text-esi-text truncate">
+                          {match.lobby_name ?? 'Battle Royale'}
+                        </p>
+                        <p className="text-xs text-esi-muted flex items-center gap-1">
+                          <Trophy size={11} />
+                          {match.tournament_name}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-base font-bold text-esi-text truncate">
-                        {match.lobby_name ?? 'Battle Royale'}
-                      </p>
-                      <p className="text-xs text-esi-muted flex items-center gap-1">
+                  ) : (
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 text-right">
+                          <p className="truncate text-sm font-bold text-esi-text">{match.team_a_name}</p>
+                        </div>
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800">
+                          <span className="text-[10px] font-black text-esi-muted">VS</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold text-esi-text">{match.team_b_name}</p>
+                        </div>
+                      </div>
+                      <p className="mt-1.5 text-center text-xs text-esi-muted flex items-center justify-center gap-1">
                         <Trophy size={11} />
                         {match.tournament_name}
                       </p>
                     </div>
-                  </div>
-                ) : (
-                  /* VS layout for bracket/group */
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1 text-right">
-                        <p className="truncate text-sm font-bold text-esi-text">
-                          {match.team_a_name}
-                        </p>
-                      </div>
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800">
-                        <span className="text-[10px] font-black text-esi-muted">VS</span>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold text-esi-text">
-                          {match.team_b_name}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-1.5 text-center text-xs text-esi-muted flex items-center justify-center gap-1">
-                      <Trophy size={11} />
-                      {match.tournament_name}
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openCardDialog(match)}
-                    className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 text-sm font-semibold text-amber-700 dark:text-amber-300 transition-all active:scale-[0.97]"
-                  >
-                    <IdentificationCard size={18} weight="duotone" />
-                    Beri Kartu
-                  </button>
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {tab === 'scheduled' ? (
+                      <button
+                        onClick={() => handleSetLive(match)}
+                        disabled={isSettingThisLive}
+                        className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/50 text-sm font-semibold text-green-700 dark:text-green-300 transition-all active:scale-[0.97] disabled:opacity-60"
+                      >
+                        {isSettingThisLive ? (
+                          <Spinner size={18} className="animate-spin" />
+                        ) : (
+                          <Play size={18} weight="fill" />
+                        )}
+                        Mulai
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => openCardDialog(match)}
+                        className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 text-sm font-semibold text-amber-700 dark:text-amber-300 transition-all active:scale-[0.97]"
+                      >
+                        <IdentificationCard size={18} weight="duotone" />
+                        Beri Kartu
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-stone-300 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-900/50 p-10 text-center">
           <Sword size={40} weight="duotone" className="mx-auto mb-3 text-esi-border" />
           <p className="text-sm font-medium text-esi-muted">
             {filter !== 'all'
-              ? `Tidak ada pertandingan ${getMatchTypeLabel(filter)} yang sedang live`
-              : 'Belum ada pertandingan yang sedang berlangsung'}
+              ? `Tidak ada pertandingan ${getMatchTypeLabel(filter)} yang ${tab === 'live' ? 'sedang live' : 'terjadwal'}`
+              : tab === 'live'
+              ? 'Belum ada pertandingan yang sedang berlangsung'
+              : 'Tidak ada pertandingan yang terjadwal'}
           </p>
           <p className="mt-1 text-xs text-esi-muted">Otomatis refresh setiap 30 detik</p>
         </div>
@@ -362,9 +443,7 @@ export default function RefereeMatchesPage() {
               <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-4 space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-stone-500 dark:text-zinc-400">Tim:</span>
-                  <span className="font-bold text-stone-900 dark:text-zinc-100">
-                    {cardForm.team_name}
-                  </span>
+                  <span className="font-bold text-stone-900 dark:text-zinc-100">{cardForm.team_name}</span>
                 </div>
                 <div className="flex justify-between text-sm items-center">
                   <span className="text-stone-500 dark:text-zinc-400">Kartu:</span>
@@ -387,9 +466,7 @@ export default function RefereeMatchesPage() {
                 </div>
                 <div className="text-sm">
                   <span className="text-stone-500 dark:text-zinc-400">Alasan:</span>
-                  <p className="mt-1 font-medium text-stone-900 dark:text-zinc-100">
-                    {cardForm.reason}
-                  </p>
+                  <p className="mt-1 font-medium text-stone-900 dark:text-zinc-100">{cardForm.reason}</p>
                 </div>
               </div>
             </div>
@@ -398,9 +475,7 @@ export default function RefereeMatchesPage() {
               {/* Team selection */}
               {cardMatch && getMatchTeams(cardMatch).length > 0 ? (
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">
-                    Tim
-                  </label>
+                  <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">Tim</label>
                   <div className="flex gap-2">
                     {getMatchTeams(cardMatch).map((team) => (
                       <button
@@ -421,9 +496,7 @@ export default function RefereeMatchesPage() {
                 </div>
               ) : cardMatch?.type === 'br' ? (
                 <div>
-                  <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">
-                    Team ID
-                  </label>
+                  <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">Team ID</label>
                   <input
                     type="text"
                     placeholder="Masukkan team ID..."
@@ -438,16 +511,14 @@ export default function RefereeMatchesPage() {
                     className="h-14 w-full rounded-xl border-2 border-stone-200 dark:border-zinc-700 px-4 text-sm bg-white dark:bg-zinc-900 text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:outline-none"
                   />
                   <p className="mt-1.5 text-[11px] text-esi-muted">
-                    Battle Royale -- masukkan ID tim yang melanggar
+                    Battle Royale — masukkan ID tim yang melanggar
                   </p>
                 </div>
               ) : null}
 
               {/* Card type */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">
-                  Jenis Kartu
-                </label>
+                <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">Jenis Kartu</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -480,9 +551,7 @@ export default function RefereeMatchesPage() {
 
               {/* Reason */}
               <div>
-                <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">
-                  Alasan
-                </label>
+                <label className="mb-2 block text-sm font-semibold text-stone-700 dark:text-zinc-300">Alasan</label>
                 <Textarea
                   value={cardForm.reason}
                   onChange={(e) => setCardForm((prev) => ({ ...prev, reason: e.target.value }))}

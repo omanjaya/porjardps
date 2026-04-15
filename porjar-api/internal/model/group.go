@@ -96,6 +96,7 @@ type GroupRepository interface {
 	UpdateMatchStatus(ctx context.Context, id uuid.UUID, status string) error
 	FindLiveMatches(ctx context.Context, limit int) ([]*GroupMatch, error)
 	FindLiveMatchesByTeam(ctx context.Context, teamID uuid.UUID) ([]*GroupMatch, error)
+	FindScheduledMatches(ctx context.Context, limit int) ([]*GroupMatch, error)
 
 	// Reset
 	ResetMatchResultsByGroup(ctx context.Context, groupID uuid.UUID) error

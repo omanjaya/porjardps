@@ -71,7 +71,7 @@ export default function EventTeamsPage() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Users} title="Belum ada tim" description="Belum ada tim yang terdaftar." />
+        <EmptyState icon={Users} title="Belum ada tim" description={search ? 'Tidak ada tim yang cocok dengan pencarianmu.' : 'Belum ada tim yang mendaftar pada event ini.'} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {visible.map((t) => (

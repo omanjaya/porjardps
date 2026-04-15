@@ -1,6 +1,9 @@
 import type { ApiResponse, ApiErrorBody } from '@/types'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9090/api/v1'
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? (() => {
+  if (process.env.NODE_ENV === 'production') throw new Error('NEXT_PUBLIC_API_URL is required')
+  return 'http://localhost:9090/api/v1'
+})()
 const API_BASE = API_URL.replace(/\/api\/v\d+$/, '')
 
 /**
@@ -140,9 +143,14 @@ async function fetchWithAuth(
     (fetchOpts.method || 'GET').toUpperCase()
   )
 
+  const csrfToken = isMutation ? getCSRFToken() : ''
+  if (isMutation && !csrfToken) {
+    console.warn('[api] CSRF token is empty for mutation — server will validate and reject if required')
+  }
+
   const headers: Record<string, string> = {
     ...(fetchOpts.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-    ...(isMutation ? { 'X-CSRF-Token': getCSRFToken() } : {}),
+    ...(isMutation ? { 'X-CSRF-Token': csrfToken } : {}),
     ...(fetchOpts.headers as Record<string, string> ?? {}),
   }
 

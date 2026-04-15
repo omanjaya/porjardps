@@ -84,9 +84,11 @@ func (h *EventAnnouncementHandler) Create(c *fiber.Ctx) error {
 	}
 	var createdBy *uuid.UUID
 	if uidStr, ok := c.Locals("userID").(string); ok && uidStr != "" {
-		if uid, err := uuid.Parse(uidStr); err == nil {
-			createdBy = &uid
+		uid, err := uuid.Parse(uidStr)
+		if err != nil {
+			return response.BadRequest(c, "User ID tidak valid")
 		}
+		createdBy = &uid
 	}
 	a, err := h.svc.Create(c.Context(), service.CreateAnnouncementInput{
 		EventID:   eventID,

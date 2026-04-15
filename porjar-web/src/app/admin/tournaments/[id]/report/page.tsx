@@ -315,7 +315,7 @@ export default function TournamentReportPage() {
               <Button
                 variant="outline"
                 onClick={handleShare}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-stone-600 text-stone-300 hover:bg-zinc-700"
               >
                 <ShareNetwork className="mr-2 h-4 w-4" />
                 Share
@@ -323,7 +323,7 @@ export default function TournamentReportPage() {
               <Button
                 variant="outline"
                 onClick={handleDownloadJSON}
-                className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                className="border-stone-600 text-stone-300 hover:bg-zinc-700"
               >
                 <DownloadSimple className="mr-2 h-4 w-4" />
                 Download JSON
@@ -339,16 +339,16 @@ export default function TournamentReportPage() {
 
       <div className="print-container space-y-8">
         {/* Tournament Header */}
-        <div className="print-section rounded-xl border border-slate-700 bg-gradient-to-r from-slate-800 to-slate-900 p-6">
+        <div className="print-section rounded-xl border border-stone-700 bg-gradient-to-r from-zinc-800 to-zinc-900 p-6">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-slate-50">{t.name}</h2>
-              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-400">
+              <h2 className="text-3xl font-bold text-stone-50">{t.name}</h2>
+              <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-stone-400">
                 <span className="flex items-center gap-1">
                   <GameController className="h-4 w-4" />
                   {t.game_name}
                 </span>
-                <Badge variant="outline" className="border-slate-600 text-slate-300">
+                <Badge variant="outline" className="border-stone-600 text-stone-300">
                   {FORMAT_LABELS[t.format] || t.format}
                 </Badge>
                 <Badge
@@ -357,13 +357,13 @@ export default function TournamentReportPage() {
                       ? 'bg-green-900/50 text-green-400'
                       : t.status === 'ongoing'
                         ? 'bg-blue-900/50 text-blue-400'
-                        : 'bg-slate-700 text-slate-300'
+                        : 'bg-zinc-700 text-stone-300'
                   }
                 >
                   {STATUS_LABELS[t.status] || t.status}
                 </Badge>
               </div>
-              <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-400">
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-stone-400">
                 {t.start_date && (
                   <span>Mulai: {formatDate(t.start_date)}</span>
                 )}
@@ -374,7 +374,7 @@ export default function TournamentReportPage() {
                 {t.max_teams && <span>Maks {t.max_teams} tim</span>}
               </div>
             </div>
-            <div className="text-right text-xs text-slate-500">
+            <div className="text-right text-xs text-stone-500">
               Laporan dibuat: {formatDateTime(report.generated_at)}
             </div>
           </div>
@@ -386,34 +386,34 @@ export default function TournamentReportPage() {
         {/* Final Standings */}
         {report.standings.length > 0 && (
           <div className="print-section">
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-200">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-200">
               <Trophy className="h-5 w-5" />
               Klasemen Akhir
             </h3>
-            <div className="overflow-hidden rounded-lg border border-slate-700">
+            <div className="overflow-hidden rounded-lg border border-stone-700">
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-slate-700 hover:bg-transparent">
-                    <TableHead className="w-16 text-slate-400">#</TableHead>
-                    <TableHead className="text-slate-400">Tim</TableHead>
-                    <TableHead className="text-center text-slate-400">Main</TableHead>
-                    <TableHead className="text-center text-slate-400">M</TableHead>
-                    <TableHead className="text-center text-slate-400">K</TableHead>
-                    <TableHead className="text-center text-slate-400">S</TableHead>
-                    <TableHead className="text-center text-slate-400">Poin</TableHead>
+                  <TableRow className="border-stone-700 hover:bg-transparent">
+                    <TableHead className="w-16 text-stone-400">#</TableHead>
+                    <TableHead className="text-stone-400">Tim</TableHead>
+                    <TableHead className="text-center text-stone-400">Main</TableHead>
+                    <TableHead className="text-center text-stone-400">M</TableHead>
+                    <TableHead className="text-center text-stone-400">K</TableHead>
+                    <TableHead className="text-center text-stone-400">S</TableHead>
+                    <TableHead className="text-center text-stone-400">Poin</TableHead>
                     {report.standings.some((s) => s.total_kills > 0) && (
-                      <TableHead className="text-center text-slate-400">Kills</TableHead>
+                      <TableHead className="text-center text-stone-400">Kills</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {report.standings.map((s, i) => (
-                    <TableRow key={i} className="border-slate-700 hover:bg-slate-800/50">
-                      <TableCell className="font-bold text-slate-300">
+                    <TableRow key={i} className="border-stone-700 hover:bg-zinc-800/50">
+                      <TableCell className="font-bold text-stone-300">
                         {s.rank_position ?? i + 1}
                       </TableCell>
-                      <TableCell className="font-medium text-slate-200">
+                      <TableCell className="font-medium text-stone-200">
                         {s.team_name}
                         {s.is_eliminated && (
                           <Badge className="ml-2 bg-red-900/50 text-xs text-red-400">
@@ -421,17 +421,17 @@ export default function TournamentReportPage() {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-center text-slate-300">
+                      <TableCell className="text-center text-stone-300">
                         {s.matches_played}
                       </TableCell>
                       <TableCell className="text-center text-green-400">{s.wins}</TableCell>
                       <TableCell className="text-center text-red-400">{s.losses}</TableCell>
-                      <TableCell className="text-center text-slate-400">{s.draws}</TableCell>
-                      <TableCell className="text-center font-bold text-slate-200">
+                      <TableCell className="text-center text-stone-400">{s.draws}</TableCell>
+                      <TableCell className="text-center font-bold text-stone-200">
                         {s.total_points}
                       </TableCell>
                       {report.standings.some((st) => st.total_kills > 0) && (
-                        <TableCell className="text-center text-slate-300">
+                        <TableCell className="text-center text-stone-300">
                           {s.total_kills}
                         </TableCell>
                       )}
@@ -450,57 +450,57 @@ export default function TournamentReportPage() {
         {/* Lobby Results (Battle Royale) */}
         {report.lobbies.length > 0 && (
           <div className="print-section">
-            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-200">
+            <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-200">
               <GameController className="h-5 w-5" />
               Hasil Lobby
             </h3>
             {report.lobbies.map((lobby) => (
               <div key={lobby.id} className="mb-4">
-                <h4 className="mb-2 text-sm font-semibold text-slate-400">
+                <h4 className="mb-2 text-sm font-semibold text-stone-400">
                   {lobby.lobby_name} (Hari {lobby.day_number})
                   <Badge
                     className={`ml-2 ${
                       lobby.status === 'completed'
                         ? 'bg-green-900/50 text-green-400'
-                        : 'bg-slate-700 text-slate-300'
+                        : 'bg-zinc-700 text-stone-300'
                     }`}
                   >
                     {lobby.status}
                   </Badge>
                 </h4>
                 {lobby.results.length > 0 && (
-                  <div className="overflow-hidden rounded-lg border border-slate-700">
+                  <div className="overflow-hidden rounded-lg border border-stone-700">
                     <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="border-slate-700 hover:bg-transparent">
-                          <TableHead className="w-16 text-slate-400">#</TableHead>
-                          <TableHead className="text-slate-400">Tim</TableHead>
-                          <TableHead className="text-center text-slate-400">Kills</TableHead>
-                          <TableHead className="text-center text-slate-400">Placement Pts</TableHead>
-                          <TableHead className="text-center text-slate-400">Kill Pts</TableHead>
-                          <TableHead className="text-center text-slate-400">Total</TableHead>
+                        <TableRow className="border-stone-700 hover:bg-transparent">
+                          <TableHead className="w-16 text-stone-400">#</TableHead>
+                          <TableHead className="text-stone-400">Tim</TableHead>
+                          <TableHead className="text-center text-stone-400">Kills</TableHead>
+                          <TableHead className="text-center text-stone-400">Placement Pts</TableHead>
+                          <TableHead className="text-center text-stone-400">Kill Pts</TableHead>
+                          <TableHead className="text-center text-stone-400">Total</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {lobby.results
                           .sort((a, b) => a.placement - b.placement)
                           .map((r, i) => (
-                            <TableRow key={i} className="border-slate-700 hover:bg-slate-800/50">
-                              <TableCell className="font-bold text-slate-300">
+                            <TableRow key={i} className="border-stone-700 hover:bg-zinc-800/50">
+                              <TableCell className="font-bold text-stone-300">
                                 {r.placement}
                               </TableCell>
-                              <TableCell className="text-slate-200">{r.team_name}</TableCell>
-                              <TableCell className="text-center text-slate-300">
+                              <TableCell className="text-stone-200">{r.team_name}</TableCell>
+                              <TableCell className="text-center text-stone-300">
                                 {r.kills}
                               </TableCell>
-                              <TableCell className="text-center text-slate-300">
+                              <TableCell className="text-center text-stone-300">
                                 {r.placement_points}
                               </TableCell>
-                              <TableCell className="text-center text-slate-300">
+                              <TableCell className="text-center text-stone-300">
                                 {r.kill_points}
                               </TableCell>
-                              <TableCell className="text-center font-bold text-slate-200">
+                              <TableCell className="text-center font-bold text-stone-200">
                                 {r.total_points}
                               </TableCell>
                             </TableRow>
@@ -520,27 +520,27 @@ export default function TournamentReportPage() {
 
         {/* Team List */}
         <div className="print-section">
-          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-slate-200">
+          <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-stone-200">
             <UsersThree className="h-5 w-5" />
             Daftar Tim ({report.teams.length})
           </h3>
-          <div className="overflow-hidden rounded-lg border border-slate-700">
+          <div className="overflow-hidden rounded-lg border border-stone-700">
             <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-slate-700 hover:bg-transparent">
-                  <TableHead className="w-16 text-slate-400">Seed</TableHead>
-                  <TableHead className="text-slate-400">Tim</TableHead>
-                  <TableHead className="text-slate-400">Sekolah</TableHead>
-                  <TableHead className="text-slate-400">Status</TableHead>
+                <TableRow className="border-stone-700 hover:bg-transparent">
+                  <TableHead className="w-16 text-stone-400">Seed</TableHead>
+                  <TableHead className="text-stone-400">Tim</TableHead>
+                  <TableHead className="text-stone-400">Sekolah</TableHead>
+                  <TableHead className="text-stone-400">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {report.teams.map((team) => (
-                  <TableRow key={team.id} className="border-slate-700 hover:bg-slate-800/50">
-                    <TableCell className="text-slate-400">{team.seed ?? '-'}</TableCell>
-                    <TableCell className="font-medium text-slate-200">{team.name}</TableCell>
-                    <TableCell className="text-slate-400">{team.school || '-'}</TableCell>
+                  <TableRow key={team.id} className="border-stone-700 hover:bg-zinc-800/50">
+                    <TableCell className="text-stone-400">{team.seed ?? '-'}</TableCell>
+                    <TableCell className="font-medium text-stone-200">{team.name}</TableCell>
+                    <TableCell className="text-stone-400">{team.school || '-'}</TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
@@ -549,7 +549,7 @@ export default function TournamentReportPage() {
                             ? 'border-green-700 text-green-400'
                             : team.status === 'pending'
                               ? 'border-yellow-700 text-yellow-400'
-                              : 'border-slate-600 text-slate-400'
+                              : 'border-stone-600 text-stone-400'
                         }`}
                       >
                         {team.status}

@@ -90,7 +90,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ── Stats ── */}
-      <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 mb-4 sm:mb-6">
         <StatCard label="Turnamen" value={stats.tournaments} icon={Trophy} href="/admin/tournaments" color="text-esi-red" bg="bg-red-50 dark:bg-red-950/30" loading={loading} />
         <StatCard label="Tim" value={stats.teams} icon={Users} href="/admin/teams" color="text-blue-600" bg="bg-blue-50 dark:bg-blue-950/30" loading={loading} />
         <StatCard label="Hari Ini" value={stats.today} icon={CalendarBlank} color="text-amber-600" bg="bg-amber-50 dark:bg-amber-950/30" loading={loading} />

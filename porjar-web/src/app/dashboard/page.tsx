@@ -76,25 +76,27 @@ export default function DashboardPage() {
   }, [])
 
   // Personal WS notifications: react to approval / rejection in real time.
-  const userChannels = useMemo(() => (user?.id ? [`user:${user.id}`] : []), [user?.id])
+  // Channel uses '#' separator — Centrifugo personal channel syntax: user#<id>
+  const userChannels = useMemo(() => (user?.id ? [`user#${user.id}`] : []), [user?.id])
   useWebSocket({
     channels: userChannels,
-    messageTypes: ['team_approved', 'team_rejected', 'submission_approved', 'submission_rejected'],
+    messageTypes: ['notification'],
     onMessage: (msg) => {
-      const payload = (msg.data ?? {}) as Record<string, unknown>
-      const teamName = typeof payload.team_name === 'string' ? payload.team_name : 'Tim'
-      if (msg.type === 'team_approved') {
+      const inner = (msg.data ?? {}) as Record<string, unknown>
+      const notifType = typeof inner.type === 'string' ? inner.type : ''
+      const teamName = typeof inner.team_name === 'string' ? inner.team_name : 'Tim'
+      if (notifType === 'team_approved') {
         toast.success(`Tim "${teamName}" telah disetujui!`)
         reloadMyTeams()
         reload()
-      } else if (msg.type === 'team_rejected') {
+      } else if (notifType === 'team_rejected') {
         toast.error(`Tim "${teamName}" ditolak`)
         reloadMyTeams()
         reload()
-      } else if (msg.type === 'submission_approved') {
+      } else if (notifType === 'submission_approved') {
         toast.success('Submission kamu disetujui')
         reload()
-      } else if (msg.type === 'submission_rejected') {
+      } else if (notifType === 'submission_rejected') {
         toast.error('Submission kamu ditolak')
         reload()
       }
@@ -382,7 +384,7 @@ export default function DashboardPage() {
         {/* Info Turnamen */}
         {eventSettings && (eventSettings.event_name || eventSettings.organizer || eventSettings.contact_phone || eventSettings.contact_email) && (
           <AnimatedCard delay={450}>
-            <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-3 sm:p-5 shadow-sm">
+            <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm">
               <h2 className="flex items-center gap-2 text-base font-bold text-esi-text mb-3">
                 <Trophy size={18} weight="bold" className="text-amber-500" />
                 Info Turnamen

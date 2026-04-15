@@ -9,6 +9,7 @@ import {
   Star,
   CalendarBlank,
   ListBullets,
+  Bell,
 } from '@phosphor-icons/react'
 import type { LayoutConfig } from './types'
 
@@ -28,6 +29,7 @@ export const playerConfig: LayoutConfig = {
     { label: 'Event Saya', href: '/dashboard/events', icon: CalendarBlank },
     { label: 'Poin Saya', href: '/dashboard/points', icon: Star },
     { label: 'Tim Saya', href: '/dashboard/teams', icon: Users },
+    { label: 'Notifikasi', href: '/dashboard/notifications', icon: Bell },
     { label: 'Profil', href: '/dashboard/profile', icon: UserCircle },
   ],
   bottomNavItems: [

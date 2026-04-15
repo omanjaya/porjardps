@@ -444,18 +444,13 @@ func (h *ChallongeHandler) ImportBracket(c *fiber.Ctx) error {
 		}
 
 		// BYE detection: complete match with only 1 team
-		isBye := false
 		if cm.State == "complete" && ((teamAID != nil && teamBID == nil) || (teamAID == nil && teamBID != nil)) {
 			status = "bye"
-			isBye = true
 		}
 		// Also BYE if no players at all and complete
 		if cm.State == "complete" && teamAID == nil && teamBID == nil && cm.Player1ID == nil && cm.Player2ID == nil {
 			status = "bye"
-			isBye = true
 		}
-
-		_ = isBye
 
 		bm := &model.BracketMatch{
 			ID:              challongeIDToUUID[cm.ID],

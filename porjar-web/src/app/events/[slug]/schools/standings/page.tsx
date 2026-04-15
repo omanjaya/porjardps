@@ -57,7 +57,8 @@ export default function EventSchoolStandingsPage() {
         />
       ) : (
         <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-400 border-b border-stone-100 dark:border-zinc-800">
+          <div className="overflow-x-auto">
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 text-xs font-bold uppercase tracking-wider text-stone-400 border-b border-stone-100 dark:border-zinc-800 min-w-[320px]">
             <div className="col-span-1">#</div>
             <div className="col-span-6">Sekolah</div>
             <div className="col-span-2 text-right">Emas</div>
@@ -67,7 +68,7 @@ export default function EventSchoolStandingsPage() {
           {standings.map((s, i) => (
             <div
               key={s.id}
-              className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-stone-100 dark:border-zinc-800 last:border-0"
+              className="grid grid-cols-12 gap-2 px-4 py-3 items-center border-b border-stone-100 dark:border-zinc-800 last:border-0 min-w-[320px]"
             >
               <div className="col-span-1 font-bold text-stone-400">{i + 1}</div>
               <div className="col-span-6 font-semibold text-stone-800 dark:text-zinc-100 truncate">
@@ -84,6 +85,7 @@ export default function EventSchoolStandingsPage() {
               </div>
             </div>
           ))}
+          </div>
         </div>
       )}
     </>

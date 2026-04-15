@@ -70,9 +70,10 @@ func (s *NotificationService) GetByUser(ctx context.Context, userID uuid.UUID, p
 	return notifications, total, nil
 }
 
-// MarkRead marks a single notification as read without an ownership check.
-// This is intended for admin/internal paths only (e.g. system-triggered reads).
-// For user-initiated reads, always use MarkReadForUser which verifies ownership.
+// MarkRead marks a notification as read by ID, with NO ownership check.
+// SECURITY: This must ONLY be called from internal/admin paths where ownership
+// has already been verified at a higher layer. For user-facing operations,
+// always use MarkReadForUser() which enforces ownership.
 func (s *NotificationService) MarkRead(ctx context.Context, notificationID uuid.UUID) error {
 	if err := s.repo.MarkRead(ctx, notificationID); err != nil {
 		return fmt.Errorf("mark read: %w", err)
@@ -241,7 +242,7 @@ func (s *NotificationService) NotifyMatchResult(ctx context.Context, winnerTeamI
 
 // notifyAllAdmins sends a notification to all admin and superadmin users.
 func (s *NotificationService) notifyAllAdmins(ctx context.Context, notifType, title, message string, data json.RawMessage) {
-	for _, role := range []string{"admin", "superadmin"} {
+	for _, role := range []string{model.RoleAdmin, model.RoleSuperAdmin} {
 		r := role
 		admins, _, err := s.userRepo.List(ctx, model.UserFilter{Role: &r, Page: 1, Limit: 200})
 		if err != nil {

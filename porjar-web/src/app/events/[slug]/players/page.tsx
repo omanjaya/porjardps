@@ -80,7 +80,7 @@ export default function EventPlayersPage() {
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState icon={Users} title="Belum ada pemain" description="Belum ada pemain yang terdaftar." />
+        <EmptyState icon={Users} title="Belum ada pemain" description={search ? 'Tidak ada pemain yang cocok dengan pencarianmu.' : 'Pemain peserta event ini belum terdaftar.'} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {visible.map((p) => (

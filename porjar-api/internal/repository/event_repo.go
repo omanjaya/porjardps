@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -20,7 +21,7 @@ func NewEventRepo(db *pgxpool.Pool) model.EventRepository {
 	return &eventRepo{db: db}
 }
 
-const eventColumns = `id, slug, name, short_name, description, logo_url, banner_url,
+const eventColumns = `id, slug, name, short_name, description, logo_url, banner_url, poster_url,
 	primary_color, secondary_color, venue, city, organizer,
 	start_date, end_date, registration_start, registration_end,
 	status, contact_phone, contact_email, instagram_url, website_url,
@@ -31,7 +32,7 @@ func scanEvent(row pgx.Row) (*model.Event, error) {
 	e := &model.Event{}
 	var rulesRaw []byte
 	err := row.Scan(
-		&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL,
+		&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL, &e.PosterURL,
 		&e.PrimaryColor, &e.SecondaryColor, &e.Venue, &e.City, &e.Organizer,
 		&e.StartDate, &e.EndDate, &e.RegistrationStart, &e.RegistrationEnd,
 		&e.Status, &e.ContactPhone, &e.ContactEmail, &e.InstagramURL, &e.WebsiteURL,
@@ -58,7 +59,7 @@ func scanEvents(rows pgx.Rows) ([]*model.Event, error) {
 		e := &model.Event{}
 		var rulesRaw []byte
 		if err := rows.Scan(
-			&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL,
+			&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL, &e.PosterURL,
 			&e.PrimaryColor, &e.SecondaryColor, &e.Venue, &e.City, &e.Organizer,
 			&e.StartDate, &e.EndDate, &e.RegistrationStart, &e.RegistrationEnd,
 			&e.Status, &e.ContactPhone, &e.ContactEmail, &e.InstagramURL, &e.WebsiteURL,
@@ -154,14 +155,14 @@ func (r *eventRepo) Create(ctx context.Context, e *model.Event) error {
 		return fmt.Errorf("marshal rules_content: %w", err)
 	}
 	_, err = r.db.Exec(ctx,
-		`INSERT INTO events (id, slug, name, short_name, description, logo_url, banner_url,
+		`INSERT INTO events (id, slug, name, short_name, description, logo_url, banner_url, poster_url,
 			primary_color, secondary_color, venue, city, organizer,
 			start_date, end_date, registration_start, registration_end,
 			status, contact_phone, contact_email, instagram_url, website_url,
 			announcement, announcement_active, registration_open, rules_published,
 			requires_school, sort_order, rules_content, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
-		e.ID, e.Slug, e.Name, e.ShortName, e.Description, e.LogoURL, e.BannerURL,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
+		e.ID, e.Slug, e.Name, e.ShortName, e.Description, e.LogoURL, e.BannerURL, e.PosterURL,
 		e.PrimaryColor, e.SecondaryColor, e.Venue, e.City, e.Organizer,
 		e.StartDate, e.EndDate, e.RegistrationStart, e.RegistrationEnd,
 		e.Status, e.ContactPhone, e.ContactEmail, e.InstagramURL, e.WebsiteURL,
@@ -183,15 +184,15 @@ func (r *eventRepo) Update(ctx context.Context, e *model.Event) error {
 	}
 	_, err = r.db.Exec(ctx,
 		`UPDATE events SET slug = $2, name = $3, short_name = $4, description = $5,
-			logo_url = $6, banner_url = $7, primary_color = $8, secondary_color = $9,
-			venue = $10, city = $11, organizer = $12,
-			start_date = $13, end_date = $14, registration_start = $15, registration_end = $16,
-			status = $17, contact_phone = $18, contact_email = $19, instagram_url = $20, website_url = $21,
-			announcement = $22, announcement_active = $23, registration_open = $24, rules_published = $25,
-			requires_school = $26, sort_order = $27, rules_content = $28, updated_at = $29
+			logo_url = $6, banner_url = $7, poster_url = $8, primary_color = $9, secondary_color = $10,
+			venue = $11, city = $12, organizer = $13,
+			start_date = $14, end_date = $15, registration_start = $16, registration_end = $17,
+			status = $18, contact_phone = $19, contact_email = $20, instagram_url = $21, website_url = $22,
+			announcement = $23, announcement_active = $24, registration_open = $25, rules_published = $26,
+			requires_school = $27, sort_order = $28, rules_content = $29, updated_at = $30
 		 WHERE id = $1`,
 		e.ID, e.Slug, e.Name, e.ShortName, e.Description,
-		e.LogoURL, e.BannerURL, e.PrimaryColor, e.SecondaryColor,
+		e.LogoURL, e.BannerURL, e.PosterURL, e.PrimaryColor, e.SecondaryColor,
 		e.Venue, e.City, e.Organizer,
 		e.StartDate, e.EndDate, e.RegistrationStart, e.RegistrationEnd,
 		e.Status, e.ContactPhone, e.ContactEmail, e.InstagramURL, e.WebsiteURL,
@@ -209,4 +210,49 @@ func (r *eventRepo) Delete(ctx context.Context, id uuid.UUID) error {
 		return fmt.Errorf("Delete: %w", err)
 	}
 	return nil
+}
+
+func (r *eventRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE events SET status = $2, updated_at = NOW() WHERE id = $1`, id, status)
+	if err != nil {
+		return fmt.Errorf("UpdateStatus: %w", err)
+	}
+	return nil
+}
+
+func (r *eventRepo) ListByDateRange(ctx context.Context, start, end time.Time) ([]*model.Event, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT `+eventColumns+` FROM events
+		 WHERE start_date <= $2 AND end_date >= $1
+		 ORDER BY start_date`,
+		start, end)
+	if err != nil {
+		return nil, fmt.Errorf("ListByDateRange: %w", err)
+	}
+	defer rows.Close()
+
+	events, err := scanEvents(rows)
+	if err != nil {
+		return nil, fmt.Errorf("ListByDateRange scan: %w", err)
+	}
+	return events, nil
+}
+
+func (r *eventRepo) ListDueForTransition(ctx context.Context, now time.Time) ([]*model.Event, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT `+eventColumns+` FROM events
+		 WHERE (status = 'published' AND start_date IS NOT NULL AND start_date <= $1)
+		    OR (status = 'ongoing'   AND end_date   IS NOT NULL AND end_date   <= $1)`,
+		now)
+	if err != nil {
+		return nil, fmt.Errorf("ListDueForTransition: %w", err)
+	}
+	defer rows.Close()
+
+	events, err := scanEvents(rows)
+	if err != nil {
+		return nil, fmt.Errorf("ListDueForTransition scan: %w", err)
+	}
+	return events, nil
 }

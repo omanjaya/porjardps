@@ -103,7 +103,7 @@ export default function PointRulesPage() {
         description={event ? `Konfigurasi poin untuk ${event.name}` : 'Konfigurasi poin event'}
         breadcrumbs={[
           { label: 'Events', href: '/admin/events' },
-          { label: event?.name ?? '...', href: '/admin/events' },
+          { label: event?.name ?? '...', href: `/admin/events/${params.id}` },
           { label: 'Point Rules' },
         ]}
         actions={

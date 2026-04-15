@@ -130,7 +130,7 @@ func (h *AdminHandler) PublicStats(c *fiber.Ctx) error {
 	_, totalSchools, _ := h.schoolRepo.List(ctx, model.SchoolFilter{Page: 1, Limit: 1})
 
 	// Count players
-	totalPlayers, _ := h.userRepo.CountByRole(ctx, "player")
+	totalPlayers, _ := h.userRepo.CountByRole(ctx, model.RolePlayer)
 
 	// Count unique competition days from upcoming schedules
 	schedules, _ := h.scheduleRepo.FindUpcoming(ctx, 500)
@@ -212,7 +212,7 @@ func (h *AdminHandler) Dashboard(c *fiber.Ctx) error {
 	upcomingCount := len(upcomingSchedules)
 
 	// Total players
-	totalPlayers, _ := h.userRepo.CountByRole(ctx, "player")
+	totalPlayers, _ := h.userRepo.CountByRole(ctx, model.RolePlayer)
 
 	// Total schools
 	_, totalSchools, _ := h.schoolRepo.List(ctx, model.SchoolFilter{Page: 1, Limit: 1})

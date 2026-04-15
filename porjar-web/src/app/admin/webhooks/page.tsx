@@ -208,7 +208,7 @@ export default function AdminWebhooksPage() {
               {webhooks.map((wh) => (
                 <TableRow key={wh.id} className="border-stone-100 dark:border-zinc-700 hover:bg-red-50 dark:bg-red-950/30">
                   <TableCell className="font-medium text-stone-900 dark:text-zinc-100">{wh.name}</TableCell>
-                  <TableCell className="hidden sm:table-cell max-w-[200px] truncate text-sm text-stone-500 dark:text-zinc-400">
+                  <TableCell className="hidden sm:table-cell max-w-[120px] sm:max-w-[200px] truncate text-sm text-stone-500 dark:text-zinc-400">
                     {wh.url}
                   </TableCell>
                   <TableCell>

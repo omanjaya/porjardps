@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -109,6 +111,36 @@ func (q *SubmissionQueue) ReadBatch(ctx context.Context, consumerName string, ba
 				continue
 			}
 			job.JobID = msg.ID // populate the stream message ID as the job ID
+
+			// M6: Validate required fields after unmarshal.
+			if job.Type == "" || job.MatchID == "" || job.TeamID == "" || job.SubmittedByID == "" {
+				slog.Warn("invalid submission job: missing required fields", "job_id", job.JobID)
+				// Ack to prevent infinite re-delivery of a permanently-invalid message.
+				_ = q.Ack(ctx, job.JobID)
+				continue
+			}
+			if _, err := uuid.Parse(job.MatchID); err != nil {
+				slog.Warn("invalid submission job: bad match_id", "job_id", job.JobID, "match_id", job.MatchID)
+				_ = q.Ack(ctx, job.JobID)
+				continue
+			}
+			if _, err := uuid.Parse(job.TeamID); err != nil {
+				slog.Warn("invalid submission job: bad team_id", "job_id", job.JobID, "team_id", job.TeamID)
+				_ = q.Ack(ctx, job.JobID)
+				continue
+			}
+
+			// M7: Idempotency check — skip jobs already successfully processed.
+			// A 10-minute TTL is sufficient to cover any replay window from Redis
+			// stream re-delivery (e.g. consumer group restart or pending re-claim).
+			dedupKey := fmt.Sprintf("job:processed:%s", job.JobID)
+			exists, _ := q.rdb.Exists(ctx, dedupKey).Result()
+			if exists > 0 {
+				slog.Info("skipping duplicate submission job", "job_id", job.JobID)
+				_ = q.Ack(ctx, job.JobID)
+				continue
+			}
+
 			jobs = append(jobs, job)
 		}
 	}
@@ -164,6 +196,17 @@ func (q *SubmissionQueue) Nack(ctx context.Context, job SubmissionJob, reason st
 	}
 
 	return nil
+}
+
+// MarkProcessed records the job ID in Redis with a short TTL so that duplicate
+// re-deliveries of the same message are detected and skipped in ReadBatch (M7).
+func (q *SubmissionQueue) MarkProcessed(ctx context.Context, jobID string) {
+	dedupKey := fmt.Sprintf("job:processed:%s", jobID)
+	// Best-effort: failure here only means dedup is skipped on a replay; the
+	// underlying processor is idempotent at the DB level so this is acceptable.
+	if err := q.rdb.Set(ctx, dedupKey, "1", 10*time.Minute).Err(); err != nil {
+		slog.Warn("submission queue: failed to set dedup key", "job_id", jobID, "error", err)
+	}
 }
 
 // Depth returns the current number of messages in the stream (approximate).

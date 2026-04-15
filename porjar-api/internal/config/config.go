@@ -87,5 +87,14 @@ func Load() (*Config, error) {
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
+	if len(cfg.JWTSecret) < 32 {
+		return nil, fmt.Errorf("JWT_SECRET must be at least 32 characters")
+	}
+	if cfg.JWTAccessExpiry > 24*time.Hour {
+		return nil, fmt.Errorf("JWT_ACCESS_EXPIRY must not exceed 24h")
+	}
+	if cfg.JWTRefreshExpiry > 30*24*time.Hour {
+		return nil, fmt.Errorf("JWT_REFRESH_EXPIRY must not exceed 30 days")
+	}
 	return cfg, nil
 }

@@ -5,6 +5,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Image from 'next/image'
 import { api, resolveMediaUrl } from '@/lib/api'
+import { getSchoolLogo } from '@/lib/schoolLogo'
 import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -320,9 +321,9 @@ export default function SchoolStandingsPage() {
                           </div>
 
                           {/* School logo */}
-                          {school.logo_url ? (
+                          {(school.logo_url || getSchoolLogo(school.name)) ? (
                             <img
-                              src={resolveMediaUrl(school.logo_url) ?? ''}
+                              src={resolveMediaUrl(school.logo_url) ?? getSchoolLogo(school.name)!}
                               alt={school.name}
                               className={cn('mx-auto rounded-xl object-contain', isChampion ? 'h-16 w-16 mb-3' : 'h-12 w-12 mb-2')}
                             />
@@ -406,8 +407,8 @@ export default function SchoolStandingsPage() {
                           </td>
                           <td className="px-4 py-3.5">
                             <div className="flex items-center gap-3">
-                              {school.logo_url ? (
-                                <Image src={resolveMediaUrl(school.logo_url) ?? ''} alt={`${school.name} logo`} width={36} height={36} className="h-9 w-9 shrink-0 rounded-xl object-contain transition-transform group-hover:scale-110" unoptimized />
+                              {(school.logo_url || getSchoolLogo(school.name)) ? (
+                                <Image src={resolveMediaUrl(school.logo_url) ?? getSchoolLogo(school.name)!} alt={`${school.name} logo`} width={36} height={36} className="h-9 w-9 shrink-0 rounded-xl object-contain transition-transform group-hover:scale-110" unoptimized />
                               ) : (
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-stone-100 dark:bg-zinc-800">
                                   <GraduationCap size={16} className="text-stone-400 dark:text-zinc-500" />
@@ -446,8 +447,8 @@ export default function SchoolStandingsPage() {
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center text-sm font-bold text-stone-400 dark:text-zinc-500 tabular-nums">
                           {school.rank}
                         </span>
-                        {school.logo_url ? (
-                          <Image src={resolveMediaUrl(school.logo_url) ?? ''} alt={`${school.name} logo`} width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg object-contain" unoptimized />
+                        {(school.logo_url || getSchoolLogo(school.name)) ? (
+                          <Image src={resolveMediaUrl(school.logo_url) ?? getSchoolLogo(school.name)!} alt={`${school.name} logo`} width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg object-contain" unoptimized />
                         ) : (
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-stone-100 dark:bg-zinc-800">
                             <GraduationCap size={14} className="text-stone-400 dark:text-zinc-500" />
@@ -489,8 +490,8 @@ export default function SchoolStandingsPage() {
         <SheetContent className="overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-3">
-              {selectedSchool?.logo_url ? (
-                <Image src={resolveMediaUrl(selectedSchool.logo_url) ?? ''} alt={`${selectedSchool.name} logo`} width={48} height={48} className="h-12 w-12 rounded-xl object-contain" unoptimized />
+              {(selectedSchool?.logo_url || (selectedSchool && getSchoolLogo(selectedSchool.name))) ? (
+                <Image src={resolveMediaUrl(selectedSchool!.logo_url) ?? getSchoolLogo(selectedSchool!.name)!} alt={`${selectedSchool!.name} logo`} width={48} height={48} className="h-12 w-12 rounded-xl object-contain" unoptimized />
               ) : (
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 dark:bg-zinc-800">
                   <GraduationCap size={24} className="text-stone-400" />

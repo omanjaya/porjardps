@@ -233,7 +233,16 @@ export default function AdminLivePage() {
         const readyBracket = block.items
           .filter(i => i.kind === 'bracket' && isReady(i))
           .map(i => (i as { kind: 'bracket'; match: BracketMatch }).match)
-        if (readyBracket.length === 0) { toast.info('Tidak ada match siap'); setTogglingId(null); return }
+        if (readyBracket.length === 0) {
+          const bracketItems = block.items.filter(i => i.kind === 'bracket')
+          const allLive = bracketItems.length > 0 && bracketItems.every(isLive)
+          const allDone = bracketItems.every(i => (i as { kind: 'bracket'; match: BracketMatch }).match.status === 'completed')
+          if (allLive) toast.info('Semua match sudah live')
+          else if (allDone) toast.info('Semua match sudah selesai')
+          else toast.info('Tidak ada match siap — ada tim yang belum ditentukan')
+          setTogglingId(null)
+          return
+        }
         const minRound = Math.min(...readyBracket.map(m => m.round))
         const roundMatches = readyBracket.filter(m => m.round === minRound)
         let ok = 0

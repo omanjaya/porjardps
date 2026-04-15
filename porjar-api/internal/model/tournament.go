@@ -83,6 +83,10 @@ type TournamentRepository interface {
 	CountActive(ctx context.Context) (int, error)
 	CountTeams(ctx context.Context, tournamentID uuid.UUID) (int, error)
 	CountTeamsBatch(ctx context.Context, tournamentIDs []uuid.UUID) (map[uuid.UUID]int, error)
+	// ListDueForTransition returns tournaments whose date-based status should change:
+	//   registration → ongoing   when registration_end <= now AND start_date <= now
+	//   ongoing      → completed when end_date          <= now
+	ListDueForTransition(ctx context.Context, now time.Time) ([]*Tournament, error)
 }
 
 type TournamentTeamRepository interface {

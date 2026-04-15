@@ -11,7 +11,7 @@ export function PageHeader({ title, description, actions, breadcrumbs }: PageHea
   return (
     <div className="mb-6">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav className="mb-3 flex items-center gap-1.5 text-sm text-stone-500 dark:text-zinc-400">
+        <nav className="mb-3 flex items-center gap-1.5 text-sm text-stone-600 dark:text-zinc-400">
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1.5">
               {i > 0 && <span className="text-stone-300 dark:text-zinc-600">/</span>}
@@ -33,7 +33,7 @@ export function PageHeader({ title, description, actions, breadcrumbs }: PageHea
         <div>
           <h1 className="text-xl font-bold text-stone-900 dark:text-zinc-100 sm:text-2xl">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">{description}</p>
+            <p className="mt-1 text-sm text-stone-600 dark:text-zinc-400">{description}</p>
           )}
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}

@@ -18,7 +18,7 @@ import {
   Trophy, Plus, Users, TreeStructure, ChartBar, PencilSimple, Trash,
 } from '@phosphor-icons/react'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import type { Tournament, Game, GameSlug } from '@/types'
+import type { Tournament, Game, GameSlug, Event } from '@/types'
 import { TournamentWizardDialog, TINGKAT_OPTIONS, FORMAT_LABELS } from './TournamentWizardDialog'
 import { TournamentEditDialog } from './TournamentEditDialog'
 
@@ -26,11 +26,13 @@ export default function AdminTournamentsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [games, setGames] = useState<Game[]>([])
+  const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [createOpen, setCreateOpen] = useState(false)
   const [filterTingkat, setFilterTingkat] = useState<string | null>(null)
   const [filterGame, setFilterGame] = useState<string | null>(null)
   const [filterStatus, setFilterStatus] = useState<string | null>(null)
+  const [filterEvent, setFilterEvent] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 12
 
@@ -67,13 +69,15 @@ export default function AdminTournamentsPage() {
 
   async function load() {
     try {
-      const [tRes, g] = await Promise.all([
+      const [tRes, g, ev] = await Promise.all([
         api.getPaginated<Tournament[]>('/tournaments?per_page=100'),
         api.get<Game[]>('/games'),
+        api.get<Event[]>('/admin/events'),
       ])
       const t = Array.isArray(tRes.data) ? tRes.data : []
       setTournaments(t)
       setGames(g ?? [])
+      setEvents(Array.isArray(ev) ? ev : [])
     } catch {
       toast.error('Gagal memuat data turnamen')
     } finally { setLoading(false) }
@@ -90,6 +94,12 @@ export default function AdminTournamentsPage() {
     onMessage: () => { load() },
   })
 
+  const eventMap = useMemo(() => {
+    const m: Record<string, Event> = {}
+    events.forEach(e => { m[e.id] = e })
+    return m
+  }, [events])
+
   const filtered = useMemo(() => {
     setPage(1)
     return tournaments.filter(t => {
@@ -99,9 +109,10 @@ export default function AdminTournamentsPage() {
       }
       if (filterGame && t.game?.slug !== filterGame) return false
       if (filterStatus && t.status !== filterStatus) return false
+      if (filterEvent && t.event_id !== filterEvent) return false
       return true
     })
-  }, [tournaments, filterTingkat, filterGame, filterStatus])
+  }, [tournaments, filterTingkat, filterGame, filterStatus, filterEvent])
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -201,6 +212,37 @@ export default function AdminTournamentsPage() {
             </button>
           ))}
         </div>
+
+        {/* Event filter */}
+        {events.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500 w-16">Event</span>
+            <button
+              onClick={() => setFilterEvent(null)}
+              className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                !filterEvent ? 'border-esi-red bg-esi-red text-white' : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50'
+              }`}
+            >
+              Semua
+            </button>
+            {events.map(e => (
+              <button
+                key={e.id}
+                onClick={() => setFilterEvent(filterEvent === e.id ? null : e.id)}
+                className={`shrink-0 flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  filterEvent === e.id ? 'border-esi-red bg-esi-red text-white' : 'border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800 dark:bg-zinc-800/50'
+                }`}
+              >
+                {e.short_name || e.name}
+                {e.status === 'completed' && (
+                  <span className={`rounded px-1 py-0.5 text-[9px] font-bold uppercase ${filterEvent === e.id ? 'bg-white/20 text-white' : 'bg-stone-100 dark:bg-zinc-700 text-stone-500 dark:text-zinc-400'}`}>
+                    Selesai
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tournament list */}
@@ -217,8 +259,10 @@ export default function AdminTournamentsPage() {
           {paginated.map((t) => {
             const gameSlug = t.game?.slug as GameSlug | undefined
             const config = gameSlug ? GAME_CONFIG[gameSlug] : null
+            const event = eventMap[t.event_id]
+            const eventCompleted = event?.status === 'completed' || event?.status === 'archived'
             return (
-              <div key={t.id} className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-5 shadow-sm transition-all hover:shadow-md">
+              <div key={t.id} className={`rounded-xl border bg-white dark:bg-zinc-900 p-5 shadow-sm transition-all hover:shadow-md ${eventCompleted ? 'border-stone-200 dark:border-zinc-700 opacity-80' : 'border-stone-200 dark:border-zinc-700'}`}>
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-stone-50 dark:bg-zinc-800/50 border border-stone-200 dark:border-zinc-700">
@@ -233,6 +277,18 @@ export default function AdminTournamentsPage() {
                         <Link href={`/admin/tournaments/${t.id}`} className="font-bold text-stone-900 dark:text-zinc-100 hover:text-esi-red transition-colors">{t.name}</Link>
                         <StatusBadge status={t.status} />
                       </div>
+                      {event && (
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                            eventCompleted
+                              ? 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400'
+                              : 'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400'
+                          }`}>
+                            {event.short_name || event.name}
+                            {eventCompleted && <span className="opacity-60">· Selesai</span>}
+                          </span>
+                        </div>
+                      )}
                       <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-stone-500 dark:text-zinc-400">
                         <span className="rounded bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 font-medium text-stone-600 dark:text-zinc-400">
                           {FORMAT_LABELS[t.format] || t.format}

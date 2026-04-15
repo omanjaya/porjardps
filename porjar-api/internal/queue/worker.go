@@ -7,6 +7,8 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 )
 
 // JobProcessor is implemented by MatchSubmissionService to process dequeued jobs.
@@ -146,6 +148,10 @@ func (w *SubmissionWorker) processWithRetry(ctx context.Context, job SubmissionJ
 				"type", job.Type,
 				"match_id", job.MatchID,
 			)
+			middleware.SubmissionJobsTotal.WithLabelValues(job.Type, "success").Inc()
+			// M7: Record the job ID as processed so duplicate re-deliveries are
+			// deduplicated in ReadBatch before reaching the processor.
+			w.queue.MarkProcessed(ctx, job.JobID)
 		}
 		return
 	}
@@ -157,6 +163,7 @@ func (w *SubmissionWorker) processWithRetry(ctx context.Context, job SubmissionJ
 		"match_id", job.MatchID,
 		"error", lastErr,
 	)
+	middleware.SubmissionJobsTotal.WithLabelValues(job.Type, "dlq").Inc()
 	nackCtx, nackCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer nackCancel()
 	if nackErr := w.queue.Nack(nackCtx, job, lastErr.Error()); nackErr != nil {

@@ -11,6 +11,7 @@ import { Lightning, Trophy } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import type { BracketMatch, Game, WSMessage, TournamentStatus } from '@/types'
 import { usePageAnimation } from '@/hooks/usePageAnimation'
+import { toast } from 'sonner'
 
 export default function LiveMatchesPage() {
   const router = useRouter()
@@ -42,7 +43,7 @@ export default function LiveMatchesPage() {
       }
     }
     load()
-    api.get<Game[]>('/games').then(g => setGames(g ?? [])).catch(() => {})
+    api.get<Game[]>('/games').then(g => setGames(g ?? [])).catch(() => { toast.error('Gagal memuat data game') })
   }, [])
 
   const flushUpdates = useCallback(() => {

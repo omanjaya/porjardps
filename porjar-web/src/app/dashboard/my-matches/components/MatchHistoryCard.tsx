@@ -114,11 +114,11 @@ export function MatchHistoryCard({
           {/* Full score display */}
           {isCompleted && (
             <div className="flex items-center justify-center gap-3">
-              <span className="text-xs font-medium text-esi-muted truncate max-w-[120px]">{myTeam?.name ?? 'Tim Kamu'}</span>
+              <span className="text-xs font-medium text-esi-muted truncate max-w-[80px] sm:max-w-[120px]">{myTeam?.name ?? 'Tim Kamu'}</span>
               <span className={`text-lg font-bold tabular-nums ${didWin ? 'text-green-600' : 'text-red-600'}`}>
                 {myScore} - {opponentScore}
               </span>
-              <span className="text-xs font-medium text-esi-muted truncate max-w-[120px]">{opponent?.name ?? 'TBD'}</span>
+              <span className="text-xs font-medium text-esi-muted truncate max-w-[80px] sm:max-w-[120px]">{opponent?.name ?? 'TBD'}</span>
             </div>
           )}
 

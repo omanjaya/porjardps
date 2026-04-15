@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"log/slog"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
@@ -49,6 +51,13 @@ func (h *MatchSubmissionHandler) VerifySubmission(c *fiber.Ctx) error {
 	if !req.Approved {
 		status = "rejected"
 	}
+
+	slog.Info("submission verified",
+		"submission_id", submissionID,
+		"admin_id", adminID,
+		"status", status,
+		"operation", "verify_submission",
+	)
 
 	return response.OK(c, fiber.Map{
 		"message": "Submission berhasil diverifikasi",

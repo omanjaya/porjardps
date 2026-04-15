@@ -45,6 +45,7 @@ export function ExportButton({ options }: ExportButtonProps) {
           <Button
             size="sm"
             variant="outline"
+            aria-label="Opsi export"
             className="border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-300 hover:text-stone-900 dark:hover:text-zinc-100"
           >
             <Export size={14} className="mr-1" />

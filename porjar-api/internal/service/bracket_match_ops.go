@@ -281,30 +281,28 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		s.advanceToLosers(ctx, match, loserID)
 	}
 
-	// Update standings for loser
+	// Update standings atomically — IncrementBracketStats uses a single SQL
+	// INSERT ... ON CONFLICT DO UPDATE so wins/losses/matches_played are incremented
+	// without a read-modify-write race (H9 fix).
 	if s.standingsRepo != nil {
-		standing, err := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, loserID)
-		if err == nil && standing != nil {
-			// Only mark eliminated if there's no losers bracket path.
-			// In double elimination, losers from the winners bracket drop to the losers bracket.
-			if match.LoserNextMatchID == nil {
+		if err := s.standingsRepo.IncrementBracketStats(ctx, match.TournamentID, loserID, false); err != nil {
+			slog.Error("CRITICAL: failed to increment loser standing after match completion", "match_id", matchID, "team_id", loserID, "error", err)
+		}
+		// Mark loser eliminated when there is no path into a losers bracket.
+		// This is a targeted single-field UPDATE so it does not conflict with the
+		// atomic counter increment above.
+		if match.LoserNextMatchID == nil {
+			standing, err := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, loserID)
+			if err == nil && standing != nil {
 				standing.IsEliminated = true
-			}
-			standing.Losses++
-			standing.MatchesPlayed++
-			if err := s.standingsRepo.Update(ctx, standing); err != nil {
-				slog.Error("CRITICAL: failed to update loser standing after match completion", "match_id", matchID, "team_id", loserID, "error", err)
+				if err := s.standingsRepo.Update(ctx, standing); err != nil {
+					slog.Error("CRITICAL: failed to mark loser eliminated after match completion", "match_id", matchID, "team_id", loserID, "error", err)
+				}
 			}
 		}
 
-		// Update winner standing
-		winnerStanding, err := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, winnerID)
-		if err == nil && winnerStanding != nil {
-			winnerStanding.Wins++
-			winnerStanding.MatchesPlayed++
-			if err := s.standingsRepo.Update(ctx, winnerStanding); err != nil {
-				slog.Error("CRITICAL: failed to update winner standing after match completion", "match_id", matchID, "team_id", winnerID, "error", err)
-			}
+		if err := s.standingsRepo.IncrementBracketStats(ctx, match.TournamentID, winnerID, true); err != nil {
+			slog.Error("CRITICAL: failed to increment winner standing after match completion", "match_id", matchID, "team_id", winnerID, "error", err)
 		}
 	}
 

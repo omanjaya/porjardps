@@ -274,6 +274,7 @@ export interface Event {
   description: string | null
   logo_url: string | null
   banner_url: string | null
+  poster_url: string | null
   primary_color: string
   secondary_color: string | null
   venue: string | null

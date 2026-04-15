@@ -182,7 +182,14 @@ export function EventNavbar({ position = 'sticky' }: EventNavbarProps) {
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
+  const dashboardHref = useMemo(() => {
+    const role = user?.role
+    if (role === 'admin' || role === 'superadmin') return '/admin'
+    if (role === 'coach') return '/coach'
+    if (role === 'referee') return '/referee'
+    return '/dashboard'
+  }, [user?.role])
   const { isDark, toggle: toggleTheme } = useThemeStore()
   const themeMounted = useThemeHydrated()
 
@@ -260,7 +267,7 @@ export function EventNavbar({ position = 'sticky' }: EventNavbarProps) {
           <PushNotifyButton />
           <NotificationBell />
           {isAuthenticated ? (
-            <Link href="/dashboard" className="rounded-lg px-4 py-1.5 text-[13px] font-bold text-white transition hover:brightness-110" style={{ backgroundColor: event.primary_color }}>
+            <Link href={dashboardHref} className="rounded-lg px-4 py-1.5 text-[13px] font-bold text-white transition hover:brightness-110" style={{ backgroundColor: event.primary_color }}>
               Dashboard
             </Link>
           ) : (
@@ -302,7 +309,7 @@ export function EventNavbar({ position = 'sticky' }: EventNavbarProps) {
                 {/* Auth — always visible at top */}
                 {isAuthenticated ? (
                   <button
-                    onClick={() => { setMobileMenuOpen(false); router.push('/dashboard') }}
+                    onClick={() => { setMobileMenuOpen(false); router.push(dashboardHref) }}
                     className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold text-white hover:brightness-110 transition-all"
                     style={{ backgroundColor: event.primary_color }}
                   >

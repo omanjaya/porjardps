@@ -25,12 +25,15 @@ export function ColumnToggle({ columns, visible, onToggle }: ColumnToggleProps) 
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-label="Tampilkan/sembunyikan kolom"
+        aria-expanded={open}
+        aria-controls="column-toggle-panel"
         className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 dark:border-zinc-700 px-3 py-2 text-sm font-semibold text-stone-600 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-800"
       >
         <Gear size={14} /> Kolom
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 w-52 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg z-50 p-1">
+        <div id="column-toggle-panel" className="absolute right-0 top-full mt-1 w-52 rounded-lg border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-lg z-50 p-1">
           {columns.map(col => (
             <button
               key={col.key}

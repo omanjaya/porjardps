@@ -247,7 +247,7 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 				Email:               email,
 				PasswordHash:        string(hash),
 				FullName:            nama,
-				Role:                "player",
+				Role:                model.RolePlayer,
 				NISN:                &nisn,
 				Tingkat:             &tingkat,
 				NomorPertandingan:   &nomorPertandingan,

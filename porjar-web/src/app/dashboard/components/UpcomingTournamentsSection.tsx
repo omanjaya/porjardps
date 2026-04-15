@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge'
 import { CountdownTimer } from '@/components/shared/CountdownTimer'
 import { resolveMediaUrl } from '@/lib/api'
 import type { DashboardData } from '../hooks/useDashboardData'
+import type { TeamSummary } from '@/types/common'
 
 function useCountdown(targetDate: string | null | undefined): string {
   const [remaining, setRemaining] = useState('')
@@ -115,10 +116,9 @@ export function UpcomingTournamentsSection({ data }: { data: DashboardData }) {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function MatchTeamCard({ team, fallbackColor }: { team?: any; fallbackColor: string }) {
-  const name = (team?.name as string) ?? 'TBD'
-  const logo = resolveMediaUrl((team?.school_logo_url ?? team?.logo_url) as string | undefined)
+function MatchTeamCard({ team, fallbackColor }: { team?: TeamSummary | null; fallbackColor: string }) {
+  const name = team?.name ?? 'TBD'
+  const logo = resolveMediaUrl(team?.school_logo_url ?? team?.logo_url ?? undefined)
 
   return (
     <div className="min-w-0 flex-1 text-center">

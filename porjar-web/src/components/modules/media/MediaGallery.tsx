@@ -147,6 +147,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                       : 'bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 hover:bg-amber-500 hover:text-black'
                   )}
                   title="Toggle Highlight"
+                  aria-label="Tandai sebagai utama"
                 >
                   <Star size={14} weight={item.is_highlight ? 'fill' : 'regular'} />
                 </button>
@@ -154,6 +155,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                   onClick={() => setEditingId(item.id)}
                   className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 transition-colors hover:bg-blue-500 hover:text-white"
                   title="Edit"
+                  aria-label="Edit media"
                 >
                   <PencilSimple size={14} />
                 </button>
@@ -161,6 +163,7 @@ export function MediaGallery({ entityType, entityId, isAdmin = false }: MediaGal
                   onClick={() => handleDelete(item.id)}
                   className="flex h-7 w-7 items-center justify-center rounded-full bg-stone-100 dark:bg-zinc-800/90 text-stone-600 dark:text-zinc-400 transition-colors hover:bg-red-500 hover:text-white"
                   title="Hapus"
+                  aria-label="Hapus media"
                 >
                   <Trash size={14} />
                 </button>

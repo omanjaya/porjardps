@@ -1,12 +1,13 @@
 import {
   Trophy,
   House,
-  Users,
+  UsersThree,
+  UserCircle,
   CalendarBlank,
   GearSix,
   ClockCounterClockwise,
   ChartLineUp,
-  CheckCircle,
+  Checks,
   UploadSimple,
   DownloadSimple,
   WebhooksLogo,
@@ -16,8 +17,11 @@ import {
   Medal,
   Newspaper,
   Megaphone,
-  Gear,
+  PaintBrush,
   WhatsappLogo,
+  Warning,
+  Timer,
+  ClipboardText,
 } from '@phosphor-icons/react'
 import type { LayoutConfig } from './types'
 
@@ -28,26 +32,39 @@ export const adminConfig: LayoutConfig = {
   allowedRoles: ['admin', 'superadmin'],
   defaultUserLabel: 'Admin',
   navItems: [
-    { label: 'Dashboard', href: '/admin', icon: House },
-    { label: 'Persetujuan', href: '/admin/approvals', icon: CheckCircle },
-    { label: 'Analitik', href: '/admin/analytics', icon: ChartLineUp },
-    { label: 'Turnamen', href: '/admin/tournaments', icon: Trophy },
-    { label: 'Aturan', href: '/admin/rules', icon: BookOpen },
-    { label: 'Tim', href: '/admin/teams', icon: Users },
-    { label: 'Jadwal', href: '/admin/schedules', icon: CalendarBlank },
-    { label: 'Sekolah', href: '/admin/schools', icon: GraduationCap },
-    { label: 'Pengguna', href: '/admin/users', icon: Users },
-    { label: 'Verifikasi', href: '/admin/submissions', icon: CheckCircle },
-    { label: 'Import Peserta', href: '/admin/import', icon: UploadSimple },
-    { label: 'Export Data', href: '/admin/export', icon: DownloadSimple },
-    { label: 'Log Aktivitas', href: '/admin/activity', icon: ClockCounterClockwise },
-    { label: 'Events', href: '/admin/events', icon: Medal },
-    { label: 'Berita', href: '/admin/news', icon: Newspaper },
-    { label: 'Pengumuman', href: '/admin/announcements', icon: Megaphone },
-    { label: 'Broadcast WA', href: '/admin/broadcast', icon: WhatsappLogo },
-    { label: 'Pengaturan Situs', href: '/admin/site-settings', icon: Gear },
-    { label: 'Live Score', href: '/admin/live', icon: Lightning },
-    { label: 'Webhooks', href: '/admin/webhooks', icon: WebhooksLogo },
-    { label: 'Pengaturan', href: '/admin/settings', icon: GearSix },
+    // ── Utama ─────────────────────────────────────────────
+    { label: 'Dashboard',      href: '/admin',            icon: House,                section: 'Utama' },
+    { label: 'Analitik',       href: '/admin/analytics',  icon: ChartLineUp },
+    { label: 'Log Aktivitas',  href: '/admin/activity',   icon: ClockCounterClockwise },
+    { label: 'Kalender',       href: '/admin/calendar',   icon: CalendarBlank },
+
+    // ── Event & Kompetisi ──────────────────────────────────
+    { label: 'Events',         href: '/admin/events',      icon: Medal,    section: 'Event & Kompetisi' },
+    { label: 'Turnamen',       href: '/admin/tournaments', icon: Trophy },
+    { label: 'Jadwal Match',   href: '/admin/schedules',   icon: Timer },
+    { label: 'Live Score',     href: '/admin/live',        icon: Lightning },
+
+    // ── Peserta ────────────────────────────────────────────
+    { label: 'Daftar Tim',     href: '/admin/approvals',   icon: ClipboardText,   section: 'Peserta' },
+    { label: 'Verifikasi Skor',href: '/admin/submissions', icon: Checks },
+    { label: 'Tim',            href: '/admin/teams',       icon: UsersThree },
+    { label: 'Sekolah',        href: '/admin/schools',     icon: GraduationCap },
+    { label: 'Pengguna',       href: '/admin/users',       icon: UserCircle },
+
+    // ── Konten ────────────────────────────────────────────
+    { label: 'Berita',         href: '/admin/news',          icon: Newspaper,  section: 'Konten' },
+    { label: 'Pengumuman',     href: '/admin/announcements', icon: Megaphone },
+    { label: 'Aturan',         href: '/admin/rules',         icon: BookOpen },
+    { label: 'Broadcast WA',   href: '/admin/broadcast',     icon: WhatsappLogo },
+
+    // ── Data ──────────────────────────────────────────────
+    { label: 'Import Peserta', href: '/admin/import', icon: UploadSimple,   section: 'Data' },
+    { label: 'Export Data',    href: '/admin/export',  icon: DownloadSimple },
+
+    // ── Sistem ────────────────────────────────────────────
+    { label: 'Tampilan Situs', href: '/admin/site-settings',       icon: PaintBrush,  section: 'Sistem' },
+    { label: 'Penalti',        href: '/admin/settings/penalties',  icon: Warning },
+    { label: 'Webhooks',       href: '/admin/webhooks',            icon: WebhooksLogo },
+    { label: 'Pengaturan',     href: '/admin/settings',            icon: GearSix },
   ],
 }

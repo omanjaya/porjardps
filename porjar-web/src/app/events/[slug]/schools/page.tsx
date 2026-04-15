@@ -55,7 +55,7 @@ export default function EventSchoolsPage() {
           ))}
         </div>
       ) : schools.length === 0 ? (
-        <EmptyState icon={Buildings} title="Belum ada sekolah" description="Belum ada sekolah peserta." />
+        <EmptyState icon={Buildings} title="Belum ada sekolah" description="Belum ada sekolah yang berpartisipasi dalam event ini." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {schools.map((s) => (

@@ -385,6 +385,113 @@ func (s *RefereeService) SetMatchLive(ctx context.Context, refereeID uuid.UUID, 
 	}
 }
 
+// GetScheduledMatches returns all scheduled (not yet live) matches across all match types.
+func (s *RefereeService) GetScheduledMatches(ctx context.Context) ([]*model.LiveMatch, error) {
+	var scheduled []*model.LiveMatch
+
+	tournamentNames := map[uuid.UUID]string{}
+	getTournamentName := func(id uuid.UUID) string {
+		if name, ok := tournamentNames[id]; ok {
+			return name
+		}
+		t, err := s.tournamentRepo.FindByID(ctx, id)
+		if err != nil || t == nil {
+			return ""
+		}
+		tournamentNames[id] = t.Name
+		return t.Name
+	}
+
+	// Bracket scheduled
+	bracketMatches, err := s.bracketRepo.FindScheduledAcrossAllTournaments(ctx, 100)
+	if err != nil {
+		return nil, apperror.Wrap(err, "get scheduled bracket matches")
+	}
+	for _, m := range bracketMatches {
+		lm := &model.LiveMatch{
+			Type:           "bracket",
+			MatchID:        m.ID,
+			TournamentID:   m.TournamentID,
+			TournamentName: getTournamentName(m.TournamentID),
+			Status:         m.Status,
+			Round:          &m.Round,
+			MatchNumber:    &m.MatchNumber,
+			TeamAName:      "TBD",
+			TeamBName:      "TBD",
+		}
+		if m.TeamAID != nil {
+			lm.TeamAID = m.TeamAID
+			if team, tErr := s.teamRepo.FindByID(ctx, *m.TeamAID); tErr == nil && team != nil {
+				lm.TeamAName = team.Name
+			}
+		}
+		if m.TeamBID != nil {
+			lm.TeamBID = m.TeamBID
+			if team, tErr := s.teamRepo.FindByID(ctx, *m.TeamBID); tErr == nil && team != nil {
+				lm.TeamBName = team.Name
+			}
+		}
+		scheduled = append(scheduled, lm)
+	}
+
+	// BR scheduled lobbies
+	brLobbies, err := s.brLobbyRepo.FindScheduledAcrossAllTournaments(ctx, 100)
+	if err != nil {
+		return nil, apperror.Wrap(err, "get scheduled BR lobbies")
+	}
+	for _, l := range brLobbies {
+		lm := &model.LiveMatch{
+			Type:           "br",
+			MatchID:        l.ID,
+			TournamentID:   l.TournamentID,
+			TournamentName: getTournamentName(l.TournamentID),
+			Status:         l.Status,
+			LobbyName:      &l.LobbyName,
+			TeamAName:      l.LobbyName,
+			TeamBName:      "Battle Royale",
+		}
+		scheduled = append(scheduled, lm)
+	}
+
+	// Group scheduled matches
+	groupMatches, err := s.groupRepo.FindScheduledMatches(ctx, 100)
+	if err != nil {
+		return nil, apperror.Wrap(err, "get scheduled group matches")
+	}
+	for _, m := range groupMatches {
+		group, grpErr := s.groupRepo.FindGroupByID(ctx, m.GroupID)
+		if grpErr != nil || group == nil {
+			continue
+		}
+		lm := &model.LiveMatch{
+			Type:           "group",
+			MatchID:        m.ID,
+			TournamentID:   group.TournamentID,
+			TournamentName: getTournamentName(group.TournamentID),
+			Status:         m.Status,
+			Round:          &m.Round,
+			MatchNumber:    &m.MatchNumber,
+			TeamAName:      "TBD",
+			TeamBName:      "TBD",
+		}
+		if m.TeamAID != nil {
+			lm.TeamAID = m.TeamAID
+			if team, tErr := s.teamRepo.FindByID(ctx, *m.TeamAID); tErr == nil && team != nil {
+				lm.TeamAName = team.Name
+			}
+		}
+		if m.TeamBID != nil {
+			lm.TeamBID = m.TeamBID
+			if team, tErr := s.teamRepo.FindByID(ctx, *m.TeamBID); tErr == nil && team != nil {
+				lm.TeamBName = team.Name
+			}
+		}
+		scheduled = append(scheduled, lm)
+	}
+
+	return scheduled, nil
+}
+
 // GetTournamentCards returns all cards for a tournament.
 func (s *RefereeService) GetTournamentCards(ctx context.Context, tournamentID uuid.UUID) ([]*model.MatchCard, error) {
 	cards, err := s.cardRepo.ListByTournament(ctx, tournamentID)

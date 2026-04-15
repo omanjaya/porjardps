@@ -23,6 +23,8 @@ function TeamLogo({
       <img
         src={src}
         alt={team!.name}
+        width={20}
+        height={20}
         className="h-5 w-5 rounded object-contain flex-shrink-0 bg-white dark:bg-zinc-800"
         onError={() => setImgError(true)}
       />
@@ -214,6 +216,14 @@ export const MatchNode = React.memo(function MatchNode({
               onTeamClick?.(match.team_a.id, match.team_a.name, match.id)
             }
           }}
+          role={swapMode && match.team_a?.id && isPending ? 'button' : undefined}
+          tabIndex={swapMode && match.team_a?.id && isPending ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (swapMode && match.team_a?.id && isPending && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              onTeamClick?.(match.team_a.id, match.team_a.name, match.id)
+            }
+          }}
           className={cn(swapMode && match.team_a?.id && isPending && 'cursor-pointer hover:brightness-95')}
         >
           <TeamRow
@@ -231,6 +241,14 @@ export const MatchNode = React.memo(function MatchNode({
           onClick={(e) => {
             if (swapMode && match.team_b?.id) {
               e.stopPropagation()
+              onTeamClick?.(match.team_b.id, match.team_b.name, match.id)
+            }
+          }}
+          role={swapMode && match.team_b?.id && isPending ? 'button' : undefined}
+          tabIndex={swapMode && match.team_b?.id && isPending ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (swapMode && match.team_b?.id && isPending && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
               onTeamClick?.(match.team_b.id, match.team_b.name, match.id)
             }
           }}

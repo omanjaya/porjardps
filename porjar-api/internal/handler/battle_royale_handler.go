@@ -253,6 +253,21 @@ func (h *BRHandler) InputResults(c *fiber.Ctx) error {
 				"results": fmt.Sprintf("Penalty points pada index %d tidak boleh negatif", i),
 			}))
 		}
+		if r.Kills < 0 || r.Kills > 99 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"results": fmt.Sprintf("Kills pada index %d tidak valid (harus antara 0 dan 99)", i),
+			}))
+		}
+		if r.DamageDealt < 0 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"results": fmt.Sprintf("Damage dealt pada index %d tidak boleh negatif", i),
+			}))
+		}
+		if r.SurvivalBonus < 0 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"results": fmt.Sprintf("Survival bonus pada index %d tidak boleh negatif", i),
+			}))
+		}
 		results = append(results, service.ResultInput{
 			TeamID:        teamID,
 			Placement:     r.Placement,
@@ -344,6 +359,16 @@ func (h *BRHandler) InputPlayerResults(c *fiber.Ctx) error {
 		if err != nil {
 			return response.Err(c, apperror.ValidationError(map[string]string{
 				"players": fmt.Sprintf("User ID pada index %d tidak valid", i),
+			}))
+		}
+		if p.Kills < 0 || p.Kills > 99 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"players": fmt.Sprintf("Kills pada index %d tidak valid (harus antara 0 dan 99)", i),
+			}))
+		}
+		if p.Damage < 0 {
+			return response.Err(c, apperror.ValidationError(map[string]string{
+				"players": fmt.Sprintf("Damage pada index %d tidak boleh negatif", i),
 			}))
 		}
 		players = append(players, service.PlayerResultInput{

@@ -322,6 +322,31 @@ func (r *groupRepo) FindLiveMatches(ctx context.Context, limit int) ([]*model.Gr
 	return matches, rows.Err()
 }
 
+func (r *groupRepo) FindScheduledMatches(ctx context.Context, limit int) ([]*model.GroupMatch, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, group_id, round, match_number, team_a_id, team_b_id,
+		        score_a, score_b, status, scheduled_at, completed_at, created_at
+		 FROM group_matches WHERE status = 'scheduled'
+		 ORDER BY scheduled_at ASC NULLS LAST, created_at ASC
+		 LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("FindScheduledMatches: %w", err)
+	}
+	defer rows.Close()
+
+	var matches []*model.GroupMatch
+	for rows.Next() {
+		m := &model.GroupMatch{}
+		if err := rows.Scan(&m.ID, &m.GroupID, &m.Round, &m.MatchNumber,
+			&m.TeamAID, &m.TeamBID, &m.ScoreA, &m.ScoreB, &m.Status,
+			&m.ScheduledAt, &m.CompletedAt, &m.CreatedAt); err != nil {
+			return nil, fmt.Errorf("FindScheduledMatches scan: %w", err)
+		}
+		matches = append(matches, m)
+	}
+	return matches, rows.Err()
+}
+
 func (r *groupRepo) FindLiveMatchesByTeam(ctx context.Context, teamID uuid.UUID) ([]*model.GroupMatch, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, group_id, round, match_number, team_a_id, team_b_id,

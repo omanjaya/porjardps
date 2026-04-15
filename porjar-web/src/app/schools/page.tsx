@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
+import { getSchoolLogo } from '@/lib/schoolLogo'
 import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -271,9 +272,9 @@ export default function SchoolsPage() {
                 <div className="relative w-full">
                   {/* Icon + badge row */}
                   <div className="mb-3 flex items-center justify-between">
-                    {school.logo_url ? (
+                    {(school.logo_url || getSchoolLogo(school.name)) ? (
                       <img
-                        src={school.logo_url}
+                        src={school.logo_url || getSchoolLogo(school.name)!}
                         alt={school.name}
                         className="h-8 w-8 rounded-lg object-contain"
                       />
@@ -318,9 +319,9 @@ export default function SchoolsPage() {
                 )}
               >
                 <div className="mb-3 flex items-center gap-3">
-                  {selectedSchool.logo_url ? (
+                  {(selectedSchool.logo_url || getSchoolLogo(selectedSchool.name)) ? (
                     <img
-                      src={selectedSchool.logo_url}
+                      src={selectedSchool.logo_url || getSchoolLogo(selectedSchool.name)!}
                       alt={selectedSchool.name}
                       className="h-10 w-10 rounded-xl object-contain shadow-sm bg-white dark:bg-zinc-900 p-1 border border-stone-100 dark:border-zinc-700"
                     />

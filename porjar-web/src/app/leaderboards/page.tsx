@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { api } from '@/lib/api'
+import { getSchoolLogo } from '@/lib/schoolLogo'
 import { PublicLayout } from '@/components/layouts/PublicLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 import type {
   Event, TeamLeaderboardEntry, UserLeaderboardEntry, SchoolLeaderboardEntry,
 } from '@/types'
+import { toast } from 'sonner'
 
 const LIMIT = 25
 
@@ -48,7 +50,7 @@ function LeaderboardsContent() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.get<Event[]>('/events').then(setEvents).catch(() => {})
+    api.get<Event[]>('/events').then(setEvents).catch(() => { toast.error('Gagal memuat daftar event') })
   }, [])
 
   const loadLeaderboards = useCallback(async () => {
@@ -67,7 +69,7 @@ function LeaderboardsContent() {
       setUserTotal(users.meta?.total_pages ?? 1)
       setSchoolTotal(schools.meta?.total_pages ?? 1)
     } catch {
-      console.error('Gagal memuat leaderboard')
+      toast.error('Gagal memuat leaderboard')
     } finally {
       setLoading(false)
     }
@@ -212,7 +214,7 @@ function LeaderboardsContent() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {e.school_logo && <Image src={e.school_logo} alt="" width={24} height={24} className="rounded-full" />}
+                      {(() => { const logoSrc = e.school_logo || getSchoolLogo(e.school_name); return logoSrc ? <Image src={logoSrc} alt="" width={24} height={24} className="rounded-full" /> : null })()}
                       <span className="font-medium text-stone-900 dark:text-zinc-100">{e.school_name}</span>
                     </div>
                   </TableCell>

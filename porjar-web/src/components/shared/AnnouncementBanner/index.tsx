@@ -97,7 +97,7 @@ export function AnnouncementBanner({ announcements, maxShow = 3, dismissible = t
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-x-2">
                 <h3 className="text-sm font-bold sm:text-base">{a.title}</h3>
-                <span className="text-xs text-stone-500 dark:text-zinc-400">{timeAgo(a.created_at)}</span>
+                <span className="text-xs text-stone-600 dark:text-zinc-400">{timeAgo(a.created_at)}</span>
               </div>
               <p className="mt-1 text-sm leading-relaxed opacity-90 whitespace-pre-wrap break-words">{a.message}</p>
             </div>

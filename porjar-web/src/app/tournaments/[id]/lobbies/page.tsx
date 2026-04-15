@@ -106,7 +106,7 @@ function ResultsTable({ results }: { results: BRLobbyResult[] }) {
               <td className="py-2.5 px-2">
                 <span
                   className={cn(
-                    'font-medium text-stone-900 dark:text-zinc-100 truncate max-w-[160px] block',
+                    'font-medium text-stone-900 dark:text-zinc-100 truncate max-w-[90px] sm:max-w-[160px] block',
                     result.placement === 1 && 'text-amber-700'
                   )}
                 >

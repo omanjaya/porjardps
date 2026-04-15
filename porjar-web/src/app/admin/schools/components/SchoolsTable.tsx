@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table'
 import { GraduationCap, PencilSimple, Trash, CaretDown, CaretRight, ArrowsLeftRight } from '@phosphor-icons/react'
 import type { School, Team } from '@/types'
+import { getSchoolLogo } from '@/lib/schoolLogo'
 
 interface Props {
   schools: School[]
@@ -78,7 +79,7 @@ export function SchoolsTable({
         <EmptyState
           icon={GraduationCap}
           title="Belum Ada Sekolah"
-          description="Tambahkan sekolah peserta."
+          description="Belum ada sekolah yang terdaftar. Tambahkan sekolah peserta untuk mulai mengelola tim."
           actionLabel="Tambah Sekolah"
           onAction={onCreate}
         />
@@ -118,17 +119,20 @@ export function SchoolsTable({
                           </button>
                         </TableCell>
                         <TableCell className="w-10">
-                          {school.logo_url ? (
-                            <img
-                              src={school.logo_url}
-                              alt={school.name}
-                              className="h-8 w-8 rounded-md object-cover border border-stone-200 dark:border-zinc-700"
-                            />
-                          ) : (
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700">
-                              <GraduationCap size={16} className="text-stone-400 dark:text-zinc-500" />
-                            </div>
-                          )}
+                          {(() => {
+                            const logoSrc = school.logo_url || getSchoolLogo(school.name)
+                            return logoSrc ? (
+                              <img
+                                src={logoSrc}
+                                alt={school.name}
+                                className="h-8 w-8 rounded-md object-cover border border-stone-200 dark:border-zinc-700"
+                              />
+                            ) : (
+                              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700">
+                                <GraduationCap size={16} className="text-stone-400 dark:text-zinc-500" />
+                              </div>
+                            )
+                          })()}
                         </TableCell>
                         <TableCell>
                           <span className="font-medium text-stone-900 dark:text-zinc-100">{school.name}</span>

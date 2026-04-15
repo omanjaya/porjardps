@@ -11,7 +11,7 @@ import (
 // authorised to view a submission. Access is granted when the user is the
 // original submitter, a member of the submitting team, or an admin.
 func (s *MatchSubmissionService) CanAccessSubmission(ctx context.Context, sub *model.MatchSubmission, userID uuid.UUID, role string) bool {
-	if role == "admin" || role == "superadmin" {
+	if role == model.RoleAdmin || role == model.RoleSuperAdmin {
 		return true
 	}
 	if sub.SubmittedBy == userID {

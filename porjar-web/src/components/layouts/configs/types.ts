@@ -4,6 +4,8 @@ export interface NavItem {
   label: string
   href: string
   icon: Icon
+  /** Section header label — rendered as a divider above this item when it changes */
+  section?: string
 }
 
 export interface LayoutConfig {

@@ -52,6 +52,10 @@ function ResetPasswordForm() {
     try {
       await api.post('/auth/reset-password', { token, new_password: newPassword })
       toast.success('Password berhasil direset! Silakan login.')
+      // Clear the token from URL to prevent it from staying in browser history
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', '/reset-password')
+      }
       router.push('/login')
     } catch (err) {
       if (err instanceof ApiError) {

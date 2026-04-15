@@ -22,14 +22,39 @@ export function formatDateShort(iso: string | Date): string {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-/** Format full date: "Senin, 6 April 2026" */
+/** Format full date with weekday: "Senin, 6 April 2026" */
 export function formatDateFull(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
   return d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+/** Format long date without weekday: "6 April 2026" */
+export function formatDateLong(iso: string | Date | null | undefined): string {
+  if (!iso) return '-'
+  try {
+    const d = typeof iso === 'string' ? new Date(iso) : iso
+    return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  } catch {
+    return String(iso)
+  }
 }
 
 /** Format time: "14:30" */
 export function formatTime(iso: string | Date): string {
   const d = typeof iso === 'string' ? new Date(iso) : iso
   return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Format a date range: "6-10 Apr 2026" (same month) or "6 Apr - 3 Mei 2026" (different months) */
+export function formatDateRange(start?: string | null, end?: string | null): string {
+  if (!start) return ''
+  const s = new Date(start)
+  const e = end ? new Date(end) : null
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
+  if (!e) return s.toLocaleDateString('id-ID', opts)
+  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
+  if (sameMonth) {
+    return `${s.getDate()}-${e.getDate()} ${e.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`
+  }
+  return `${s.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })} - ${e.toLocaleDateString('id-ID', opts)}`
 }

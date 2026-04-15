@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Users, ArrowRight, Ranking, Trophy, Crown } from '@phosphor-icons/react'
 import { resolveMediaUrl } from '@/lib/api'
+import { formatDateLong } from '@/lib/relativeTime'
 import { EmptyState } from '@/components/shared/EmptyState'
 import type { TeamLeaderboardEntry } from '@/types'
 import { RED } from '../constants'
@@ -15,17 +16,6 @@ interface Props {
   pastWinners: PastWinner[]
 }
 
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-  } catch {
-    return iso
-  }
-}
 
 export function HallOfFameSection({ topTeams, pastWinners }: Props) {
   const [tab, setTab] = useState<'a' | 'b'>('a')
@@ -183,7 +173,7 @@ export function HallOfFameSection({ topTeams, pastWinners }: Props) {
                           {w.winnerTeamName}
                         </div>
                         <div className="truncate text-xs text-stone-500 dark:text-zinc-400">
-                          Juara — {formatDate(w.completedAt)}
+                          Juara — {formatDateLong(w.completedAt)}
                         </div>
                       </div>
                     </div>

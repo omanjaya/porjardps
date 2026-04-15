@@ -79,6 +79,7 @@ type BRLobbyRepository interface {
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 	ListScheduledBefore(ctx context.Context, before time.Time) ([]*BRLobby, error)
 	FindLiveAcrossAllTournaments(ctx context.Context, limit int) ([]*BRLobby, error)
+	FindScheduledAcrossAllTournaments(ctx context.Context, limit int) ([]*BRLobby, error)
 }
 
 type BRLobbyResultRepository interface {

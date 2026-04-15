@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn } from '@/lib/utils'
 import type { Team, Game, GameSlug, PaginationMeta } from '@/types'
+import { toast } from 'sonner'
 
 interface School { id: string; name: string; level: string }
 
@@ -133,10 +134,10 @@ export default function TeamsDirectoryPage() {
   useEffect(() => {
     api.get<Game[]>('/games').then(g => {
       if (g) setGames(g.filter(x => x.is_active).map(x => ({ slug: x.slug, name: x.name })))
-    }).catch(() => {})
+    }).catch(() => { toast.error('Gagal memuat data game') })
     api.get<School[]>('/schools?per_page=100').then(s => {
       if (s) setSchools(s.sort((a, b) => a.name.localeCompare(b.name)))
-    }).catch(() => {})
+    }).catch(() => { toast.error('Gagal memuat data sekolah') })
   }, [])
 
   // Sync search input → URL (debounced)
@@ -446,7 +447,7 @@ export default function TeamsDirectoryPage() {
                       {team.captain && (
                         <span className="flex items-center gap-1">
                           <Crown size={10} weight="fill" className="text-amber-400" />
-                          <span className="truncate max-w-[60px]">{team.captain.full_name}</span>
+                          <span className="truncate max-w-[50px] sm:max-w-[60px]">{team.captain.full_name}</span>
                         </span>
                       )}
                     </div>

@@ -44,7 +44,7 @@ export function EmptyState({
 
   return (
     <div className={`flex flex-col items-center justify-center ${containerPad} text-center border border-dashed border-stone-300 dark:border-zinc-600 rounded-2xl p-8`}>
-      <div className={`${mb} flex ${iconBoxSize} items-center justify-center rounded-full bg-gradient-to-br from-stone-100 to-stone-50 dark:from-zinc-800 dark:to-zinc-900`}>
+      <div className={`${mb} flex ${iconBoxSize} items-center justify-center rounded-full bg-gradient-to-br from-stone-100 to-stone-50 dark:from-zinc-800/50 dark:to-zinc-900/50`}>
         {iconNode}
       </div>
       <h3 className={`${titleSize} font-semibold text-stone-900 dark:text-zinc-100`}>{title}</h3>

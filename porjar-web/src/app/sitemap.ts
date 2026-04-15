@@ -9,17 +9,26 @@ interface EventItem {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://esidenpasar.com'
+  const highPriority = ['', '/events', '/tournaments', '/leaderboards', '/schools/standings']
+  const mediumPriority = [
+    '/cara-bertanding', '/schedule', '/games', '/rules',
+    '/teams', '/players', '/schools', '/gallery', '/achievements',
+    '/matches/live', '/rundown',
+  ]
   const staticRoutes: MetadataRoute.Sitemap = [
-    '', '/login', '/register', '/cara-bertanding',
-    '/tournaments', '/schedule', '/leaderboards', '/games', '/rules',
-    '/teams', '/players', '/schools', '/schools/standings',
-    '/gallery', '/achievements', '/matches/live', '/rundown',
-  ].map(path => ({
-    url: base + path,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: path === '' ? 1.0 : 0.7,
-  }))
+    ...highPriority.map(path => ({
+      url: base + path,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: path === '' ? 1.0 : 0.9,
+    })),
+    ...mediumPriority.map(path => ({
+      url: base + path,
+      lastModified: new Date(),
+      changeFrequency: 'daily' as const,
+      priority: 0.7,
+    })),
+  ]
 
   const dynamicRoutes: MetadataRoute.Sitemap = []
   try {

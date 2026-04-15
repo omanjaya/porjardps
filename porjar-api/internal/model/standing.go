@@ -73,4 +73,6 @@ type StandingsRepository interface {
 	IncrementBracketStats(ctx context.Context, tournamentID, teamID uuid.UUID, isWin bool) error
 	// DeleteByTournament removes all standings for a tournament so they can be fully recalculated.
 	DeleteByTournament(ctx context.Context, tournamentID uuid.UUID) error
+	// BulkMarkEliminated sets is_eliminated = true for all teamIDs in a single UPDATE statement.
+	BulkMarkEliminated(ctx context.Context, tournamentID uuid.UUID, teamIDs []uuid.UUID) error
 }

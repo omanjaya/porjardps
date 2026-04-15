@@ -164,7 +164,7 @@ func (h *MatchSubmissionHandler) GetTeamSubmissions(c *fiber.Ctx) error {
 	// Verify the requesting user is a member of this team or an admin
 	userID := middleware.GetUserID(c)
 	role := middleware.GetUserRole(c)
-	if role != "admin" && role != "superadmin" {
+	if role != model.RoleAdmin && role != model.RoleSuperAdmin {
 		isMember, _ := h.submissionService.CheckTeamMember(c.Context(), teamID, userID)
 		if !isMember {
 			return response.Err(c, apperror.BusinessRule("FORBIDDEN", "Anda tidak memiliki akses ke submission tim ini"))

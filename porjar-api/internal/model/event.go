@@ -20,6 +20,7 @@ type Event struct {
 	Description        *string    `json:"description"`
 	LogoURL            *string    `json:"logo_url"`
 	BannerURL          *string    `json:"banner_url"`
+	PosterURL          *string    `json:"poster_url"`
 	PrimaryColor       string     `json:"primary_color"`
 	SecondaryColor     *string    `json:"secondary_color"`
 	Venue              *string    `json:"venue"`
@@ -57,4 +58,11 @@ type EventRepository interface {
 	Create(ctx context.Context, e *Event) error
 	Update(ctx context.Context, e *Event) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	// ListDueForTransition returns events whose date-based status should change:
+	//   published  → ongoing   when start_date <= now
+	//   ongoing    → completed when end_date   <= now
+	ListDueForTransition(ctx context.Context, now time.Time) ([]*Event, error)
+	// ListByDateRange returns events that overlap [start, end].
+	ListByDateRange(ctx context.Context, start, end time.Time) ([]*Event, error)
 }

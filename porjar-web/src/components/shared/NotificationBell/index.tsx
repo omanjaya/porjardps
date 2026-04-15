@@ -270,11 +270,12 @@ export function NotificationBell() {
           {/* Notification list */}
           <div className="max-h-96 overflow-y-auto">
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
+              <div role="status" aria-live="polite" className="flex items-center justify-center py-8">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-stone-200 dark:border-zinc-700 border-t-esi-red" />
+                <span className="sr-only">Memuat notifikasi...</span>
               </div>
             ) : notifications.length === 0 ? (
-              <div className="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">
+              <div role="status" className="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">
                 Tidak ada notifikasi
               </div>
             ) : (

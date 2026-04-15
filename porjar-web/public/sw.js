@@ -63,9 +63,28 @@ self.addEventListener('fetch', (event) => {
   // Bypass: API mutations and any /api/admin/* — never cache
   if (url.pathname.startsWith('/api/v1/admin/') || url.pathname.startsWith('/api/v1/auth/')) return
 
-  // API GET: stale-while-revalidate
+  // Only cache these safe, non-sensitive API endpoints
+  const CACHEABLE_API_PATHS = [
+    '/api/v1/games',
+    '/api/v1/events',
+    '/api/v1/tournaments',
+    '/api/v1/schedules',
+    '/api/v1/standings',
+    '/api/v1/matches/live',
+    '/api/v1/push/vapid-public-key',
+  ]
+
+  function isCacheableApiRequest(reqUrl) {
+    const path = new URL(reqUrl).pathname
+    return CACHEABLE_API_PATHS.some(p => path.startsWith(p))
+  }
+
+  // API GET: stale-while-revalidate for explicitly safe endpoints; network-only for everything else
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(staleWhileRevalidate(request, API_CACHE))
+    if (isCacheableApiRequest(request.url)) {
+      event.respondWith(staleWhileRevalidate(request, API_CACHE))
+    }
+    // All other API paths (user data, submissions, notifications, etc.) use network-only — no caching
     return
   }
 

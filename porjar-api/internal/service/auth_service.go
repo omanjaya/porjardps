@@ -77,7 +77,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, fullName, p
 		Email:        email,
 		PasswordHash: string(hash),
 		FullName:     fullName,
-		Role:         "player",
+		Role:         model.RolePlayer,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
@@ -373,7 +373,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, oldP
 
 	if !validator.ValidatePassword(newPassword) {
 		return apperror.ValidationError(map[string]string{
-			"new_password": "Password minimal 8 karakter, mengandung huruf kecil dan angka",
+			"new_password": "Password minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka",
 		})
 	}
 
@@ -455,7 +455,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	if user != nil {
 		// Real user: store their ID so the token is usable
 		_ = s.redis.Set(ctx, key, user.ID.String(), time.Hour).Err()
-		slog.Info("password reset requested", "email", email)
+		slog.Info("password reset requested")
 	} else {
 		// Non-existing user: store a dummy value (token will never be used)
 		_ = s.redis.Set(ctx, key, "invalid", time.Hour).Err()
@@ -468,15 +468,21 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
 	key := fmt.Sprintf("reset_token:%s", token)
 
-	userIDStr, err := s.redis.Get(ctx, key).Result()
+	// Atomically get-and-delete the token to prevent concurrent requests with
+	// the same token from all succeeding (race condition window eliminated).
+	userIDStr, err := s.redis.GetDel(ctx, key).Result()
 	if err != nil {
+		return apperror.New("RESET_TOKEN_INVALID", "Token reset tidak valid atau sudah kedaluwarsa", 400)
+	}
+
+	if userIDStr == "invalid" {
 		return apperror.New("RESET_TOKEN_INVALID", "Token reset tidak valid atau sudah kedaluwarsa", 400)
 	}
 
 	// Validate password strength
 	if !validator.ValidatePassword(newPassword) {
 		return apperror.ValidationError(map[string]string{
-			"new_password": "Password minimal 8 karakter, mengandung huruf kecil dan angka",
+			"new_password": "Password minimal 8 karakter, mengandung huruf besar, huruf kecil, dan angka",
 		})
 	}
 
@@ -502,10 +508,6 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 	if err := s.userRepo.Update(ctx, user); err != nil {
 		return apperror.ErrInternal
 	}
-
-	// Only delete the token AFTER the password has been successfully updated,
-	// so the token remains usable if the DB update fails (prevents silent data loss).
-	s.redis.Del(ctx, key)
 
 	return nil
 }

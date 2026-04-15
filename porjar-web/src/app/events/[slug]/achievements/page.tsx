@@ -66,7 +66,7 @@ export default function EventAchievementsPage() {
           ))}
         </div>
       ) : items.length === 0 ? (
-        <EmptyState icon={Trophy} title="Belum ada achievement" description="Belum ada pencapaian yang tercatat." />
+        <EmptyState icon={Trophy} title="Belum ada prestasi" description="Prestasi dan pencapaian tim akan muncul di sini setelah pertandingan selesai." />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((a) => (

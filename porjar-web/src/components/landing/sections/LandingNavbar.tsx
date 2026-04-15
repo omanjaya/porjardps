@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Moon, Sun } from '@phosphor-icons/react'
 import { useThemeStore, useThemeHydrated } from '@/store/theme-store'
+import { useAuthStore } from '@/store/auth-store'
 import type { Event } from '@/types'
 import { RED } from '../constants'
 
@@ -15,6 +16,13 @@ interface LandingNavbarProps {
 export function LandingNavbar({ activeEvent = null }: LandingNavbarProps = {}) {
   const { isDark, toggle: toggleTheme } = useThemeStore()
   const themeMounted = useThemeHydrated()
+  const { isAuthenticated, user } = useAuthStore()
+
+  const dashboardHref =
+    user?.role === 'admin' || user?.role === 'superadmin' ? '/admin'
+    : user?.role === 'coach' ? '/coach'
+    : user?.role === 'referee' ? '/referee'
+    : '/dashboard'
 
   const NAV_ITEMS = useMemo(() => [
     { href: '/events', label: 'Event' },
@@ -48,12 +56,20 @@ export function LandingNavbar({ activeEvent = null }: LandingNavbarProps = {}) {
           >
             {themeMounted ? (isDark ? <Sun size={18} /> : <Moon size={18} />) : <Moon size={18} />}
           </button>
-          <Link href="/login" className="text-sm font-medium text-stone-600 border border-stone-300 dark:border-zinc-600 rounded-lg px-4 py-2 transition hover:bg-stone-100 hover:text-stone-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 hidden sm:block">
-            Masuk
-          </Link>
-          <Link href="/register" className="rounded-lg px-4 py-2 text-sm font-bold text-white transition hover:brightness-110" style={{ background: RED }}>
-            Daftar
-          </Link>
+          {isAuthenticated ? (
+            <Link href={dashboardHref} className="rounded-lg px-4 py-2 text-sm font-bold text-white transition hover:brightness-110" style={{ background: RED }}>
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="text-sm font-medium text-stone-600 border border-stone-300 dark:border-zinc-600 rounded-lg px-4 py-2 transition hover:bg-stone-100 hover:text-stone-800 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 hidden sm:block">
+                Masuk
+              </Link>
+              <Link href="/register" className="rounded-lg px-4 py-2 text-sm font-bold text-white transition hover:brightness-110" style={{ background: RED }}>
+                Daftar
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -13,13 +13,24 @@ func Logger() fiber.Handler {
 
 		err := c.Next()
 
-		slog.Info("request",
+		status := c.Response().StatusCode()
+		args := []any{
 			"method", c.Method(),
 			"path", c.Path(),
-			"status", c.Response().StatusCode(),
+			"status", status,
 			"latency", time.Since(start).String(),
 			"ip", c.IP(),
-		)
+		}
+
+		// Differentiate log level by status code so 4xx/5xx stand out in log streams.
+		switch {
+		case status >= 500:
+			slog.Error("request", args...)
+		case status >= 400:
+			slog.Warn("request", args...)
+		default:
+			slog.Info("request", args...)
+		}
 
 		return err
 	}

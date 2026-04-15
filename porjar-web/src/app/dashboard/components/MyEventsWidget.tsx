@@ -11,6 +11,7 @@ import {
   TreeStructure,
 } from '@phosphor-icons/react'
 import { api } from '@/lib/api'
+import { formatDateShort } from '@/lib/relativeTime'
 import { AnimatedCard } from '@/components/shared/AnimatedCard'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -41,18 +42,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {
   archived: 'outline',
 }
 
-function formatDate(iso: string | null) {
-  if (!iso) return null
-  try {
-    return new Date(iso).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    })
-  } catch {
-    return null
-  }
-}
 
 export function MyEventsWidget({ hasTeam }: MyEventsWidgetProps) {
   const [events, setEvents] = useState<MyEventRegistration[] | null>(null)
@@ -132,7 +121,7 @@ export function MyEventsWidget({ hasTeam }: MyEventsWidgetProps) {
         {!loading && !errored && events && events.length > 0 && (
           <div className="space-y-2.5">
             {events.slice(0, 4).map((reg) => {
-              const startDate = formatDate(reg.event_start_date)
+              const startDate = reg.event_start_date ? formatDateShort(reg.event_start_date) : null
               return (
                 <div
                   key={reg.id}
@@ -149,7 +138,7 @@ export function MyEventsWidget({ hasTeam }: MyEventsWidgetProps) {
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-esi-muted">
                         <span className="inline-flex items-center gap-1">
                           <Users size={12} />
-                          <span className="truncate max-w-[160px]">{reg.team_name}</span>
+                          <span className="truncate max-w-[100px] sm:max-w-[160px]">{reg.team_name}</span>
                         </span>
                         {startDate && (
                           <span className="inline-flex items-center gap-1">

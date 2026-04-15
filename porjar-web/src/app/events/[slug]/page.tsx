@@ -3,11 +3,164 @@
 import { useEvent } from '@/contexts/EventContext'
 import { JsonLd } from '@/components/shared/JsonLd'
 import { useEffect, useState } from 'react'
-import { api } from '@/lib/api'
+import { api, resolveMediaUrl } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { Trophy, CalendarBlank, MapPin, Users, ArrowRight, Lightning, Medal, ClipboardText, CheckCircle } from '@phosphor-icons/react'
+import { Trophy, CalendarBlank, MapPin, Users, ArrowRight, Lightning, Medal, ClipboardText, CheckCircle, MonitorPlay, Handshake, Images, Books } from '@phosphor-icons/react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { SchoolStanding } from '@/types'
+
+interface EventSection {
+  id: string
+  section_type: string
+  sort_order: number
+  enabled: boolean
+  config: Record<string, unknown>
+}
+
+interface PrizeRow { rank: string; amount: string; description?: string }
+interface SponsorRow { name: string; logo_url: string; website_url?: string; tier?: string }
+
+function SectionBlock({ section, event }: { section: EventSection; event: ReturnType<typeof useEvent> }) {
+  const cfg = section.config as Record<string, unknown>
+
+  switch (section.section_type) {
+    case 'about': {
+      const title = (cfg.title as string) || 'Tentang Event'
+      const desc = cfg.description as string
+      const imgUrl = cfg.image_url as string
+      if (!desc && !imgUrl) return null
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 mb-6">
+          <h2 className="text-lg font-bold text-stone-900 dark:text-zinc-100 mb-3">{title}</h2>
+          <div className={imgUrl ? 'flex flex-col sm:flex-row gap-6' : ''}>
+            {imgUrl && (
+              <div className="shrink-0">
+                <Image src={resolveMediaUrl(imgUrl) ?? imgUrl} alt={title} width={240} height={160} className="rounded-lg object-cover w-full sm:w-60 h-40" />
+              </div>
+            )}
+            {desc && <p className="text-sm text-stone-600 dark:text-zinc-400 leading-relaxed whitespace-pre-line">{desc}</p>}
+          </div>
+        </div>
+      )
+    }
+
+    case 'prizes': {
+      const prizes = (cfg.prizes as PrizeRow[]) ?? []
+      if (prizes.length === 0) return null
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-stone-100 dark:border-zinc-800 flex items-center gap-2">
+            <Medal size={16} style={{ color: event.primary_color }} />
+            <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Hadiah</h2>
+          </div>
+          <div className="divide-y divide-stone-100 dark:divide-zinc-800">
+            {prizes.map((p, i) => (
+              <div key={i} className="flex items-center gap-4 px-4 py-3">
+                <span className="w-20 text-sm font-bold text-stone-700 dark:text-zinc-300">{p.rank}</span>
+                <span className="flex-1 text-sm font-semibold" style={{ color: event.primary_color }}>{p.amount}</span>
+                {p.description && <span className="text-xs text-stone-400 dark:text-zinc-500">{p.description}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    case 'sponsors': {
+      const sponsors = (cfg.sponsors as SponsorRow[]) ?? []
+      if (sponsors.length === 0) return null
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Handshake size={16} style={{ color: event.primary_color }} />
+            <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Sponsor</h2>
+          </div>
+          <div className="flex flex-wrap gap-4 items-center">
+            {sponsors.map((s, i) => (
+              s.website_url ? (
+                <a key={i} href={s.website_url} target="_blank" rel="noopener noreferrer" title={s.name}>
+                  {s.logo_url
+                    ? <Image src={resolveMediaUrl(s.logo_url) ?? s.logo_url} alt={s.name} width={100} height={50} className="h-12 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity" />
+                    : <span className="text-sm font-semibold text-stone-600 dark:text-zinc-400">{s.name}</span>
+                  }
+                </a>
+              ) : (
+                <div key={i} title={s.name}>
+                  {s.logo_url
+                    ? <Image src={resolveMediaUrl(s.logo_url) ?? s.logo_url} alt={s.name} width={100} height={50} className="h-12 w-auto object-contain opacity-80" />
+                    : <span className="text-sm font-semibold text-stone-600 dark:text-zinc-400">{s.name}</span>
+                  }
+                </div>
+              )
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    case 'stream': {
+      const streamUrl = cfg.stream_url as string
+      if (!streamUrl) return null
+      const isYoutube = streamUrl.includes('youtube.com') || streamUrl.includes('youtu.be')
+      let embedUrl = streamUrl
+      if (isYoutube) {
+        const match = streamUrl.match(/(?:v=|youtu\.be\/)([^&?/]+)/)
+        if (match) embedUrl = `https://www.youtube.com/embed/${match[1]}`
+      }
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden mb-6">
+          <div className="px-4 py-3 border-b border-stone-100 dark:border-zinc-800 flex items-center gap-2">
+            <MonitorPlay size={16} style={{ color: event.primary_color }} />
+            <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Live Stream</h2>
+          </div>
+          <div className="aspect-video">
+            <iframe
+              src={embedUrl}
+              title="Live Stream"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      )
+    }
+
+    case 'gallery':
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Images size={16} style={{ color: event.primary_color }} />
+              <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Galeri</h2>
+            </div>
+            <Link href={`/events/${event.slug}/gallery`} className="text-xs font-semibold" style={{ color: event.primary_color }}>
+              Lihat Semua <ArrowRight size={12} className="inline" />
+            </Link>
+          </div>
+        </div>
+      )
+
+    case 'rules':
+      return (
+        <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Books size={16} style={{ color: event.primary_color }} />
+              <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Peraturan</h2>
+            </div>
+            <Link href={`/events/${event.slug}/rules`} className="text-xs font-semibold" style={{ color: event.primary_color }}>
+              Baca Peraturan <ArrowRight size={12} className="inline" />
+            </Link>
+          </div>
+        </div>
+      )
+
+    default:
+      return null
+  }
+}
 
 export default function EventLandingPage() {
   const event = useEvent()
@@ -15,11 +168,15 @@ export default function EventLandingPage() {
   const [stats, setStats] = useState<{ total_games: number; total_schools: number; total_players: number } | null>(null)
   const [medals, setMedals] = useState<SchoolStanding[]>([])
   const [teamCount, setTeamCount] = useState<number | null>(null)
+  const [sections, setSections] = useState<EventSection[]>([])
 
   useEffect(() => {
     api.get<{ total_games: number; total_schools: number; total_players: number }>('/stats').then(setStats).catch(() => {})
     api.get<SchoolStanding[]>('/school-standings').then(d => setMedals(Array.isArray(d) ? d.slice(0, 5) : [])).catch(() => {})
-  }, [])
+    api.get<EventSection[]>(`/events/${event.slug}/sections`)
+      .then(d => setSections(Array.isArray(d) ? d.sort((a, b) => a.sort_order - b.sort_order) : []))
+      .catch(() => {})
+  }, [event.slug])
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -70,6 +227,11 @@ export default function EventLandingPage() {
       url: 'https://esidenpasar.com',
     },
   }
+
+  // Section types that are handled separately from the sections list
+  // (hero/schedule/games/registration are already in the static content above)
+  const STATIC_SECTION_TYPES = new Set(['hero', 'schedule', 'games', 'registration'])
+  const dynamicSections = sections.filter(s => s.enabled && !STATIC_SECTION_TYPES.has(s.section_type))
 
   return (
     <>
@@ -123,7 +285,7 @@ export default function EventLandingPage() {
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           {[
             { value: stats.total_games, label: 'Cabang' },
             { value: stats.total_schools, label: 'Sekolah' },
@@ -155,6 +317,11 @@ export default function EventLandingPage() {
           </Link>
         ))}
       </div>
+
+      {/* Dynamic sections (about, prizes, sponsors, stream, gallery, rules) */}
+      {dynamicSections.map(section => (
+        <SectionBlock key={section.id} section={section} event={event} />
+      ))}
 
       {/* Medal standings preview */}
       {medals.length > 0 && (

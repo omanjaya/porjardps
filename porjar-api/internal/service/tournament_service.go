@@ -474,7 +474,10 @@ func (s *TournamentService) GetTournamentTeamRecords(ctx context.Context, tourna
 	return teams, nil
 }
 
-// AdminRegisterTeam registers a team to a tournament bypassing normal registration checks.
+// AdminRegisterTeam registers a team into a tournament bypassing normal registration rules.
+// SECURITY: Authorization (admin/superadmin role) MUST be enforced at the handler level
+// before calling this function. This function does not perform role checks internally.
+//
 // Only validates: tournament exists, team exists, team is approved, game matches.
 // If the team is already registered, it silently skips (no error).
 func (s *TournamentService) AdminRegisterTeam(ctx context.Context, tournamentID, teamID uuid.UUID) error {

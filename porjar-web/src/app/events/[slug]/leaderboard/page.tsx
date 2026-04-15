@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import { api } from '@/lib/api'
+import { getSchoolLogo } from '@/lib/schoolLogo'
 import { useEvent } from '@/contexts/EventContext'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -191,7 +192,7 @@ export default function EventLeaderboardPage() {
                     {rankBadge(e.rank)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        {e.school_logo && <Image src={e.school_logo} alt="" width={28} height={28} className="rounded-full" unoptimized />}
+                        {(() => { const logoSrc = e.school_logo || getSchoolLogo(e.school_name); return logoSrc ? <Image src={logoSrc} alt="" width={28} height={28} className="rounded-full" unoptimized /> : null })()}
                         <div className="min-w-0">
                           <p className="font-bold text-stone-900 dark:text-zinc-100 truncate">{e.school_name}</p>
                           <p className="text-xs text-stone-500 dark:text-zinc-400">{e.team_count} tim</p>

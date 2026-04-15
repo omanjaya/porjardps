@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -79,7 +80,7 @@ func main() {
 		ErrorHandler:          middleware.ErrorHandler,
 		ProxyHeader:           "X-Forwarded-For",
 		EnableTrustedProxyCheck: true,
-		TrustedProxies:        []string{"127.0.0.1", "::1", "172.16.0.0/12", "10.0.0.0/8"},
+		TrustedProxies:        []string{"127.0.0.1", "::1", "172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"},
 	})
 
 	// Global middleware
@@ -205,6 +206,12 @@ func main() {
 	scheduler := service.NewMatchScheduler(schedulerBracketRepo, schedulerBrLobbyRepo, hub)
 	scheduler.Start()
 
+	// Start event scheduler (auto-transition event/tournament status based on start_date/end_date)
+	eventSchedulerEventRepo := repository.NewEventRepo(db)
+	eventSchedulerTournamentRepo := repository.NewTournamentRepo(db)
+	eventScheduler := service.NewEventScheduler(eventSchedulerEventRepo, eventSchedulerTournamentRepo, hub)
+	eventScheduler.Start(serverCtx)
+
 	// Start match reminder service (notifies players ~30 min before match)
 	reminderNotifRepo := repository.NewNotificationRepo(db)
 	reminderUserRepo := repository.NewUserRepo(db)
@@ -242,6 +249,7 @@ func main() {
 	serverCancel()
 
 	scheduler.Stop()
+	eventScheduler.Stop()
 
 	if err := app.Shutdown(); err != nil {
 		slog.Error("error during shutdown", "error", err)
@@ -321,6 +329,10 @@ func setupRedis(cfg *config.Config) *redis.Client {
 func isInternalIP(ip string) bool {
 	// Allow loopback
 	if ip == "127.0.0.1" || ip == "::1" {
+		return true
+	}
+	// IPv6 ULA (fc00::/7) and link-local (fe80::/10)
+	if strings.HasPrefix(ip, "fc") || strings.HasPrefix(ip, "fd") || strings.HasPrefix(ip, "fe80") {
 		return true
 	}
 	// Docker bridge networks: 172.16.0.0/12 and 10.0.0.0/8

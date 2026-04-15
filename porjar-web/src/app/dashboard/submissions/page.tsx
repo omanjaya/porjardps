@@ -59,12 +59,15 @@ export default function SubmissionsPage() {
     load()
   }, [load])
 
+  // Channel uses '#' separator — Centrifugo personal channel syntax: user#<id>
   useWebSocket({
-    channels: userId ? [`user:${userId}`] : [],
-    messageTypes: ['submission_approved', 'submission_rejected'],
+    channels: userId ? [`user#${userId}`] : [],
+    messageTypes: ['notification'],
     onMessage: (msg) => {
-      if (msg.type === 'submission_approved') toast.success('Submission disetujui!')
-      if (msg.type === 'submission_rejected') toast.error('Submission ditolak')
+      const inner = (msg.data ?? {}) as Record<string, unknown>
+      const notifType = typeof inner.type === 'string' ? inner.type : ''
+      if (notifType === 'submission_approved') toast.success('Submission disetujui!')
+      if (notifType === 'submission_rejected') toast.error('Submission ditolak')
       load()
     },
   })

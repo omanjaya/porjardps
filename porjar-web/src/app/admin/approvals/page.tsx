@@ -37,6 +37,7 @@ export default function AdminApprovalsPage() {
 
   const [rejectTarget, setRejectTarget] = useState<RejectTarget | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [rejectProcessing, setRejectProcessing] = useState(false)
 
   // Bulk selection (teams tab only)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -51,13 +52,18 @@ export default function AdminApprovalsPage() {
 
   async function confirmReject() {
     if (!rejectTarget) return
-    const ok =
-      rejectTarget.kind === 'team'
-        ? await teamsHook.reject(rejectTarget.id, rejectTarget.name, rejectReason)
-        : await schoolsHook.reject(rejectTarget.id, rejectReason)
-    if (ok) {
-      setRejectTarget(null)
-      setRejectReason('')
+    setRejectProcessing(true)
+    try {
+      const ok =
+        rejectTarget.kind === 'team'
+          ? await teamsHook.reject(rejectTarget.id, rejectTarget.name, rejectReason)
+          : await schoolsHook.reject(rejectTarget.id, rejectReason)
+      if (ok) {
+        setRejectTarget(null)
+        setRejectReason('')
+      }
+    } finally {
+      setRejectProcessing(false)
     }
   }
 
@@ -407,11 +413,11 @@ export default function AdminApprovalsPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectTarget(null)}>
+            <Button variant="outline" onClick={() => setRejectTarget(null)} disabled={rejectProcessing}>
               Batal
             </Button>
-            <Button variant="destructive" onClick={confirmReject}>
-              Tolak
+            <Button variant="destructive" onClick={confirmReject} disabled={rejectProcessing}>
+              {rejectProcessing ? 'Memproses...' : 'Tolak'}
             </Button>
           </DialogFooter>
         </DialogContent>

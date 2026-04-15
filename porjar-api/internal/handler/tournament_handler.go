@@ -5,6 +5,7 @@
 package handler
 
 import (
+	"log/slog"
 	"math"
 	"strconv"
 	"time"
@@ -148,10 +149,19 @@ func (h *TournamentHandler) Create(c *fiber.Ctx) error {
 		input.EndDate = &t
 	}
 
+	adminID := middleware.GetUserID(c)
 	tournament, svcErr := h.tournamentService.Create(c.Context(), input)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("tournament created",
+		"tournament_id", tournament.ID,
+		"tournament_name", tournament.Name,
+		"format", tournament.Format,
+		"admin_id", adminID,
+		"operation", "create_tournament",
+	)
 
 	return response.Created(c, tournament)
 }
@@ -276,9 +286,16 @@ func (h *TournamentHandler) Delete(c *fiber.Ctx) error {
 		return response.BadRequest(c, "ID tidak valid")
 	}
 
+	adminID := middleware.GetUserID(c)
 	if svcErr := h.tournamentService.Delete(c.Context(), id); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("tournament deleted",
+		"tournament_id", id,
+		"admin_id", adminID,
+		"operation", "delete_tournament",
+	)
 
 	return response.NoContent(c)
 }
@@ -349,6 +366,13 @@ func (h *TournamentHandler) RegisterTeam(c *fiber.Ctx) error {
 	if svcErr := h.tournamentService.RegisterTeam(c.Context(), tournamentID, teamID, userID); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("team registered to tournament",
+		"tournament_id", tournamentID,
+		"team_id", teamID,
+		"user_id", userID,
+		"operation", "register_team",
+	)
 
 	return response.Created(c, fiber.Map{"message": "Tim berhasil didaftarkan ke turnamen"})
 }

@@ -27,6 +27,7 @@ func NewRefereeHandler(refereeService *service.RefereeService, userRepo model.Us
 func (h *RefereeHandler) RegisterRoutes(api fiber.Router, authMw, refereeMw, adminMw fiber.Handler) {
 	// Referee routes — see all live matches and issue cards without assignment
 	api.Get("/referee/matches", authMw, refereeMw, h.GetLiveMatches)
+	api.Get("/referee/matches/scheduled", authMw, refereeMw, h.GetScheduledMatches)
 	api.Post("/referee/cards", authMw, refereeMw, h.IssueCard)
 	api.Put("/referee/matches/:type/:id/live", authMw, refereeMw, h.SetMatchLive)
 	api.Get("/referee/cards", authMw, refereeMw, h.GetMyCards)
@@ -88,6 +89,15 @@ func (h *RefereeHandler) GetLiveMatches(c *fiber.Ctx) error {
 		return response.HandleError(c, err)
 	}
 
+	return response.OK(c, matches)
+}
+
+// GetScheduledMatches returns all scheduled (not yet live) matches.
+func (h *RefereeHandler) GetScheduledMatches(c *fiber.Ctx) error {
+	matches, err := h.refereeService.GetScheduledMatches(c.Context())
+	if err != nil {
+		return response.HandleError(c, err)
+	}
 	return response.OK(c, matches)
 }
 
@@ -196,7 +206,7 @@ func (h *RefereeHandler) GetTeamCards(c *fiber.Ctx) error {
 	role := middleware.GetUserRole(c)
 
 	// Admin, superadmin, and referee can view any team's cards
-	if role != "admin" && role != "superadmin" && role != "referee" {
+	if role != model.RoleAdmin && role != model.RoleSuperAdmin && role != model.RoleReferee {
 		// For player/coach, verify they are a member of the team
 		member, _ := h.teamMemberRepo.FindByTeamAndUser(c.Context(), teamID, userID)
 		if member == nil {
@@ -213,7 +223,7 @@ func (h *RefereeHandler) GetTeamCards(c *fiber.Ctx) error {
 }
 
 func (h *RefereeHandler) ListReferees(c *fiber.Ctx) error {
-	refereeRole := "referee"
+	refereeRole := model.RoleReferee
 	filter := model.UserFilter{
 		Role:  &refereeRole,
 		Page:  1,
@@ -263,7 +273,7 @@ func (h *RefereeHandler) AssignReferee(c *fiber.Ctx) error {
 	if userErr != nil || user == nil {
 		return response.Err(c, apperror.NotFound("USER"))
 	}
-	if user.Role != "referee" {
+	if user.Role != model.RoleReferee {
 		return response.Err(c, apperror.ValidationError(map[string]string{
 			"referee_id": "User bukan referee",
 		}))

@@ -109,6 +109,11 @@ func (r *CachedTournamentRepo) CountTeamsBatch(ctx context.Context, tournamentID
 	return r.inner.CountTeamsBatch(ctx, tournamentIDs)
 }
 
+// ListDueForTransition bypasses cache — the scheduler needs fresh data every tick.
+func (r *CachedTournamentRepo) ListDueForTransition(ctx context.Context, now time.Time) ([]*model.Tournament, error) {
+	return r.inner.ListDueForTransition(ctx, now)
+}
+
 // listCacheKey builds a deterministic cache key from the filter parameters.
 func (r *CachedTournamentRepo) listCacheKey(filter model.TournamentFilter) string {
 	raw := fmt.Sprintf("gameID=%v|status=%v|page=%d|limit=%d",

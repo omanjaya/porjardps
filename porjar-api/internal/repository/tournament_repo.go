@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -263,6 +264,52 @@ func (r *tournamentRepo) CountTeamsBatch(ctx context.Context, tournamentIDs []uu
 	return result, nil
 }
 
+func (r *tournamentRepo) ListDueForTransition(ctx context.Context, now time.Time) ([]*model.Tournament, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT id, COALESCE(event_id, '00000000-0000-0000-0000-000000000000'), game_id, name, format, stage, best_of, max_teams, status,
+		        registration_start, registration_end, start_date, end_date, rules,
+		        COALESCE(kill_point_value, 1.0), COALESCE(wwcd_bonus, 0),
+		        qualification_threshold, max_lobby_teams, school_level,
+		        TO_CHAR(daily_start_time, 'HH24:MI'),
+		        COALESCE(default_num_maps, 1), COALESCE(default_map_names, '{}'),
+		        COALESCE(tiebreaker_order, '{wwcd,placement_points,kills,best_placement}'),
+		        champion_team_id, champion_team_name, champion_team_logo,
+		        prize_pool, prize_description,
+		        created_at, updated_at
+		 FROM tournaments
+		 WHERE (status = 'registration' AND registration_end IS NOT NULL AND registration_end <= $1)
+		    OR (status = 'ongoing'      AND end_date          IS NOT NULL AND end_date          <= $1)`,
+		now)
+	if err != nil {
+		return nil, fmt.Errorf("ListDueForTransition: %w", err)
+	}
+	defer rows.Close()
+
+	var tournaments []*model.Tournament
+	for rows.Next() {
+		t := &model.Tournament{}
+		if err := rows.Scan(
+			&t.ID, &t.EventID, &t.GameID, &t.Name, &t.Format, &t.Stage, &t.BestOf, &t.MaxTeams, &t.Status,
+			&t.RegistrationStart, &t.RegistrationEnd, &t.StartDate, &t.EndDate, &t.Rules,
+			&t.KillPointValue, &t.WWCDBonus,
+			&t.QualificationThreshold, &t.MaxLobbyTeams, &t.SchoolLevel,
+			&t.DailyStartTime,
+			&t.DefaultNumMaps, &t.DefaultMapNames,
+			&t.TiebreakerOrder,
+			&t.ChampionTeamID, &t.ChampionTeamName, &t.ChampionTeamLogo,
+			&t.PrizePool, &t.PrizeDescription,
+			&t.CreatedAt, &t.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("ListDueForTransition scan: %w", err)
+		}
+		tournaments = append(tournaments, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ListDueForTransition rows: %w", err)
+	}
+	return tournaments, nil
+}
+
 // --- TournamentTeamRepository ---
 
 type tournamentTeamRepo struct {
@@ -321,7 +368,7 @@ func (r *tournamentTeamRepo) Delete(ctx context.Context, tournamentID, teamID uu
 func (r *tournamentTeamRepo) ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*model.TournamentTeam, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, tournament_id, team_id, group_name, seed, status
-		 FROM tournament_teams WHERE tournament_id = $1 ORDER BY seed ASC NULLS LAST`, tournamentID)
+		 FROM tournament_teams WHERE tournament_id = $1 ORDER BY seed ASC NULLS LAST LIMIT 500`, tournamentID)
 	if err != nil {
 		return nil, fmt.Errorf("ListByTournament: %w", err)
 	}

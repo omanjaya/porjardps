@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS idx_events_sort_order;
+DROP INDEX IF EXISTS idx_tournaments_created;
+DROP INDEX IF EXISTS idx_group_matches_team_a;
+DROP INDEX IF EXISTS idx_group_matches_team_b;
+DROP INDEX IF EXISTS idx_match_cards_bracket_match;
+DROP INDEX IF EXISTS idx_match_cards_br_lobby;
+DROP INDEX IF EXISTS idx_match_cards_group_match;
+DROP INDEX IF EXISTS idx_referee_assignments_bracket;
+DROP INDEX IF EXISTS idx_referee_assignments_lobby;
+DROP INDEX IF EXISTS idx_referee_assignments_group;

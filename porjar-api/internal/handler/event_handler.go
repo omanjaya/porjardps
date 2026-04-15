@@ -44,6 +44,7 @@ func (h *EventHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicR
 	// Admin
 	app.Get("/admin/events", authMw, adminMw, h.List)
 	app.Post("/admin/events", authMw, adminMw, h.Create)
+	app.Get("/admin/events/:id", authMw, adminMw, h.GetByID)
 	app.Put("/admin/events/:id", authMw, adminMw, h.Update)
 	app.Delete("/admin/events/:id", authMw, adminMw, h.Delete)
 }
@@ -105,6 +106,21 @@ func (h *EventHandler) ListPublished(c *fiber.Ctx) error {
 func (h *EventHandler) GetBySlug(c *fiber.Ctx) error {
 	slug := c.Params("slug")
 	event, err := h.eventRepo.FindBySlug(c.Context(), slug)
+	if err != nil {
+		return response.HandleError(c, err)
+	}
+	if event == nil {
+		return response.NotFound(c, "Event tidak ditemukan")
+	}
+	return response.OK(c, event)
+}
+
+func (h *EventHandler) GetByID(c *fiber.Ctx) error {
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return response.BadRequest(c, "ID event tidak valid")
+	}
+	event, err := h.eventRepo.FindByID(c.Context(), id)
 	if err != nil {
 		return response.HandleError(c, err)
 	}

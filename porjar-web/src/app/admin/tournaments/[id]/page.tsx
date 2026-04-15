@@ -14,6 +14,14 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -21,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Trophy, Users, Plus, Trash, MagnifyingGlass, ArrowCounterClockwise, TreeStructure, ChartBar, List, Medal, Spinner, UserPlus } from '@phosphor-icons/react'
+import { Trophy, Users, Plus, Trash, MagnifyingGlass, ArrowCounterClockwise, TreeStructure, ChartBar, List, Medal, Spinner, UserPlus, ShieldCheck, IdentificationCard, ArrowsClockwise, ClipboardText, Crown } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { FORMAT_LABELS } from '../TournamentWizardDialog'
 import type { Tournament, Team } from '@/types'
@@ -47,6 +55,9 @@ export default function AdminTournamentDetailPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [resetResultsConfirm, setResetResultsConfirm] = useState(false)
   const [resettingResults, setResettingResults] = useState(false)
+  const [championDialogOpen, setChampionDialogOpen] = useState(false)
+  const [championTeamId, setChampionTeamId] = useState('')
+  const [settingChampion, setSettingChampion] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
@@ -185,6 +196,25 @@ export default function AdminTournamentDetailPage() {
     }
   }
 
+  async function handleSetChampion() {
+    if (!championTeamId) {
+      toast.error('Pilih tim juara terlebih dahulu')
+      return
+    }
+    setSettingChampion(true)
+    try {
+      await api.post(`/admin/tournaments/${params.id}/champion`, { team_id: championTeamId })
+      toast.success('Juara turnamen berhasil ditetapkan')
+      setChampionDialogOpen(false)
+      setChampionTeamId('')
+      await loadData()
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Gagal menetapkan juara')
+    } finally {
+      setSettingChampion(false)
+    }
+  }
+
   async function handleStatusChange(newStatus: string) {
     setUpdatingStatus(true)
     try {
@@ -281,6 +311,50 @@ export default function AdminTournamentDetailPage() {
         </div>
       </div>
 
+      {/* Champion Banner */}
+      {tournament.status === 'completed' && tournament.champion_team_name && (
+        <div className="mb-6 rounded-xl border-2 border-yellow-400 dark:border-yellow-600 bg-yellow-50 dark:bg-yellow-950/20 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Crown size={28} weight="fill" className="text-yellow-500 shrink-0" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-yellow-700 dark:text-yellow-400 mb-0.5">Juara Turnamen</p>
+                <p className="text-lg font-bold text-yellow-900 dark:text-yellow-200">{tournament.champion_team_name}</p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setChampionTeamId(tournament.champion_team_id ?? ''); setChampionDialogOpen(true) }}
+              className="shrink-0 border-yellow-400 dark:border-yellow-600 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-950/40"
+            >
+              <ArrowsClockwise size={14} className="mr-1.5" />
+              Ganti Juara
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Set Champion (completed but no champion yet) */}
+      {tournament.status === 'completed' && !tournament.champion_team_name && (
+        <div className="mb-6 rounded-xl border border-dashed border-yellow-400 dark:border-yellow-600 bg-yellow-50/50 dark:bg-yellow-950/10 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Belum ada juara ditetapkan</p>
+              <p className="text-xs text-yellow-700 dark:text-yellow-500 mt-0.5">Tetapkan tim juara untuk turnamen yang sudah selesai ini.</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => setChampionDialogOpen(true)}
+              className="shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white"
+            >
+              <Crown size={14} className="mr-1.5" />
+              Tetapkan Juara
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Quick Actions: pending teams alert */}
       {(() => {
         const pendingTeams = registeredTeams.filter((t) => t.status === 'pending')
@@ -349,6 +423,32 @@ export default function AdminTournamentDetailPage() {
             </Button>
           </Link>
         )}
+        {(tournament.format === 'battle_royale_points') && (
+          <Link href={`/admin/tournaments/${params.id}/rotation`}>
+            <Button variant="outline" className="gap-1.5 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300 hover:border-esi-red hover:text-esi-red">
+              <ArrowsClockwise size={16} weight="duotone" />
+              Rotasi Lobby
+            </Button>
+          </Link>
+        )}
+        <Link href={`/admin/tournaments/${params.id}/referees`}>
+          <Button variant="outline" className="gap-1.5 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300 hover:border-esi-red hover:text-esi-red">
+            <ShieldCheck size={16} weight="duotone" />
+            Wasit
+          </Button>
+        </Link>
+        <Link href={`/admin/tournaments/${params.id}/cards`}>
+          <Button variant="outline" className="gap-1.5 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300 hover:border-esi-red hover:text-esi-red">
+            <IdentificationCard size={16} weight="duotone" />
+            Kartu
+          </Button>
+        </Link>
+        <Link href={`/admin/tournaments/${params.id}/report`}>
+          <Button variant="outline" className="gap-1.5 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300 hover:border-esi-red hover:text-esi-red">
+            <ClipboardText size={16} weight="duotone" />
+            Laporan
+          </Button>
+        </Link>
         <Link href={`/tournaments/${params.id}`}>
           <Button variant="outline" className="gap-1.5 border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300 hover:border-esi-red hover:text-esi-red">
             <ChartBar size={16} weight="duotone" />
@@ -591,6 +691,63 @@ export default function AdminTournamentDetailPage() {
         loading={resettingResults}
         variant="destructive"
       />
+
+      {/* Set Champion Dialog */}
+      <Dialog open={championDialogOpen} onOpenChange={(open) => { if (!open) setChampionDialogOpen(false) }}>
+        <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-stone-900 dark:text-zinc-100">
+              <Crown size={18} weight="fill" className="text-yellow-500" />
+              Tetapkan Juara Turnamen
+            </DialogTitle>
+            <DialogDescription className="text-stone-500 dark:text-zinc-400">
+              Pilih tim yang menjadi juara turnamen ini.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-stone-200 dark:border-zinc-700 divide-y divide-stone-100 dark:divide-zinc-700">
+            {registeredTeams.length === 0 ? (
+              <p className="p-4 text-center text-sm text-stone-400 dark:text-zinc-500">Tidak ada tim terdaftar</p>
+            ) : (
+              registeredTeams.map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  onClick={() => setChampionTeamId(team.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                    championTeamId === team.id
+                      ? 'bg-yellow-50 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-200'
+                      : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300'
+                  }`}
+                >
+                  <Crown size={14} weight={championTeamId === team.id ? 'fill' : 'regular'} className={championTeamId === team.id ? 'text-yellow-500' : 'text-stone-300 dark:text-zinc-600'} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{team.name}</p>
+                    {team.school?.name && <p className="text-[11px] text-stone-400 dark:text-zinc-500 truncate">{team.school.name}</p>}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setChampionDialogOpen(false)}
+              disabled={settingChampion}
+              className="border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSetChampion}
+              disabled={settingChampion || !championTeamId}
+              className="bg-yellow-500 hover:bg-yellow-600 text-white"
+            >
+              {settingChampion && <Spinner size={14} className="mr-1 animate-spin" />}
+              {settingChampion ? 'Menyimpan...' : 'Tetapkan Juara'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   )
 }

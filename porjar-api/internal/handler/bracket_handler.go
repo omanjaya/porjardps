@@ -79,7 +79,6 @@ type completeMatchRequest struct {
 // --- Handlers ---
 
 func (h *BracketHandler) GenerateBracket(c *fiber.Ctx) error {
-	slog.Info("GenerateBracket handler called", "path", c.Path(), "method", c.Method())
 	tournamentID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Tournament ID tidak valid")
@@ -110,6 +109,13 @@ func (h *BracketHandler) GenerateBracket(c *fiber.Ctx) error {
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("bracket generated",
+		"tournament_id", tournamentID,
+		"matches_created", matchesCreated,
+		"total_rounds", totalRounds,
+		"operation", "generate_bracket",
+	)
 
 	return response.Created(c, fiber.Map{
 		"matches_created": matchesCreated,
@@ -272,6 +278,12 @@ func (h *BracketHandler) CompleteMatch(c *fiber.Ctx) error {
 	if svcErr := h.bracketService.CompleteMatch(c.Context(), matchID, winnerID); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("match completed",
+		"match_id", matchID,
+		"winner_id", winnerID,
+		"operation", "complete_match",
+	)
 
 	return response.OK(c, fiber.Map{"message": "Match berhasil diselesaikan"})
 }

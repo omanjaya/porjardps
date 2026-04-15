@@ -34,8 +34,8 @@ export function LiveScoreCard({ match, onClick }: LiveScoreCardProps) {
   return (
     <button
       onClick={() => onClick?.(match)}
-      className="group relative w-full overflow-hidden rounded-2xl text-left shadow-lg transition-all duration-300 hover:brightness-110 hover:shadow-[0_0_32px_rgba(196,30,42,0.4)]"
-      style={{ background: '#C41E2A', boxShadow: '0 4px 24px rgba(196,30,42,0.3)' }}
+      className="group relative w-full overflow-hidden rounded-2xl bg-esi-red text-left shadow-lg transition-all duration-300 hover:brightness-110 hover:shadow-[0_0_32px_rgba(196,30,42,0.4)]"
+      style={{ boxShadow: '0 4px 24px rgba(196,30,42,0.3)' }}
     >
       {/* Top glow line */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />

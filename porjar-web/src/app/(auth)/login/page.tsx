@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
@@ -220,8 +221,7 @@ function LoginForm() {
       <div className="h-2 w-full bg-esi-red" />
       <div className="p-6 sm:p-8">
         <div className="mb-5 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" className="h-12 w-12 object-contain" />
+          <Image src="/images/logo/esi-denpasar.webp" alt="ESI Denpasar" width={48} height={48} className="object-contain" />
         </div>
         <h2 className="mb-1 text-xl font-bold uppercase tracking-wide text-esi-text">Masuk</h2>
         <p className="mb-6 text-sm text-esi-muted">

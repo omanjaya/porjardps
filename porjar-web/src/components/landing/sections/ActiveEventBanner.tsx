@@ -3,22 +3,10 @@
 import Link from 'next/link'
 import { ArrowRight } from '@phosphor-icons/react'
 import type { Event } from '@/types'
+import { formatDateRange } from '@/lib/relativeTime'
 
 interface Props {
   event: Event | null
-}
-
-function formatDateRange(start?: string, end?: string): string {
-  if (!start) return ''
-  const s = new Date(start)
-  const e = end ? new Date(end) : null
-  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
-  if (!e) return s.toLocaleDateString('id-ID', opts)
-  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear()
-  if (sameMonth) {
-    return `${s.getDate()}-${e.getDate()} ${e.toLocaleDateString('id-ID', { month: 'short', year: 'numeric' })}`
-  }
-  return `${s.toLocaleDateString('id-ID', opts)} - ${e.toLocaleDateString('id-ID', opts)}`
 }
 
 export function ActiveEventBanner({ event }: Props) {

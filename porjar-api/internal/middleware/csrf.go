@@ -3,13 +3,15 @@ package middleware
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"log/slog"
 	stdpath "path"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// csrfExemptPaths are public POST endpoints that don't have auth cookies yet.
+// csrfExemptPaths are public POST endpoints that don't have auth cookies yet,
+// or fire-and-forget endpoints where CSRF protection adds no value.
 var csrfExemptPaths = []string{
 	"/api/v1/auth/login",
 	"/api/v1/auth/register",
@@ -18,6 +20,11 @@ var csrfExemptPaths = []string{
 	"/api/v1/auth/reset-password",
 	"/api/v1/auth/logout",
 	"/api/v1/csrf-token",
+	// Analytics and error reporting: fire-and-forget, no user state mutations.
+	// navigator.sendBeacon cannot attach custom headers, so CSRF tokens are
+	// impossible to send. These endpoints are already rate-limited.
+	"/api/v1/analytics/pageview",
+	"/api/v1/errors/report",
 }
 
 const csrfTokenLength = 32
@@ -95,6 +102,7 @@ func SetCSRFToken(secureCookie ...bool) fiber.Handler {
 		if c.Method() == "GET" && c.Cookies(csrfCookieName) == "" {
 			token, err := generateCSRFToken()
 			if err != nil {
+				slog.Warn("failed to generate CSRF token", "error", err)
 				return c.Next()
 			}
 			c.Cookie(&fiber.Cookie{

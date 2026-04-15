@@ -6,6 +6,11 @@ import (
 )
 
 func CORS(allowedOrigins string) fiber.Handler {
+	if allowedOrigins == "*" {
+		// Wildcard with credentials is not allowed and would be blocked by browsers.
+		// Fall back to a restrictive default.
+		allowedOrigins = "https://esidenpasar.com"
+	}
 	return cors.New(cors.Config{
 		AllowOrigins:     allowedOrigins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -45,6 +46,8 @@ func (h *AdminHandler) ResetUserPassword(c *fiber.Ctx) error {
 	// Store plain password in Redis so credential card can display it
 	credcrypto.StoreCredPassword(c.Context(), h.rdb, h.encKey, targetID, plainPassword)
 
+	slog.Info("admin credential reset", "admin_id", c.Locals("userID"), "target_user_id", targetID)
+
 	return response.OK(c, fiber.Map{
 		"message":  "Password berhasil direset",
 		"password": plainPassword,
@@ -66,6 +69,8 @@ func (h *AdminHandler) GetUserCredential(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
 	}
+
+	slog.Info("admin credential accessed", "admin_id", c.Locals("userID"), "target_user_id", targetID)
 
 	user, err := h.userRepo.FindByID(c.Context(), targetID)
 	if err != nil || user == nil {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"math"
 	"strconv"
 	"time"
@@ -123,6 +124,13 @@ func (h *TeamHandler) Create(c *fiber.Ctx) error {
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("team created",
+		"team_id", team.ID,
+		"team_name", team.Name,
+		"user_id", userID,
+		"operation", "create_team",
+	)
 
 	return response.Created(c, team)
 }
@@ -320,9 +328,16 @@ func (h *TeamHandler) Approve(c *fiber.Ctx) error {
 		return response.BadRequest(c, "ID tidak valid")
 	}
 
+	adminID := middleware.GetUserID(c)
 	if svcErr := h.teamService.Approve(c.Context(), id); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("team approved",
+		"team_id", id,
+		"admin_id", adminID,
+		"operation", "approve_team",
+	)
 
 	return response.OK(c, fiber.Map{"message": "Tim berhasil disetujui"})
 }
@@ -338,9 +353,17 @@ func (h *TeamHandler) Reject(c *fiber.Ctx) error {
 		return response.BadRequest(c, "Format request tidak valid")
 	}
 
+	adminID := middleware.GetUserID(c)
 	if svcErr := h.teamService.Reject(c.Context(), id, req.Reason); svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}
+
+	slog.Info("team rejected",
+		"team_id", id,
+		"admin_id", adminID,
+		"reason", req.Reason,
+		"operation", "reject_team",
+	)
 
 	return response.OK(c, fiber.Map{"message": "Tim berhasil ditolak"})
 }

@@ -35,7 +35,7 @@ export function SubmissionRejectionForm({
           disabled={disabled}
           className="bg-red-600 text-white hover:bg-red-700"
         >
-          Kirim Penolakan
+          {disabled ? 'Memproses...' : 'Kirim Penolakan'}
         </Button>
         <Button
           size="sm"

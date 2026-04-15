@@ -13,19 +13,31 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     const body = await res.json()
     const event = body.data
     if (!event) throw new Error()
-    const ogUrl = `/api/og?title=${encodeURIComponent(event.name)}&subtitle=${encodeURIComponent(event.venue ?? event.city ?? '')}&type=event`
+    const ogUrl = `/api/og?title=${encodeURIComponent(event.name)}&subtitle=${encodeURIComponent(event.venue ?? event.city ?? 'Denpasar')}&type=event`
+    const descParts: string[] = []
+    if (event.description) descParts.push(event.description)
+    else {
+      if (event.venue) descParts.push(event.venue)
+      if (event.city) descParts.push(event.city)
+      else descParts.push('Denpasar, Bali')
+    }
+    const description = descParts.join(', ') + ' — Turnamen esport pelajar ESI Kota Denpasar.'
     return {
       title: event.name,
-      description: `${event.short_name ?? ''} — ${event.venue ?? ''}, ${event.city ?? 'Denpasar'}`.trim(),
+      description: description.slice(0, 160),
       openGraph: {
         title: event.name,
-        description: event.description || `${event.venue ?? ''}, ${event.city ?? ''}`,
+        description: description.slice(0, 160),
         images: [{ url: ogUrl, width: 1200, height: 630 }],
       },
       twitter: { card: 'summary_large_image', title: event.name, images: [ogUrl] },
+      alternates: { canonical: `https://esidenpasar.com/events/${slug}` },
     }
   } catch {
-    return { title: 'Event' }
+    return {
+      title: 'Event Turnamen',
+      description: 'Detail event turnamen esport pelajar ESI Kota Denpasar.',
+    }
   }
 }
 

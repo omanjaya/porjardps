@@ -174,7 +174,7 @@ func (h *CoachHandler) ListCoaches(c *fiber.Ctx) error {
 		}
 	}
 
-	role := "coach"
+	role := model.RoleCoach
 	filter := model.UserFilter{
 		Role:  &role,
 		Page:  page,

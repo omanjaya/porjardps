@@ -40,7 +40,7 @@ type PlayerSummary struct {
 
 // ListPlayers returns a paginated list of players (role=player) for public discovery.
 func (s *PlayerStatsService) ListPlayers(ctx context.Context, search string, page, limit int) ([]*PlayerSummary, int, error) {
-	role := "player"
+	role := model.RolePlayer
 	filter := model.UserFilter{
 		Role:  &role,
 		Page:  page,
