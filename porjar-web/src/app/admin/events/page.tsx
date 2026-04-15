@@ -1,17 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-// Label component inline (no shadcn label installed)
-function Label({ children, htmlFor, className = '' }: { children: React.ReactNode; htmlFor?: string; className?: string }) {
-  return <label htmlFor={htmlFor} className={`text-sm font-medium text-stone-700 dark:text-zinc-300 ${className}`}>{children}</label>
-}
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -30,88 +26,14 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import Link from 'next/link'
-import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash, Archive, Rows, UsersThree, UploadSimple, X, Image as ImageIcon } from '@phosphor-icons/react'
-import { resolveMediaUrl } from '@/lib/api'
-import { useLogoUpload } from '@/app/admin/schools/hooks/useLogoUpload'
+import {
+  Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap,
+  Trash, Archive, Rows, UsersThree,
+} from '@phosphor-icons/react'
 import type { Event } from '@/types'
-import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
 type EventStatus = Event['status']
-
-interface EventFormData {
-  // Informasi Dasar
-  name: string
-  slug: string
-  short_name: string
-  description: string
-  // Tampilan
-  primary_color: string
-  secondary_color: string
-  logo_url: string
-  banner_url: string
-  poster_url: string
-  // Jadwal
-  start_date: string
-  end_date: string
-  registration_start: string
-  registration_end: string
-  // Lokasi
-  venue: string
-  city: string
-  organizer: string
-  // Kontak & Sosmed
-  contact_phone: string
-  contact_email: string
-  instagram_url: string
-  website_url: string
-  // Pengumuman
-  announcement: string
-  announcement_active: boolean
-  // Status & Flag
-  status: EventStatus
-  registration_open: boolean
-  rules_published: boolean
-  requires_school: boolean
-  sort_order: number
-}
-
-const emptyForm: EventFormData = {
-  name: '',
-  slug: '',
-  short_name: '',
-  description: '',
-  primary_color: '#dc2626',
-  secondary_color: '#1f2937',
-  logo_url: '',
-  banner_url: '',
-  poster_url: '',
-  start_date: '',
-  end_date: '',
-  registration_start: '',
-  registration_end: '',
-  venue: '',
-  city: 'Denpasar, Bali',
-  organizer: 'ESI Kota Denpasar',
-  contact_phone: '',
-  contact_email: '',
-  instagram_url: '',
-  website_url: '',
-  announcement: '',
-  announcement_active: false,
-  status: 'draft',
-  registration_open: false,
-  rules_published: false,
-  requires_school: false,
-  sort_order: 0,
-}
 
 const STATUS_OPTIONS: { value: EventStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
@@ -129,66 +51,19 @@ const STATUS_VARIANT: Record<EventStatus, 'default' | 'secondary' | 'destructive
   archived: 'outline',
 }
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim()
-}
-
-// Convert an ISO string (or empty) to the value <input type="datetime-local"> expects: YYYY-MM-DDTHH:mm
-function toDateTimeLocal(iso: string | null | undefined): string {
-  if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-// Convert a datetime-local string (YYYY-MM-DDTHH:mm) to an ISO string for the API, or null if empty.
-function fromDateTimeLocal(value: string): string | null {
-  if (!value) return null
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
-}
-
-// Section wrapper for grouping form fields.
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <fieldset className="rounded-lg border border-esi-border bg-stone-50/50 dark:bg-zinc-900/40 p-4">
-      <legend className="px-2 text-sm font-semibold text-esi-text">{title}</legend>
-      <div className="space-y-4">{children}</div>
-    </fieldset>
-  )
-}
-
 export default function AdminEventsPage() {
+  const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<EventFormData>(emptyForm)
-  const [submitting, setSubmitting] = useState(false)
-  const [slugManual, setSlugManual] = useState(false)
-  const [dirty, setDirty] = useState(false)
-  useUnsavedChanges(dirty)
 
-  // Bulk selection state
+  // Bulk selection
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
   const [bulkProcessing, setBulkProcessing] = useState(false)
 
-  // Archive state
+  // Archive
   const [archivingId, setArchivingId] = useState<string | null>(null)
-
-  // Image upload hooks for Tampilan section
-  const logoUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, logo_url: url })) })
-  const bannerUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, banner_url: url })) })
-  const posterUpload = useLogoUpload((url) => { setDirty(true); setForm(prev => ({ ...prev, poster_url: url })) })
 
   const loadEvents = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
@@ -219,143 +94,7 @@ export default function AdminEventsPage() {
     )
   }
 
-  if (!isAuthenticated) {
-    return null
-  }
-
-  function openCreateDialog() {
-    setEditingId(null)
-    setForm(emptyForm)
-    setSlugManual(false)
-    setDirty(false)
-    setDialogOpen(true)
-  }
-
-  function openEditDialog(event: Event) {
-    setEditingId(event.id)
-    setForm({
-      name: event.name,
-      slug: event.slug,
-      short_name: event.short_name || '',
-      description: event.description || '',
-      primary_color: event.primary_color || '#dc2626',
-      secondary_color: event.secondary_color || '#1f2937',
-      logo_url: event.logo_url || '',
-      banner_url: event.banner_url || '',
-      poster_url: event.poster_url || '',
-      start_date: toDateTimeLocal(event.start_date),
-      end_date: toDateTimeLocal(event.end_date),
-      registration_start: toDateTimeLocal(event.registration_start),
-      registration_end: toDateTimeLocal(event.registration_end),
-      venue: event.venue || '',
-      city: event.city || '',
-      organizer: event.organizer || '',
-      contact_phone: event.contact_phone || '',
-      contact_email: event.contact_email || '',
-      instagram_url: event.instagram_url || '',
-      website_url: event.website_url || '',
-      announcement: event.announcement || '',
-      announcement_active: event.announcement_active ?? false,
-      status: event.status,
-      registration_open: event.registration_open ?? false,
-      rules_published: event.rules_published ?? false,
-      requires_school: event.requires_school ?? false,
-      sort_order: event.sort_order ?? 0,
-    })
-    setSlugManual(true)
-    setDirty(false)
-    setDialogOpen(true)
-  }
-
-  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target
-    setDirty(true)
-    setForm(prev => {
-      const next = { ...prev, [name]: value }
-      // Auto-generate slug from name if not manually edited
-      if (name === 'name' && !slugManual) {
-        next.slug = slugify(value)
-      }
-      if (name === 'slug') {
-        setSlugManual(true)
-      }
-      return next
-    })
-  }
-
-  function handleCheck(name: keyof EventFormData) {
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      setDirty(true)
-      setForm(prev => ({ ...prev, [name]: e.target.checked }))
-    }
-  }
-
-  function handleCloseDialog(open: boolean) {
-    if (!open && dirty && !confirm('Perubahan belum disimpan. Tutup?')) return
-    if (!open) setDirty(false)
-    setDialogOpen(open)
-  }
-
-  async function handleSubmit() {
-    if (!form.name.trim()) {
-      toast.error('Nama event wajib diisi')
-      return
-    }
-    if (!form.slug.trim()) {
-      toast.error('Slug wajib diisi')
-      return
-    }
-
-    try {
-      setSubmitting(true)
-      // Emptry string -> null for nullable fields; dates go through ISO conversion.
-      const payload = {
-        name: form.name,
-        slug: form.slug,
-        short_name: form.short_name || null,
-        description: form.description || null,
-        primary_color: form.primary_color,
-        secondary_color: form.secondary_color || null,
-        logo_url: form.logo_url || null,
-        banner_url: form.banner_url || null,
-        poster_url: form.poster_url || null,
-        start_date: fromDateTimeLocal(form.start_date),
-        end_date: fromDateTimeLocal(form.end_date),
-        registration_start: fromDateTimeLocal(form.registration_start),
-        registration_end: fromDateTimeLocal(form.registration_end),
-        venue: form.venue || null,
-        city: form.city || null,
-        organizer: form.organizer || null,
-        contact_phone: form.contact_phone || null,
-        contact_email: form.contact_email || null,
-        instagram_url: form.instagram_url || null,
-        website_url: form.website_url || null,
-        announcement: form.announcement || null,
-        announcement_active: form.announcement_active,
-        status: form.status,
-        registration_open: form.registration_open,
-        rules_published: form.rules_published,
-        requires_school: form.requires_school,
-        sort_order: Number(form.sort_order) || 0,
-      }
-
-      if (editingId) {
-        await api.put(`/admin/events/${editingId}`, payload)
-        toast.success('Event berhasil diperbarui')
-      } else {
-        await api.post('/admin/events', payload)
-        toast.success('Event berhasil dibuat')
-      }
-
-      setDirty(false)
-      setDialogOpen(false)
-      loadEvents()
-    } catch {
-      toast.error(editingId ? 'Gagal memperbarui event' : 'Gagal membuat event')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+  if (!isAuthenticated) return null
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '-'
@@ -385,9 +124,7 @@ export default function AdminEventsPage() {
     const ids = [...selectedIds]
     setBulkProcessing(true)
     try {
-      const results = await Promise.allSettled(
-        ids.map(id => api.delete(`/admin/events/${id}`))
-      )
+      const results = await Promise.allSettled(ids.map(id => api.delete(`/admin/events/${id}`)))
       const ok = results.filter(r => r.status === 'fulfilled').length
       const fail = results.length - ok
       if (ok > 0) toast.success(`${ok} event berhasil dihapus`)
@@ -453,7 +190,7 @@ export default function AdminEventsPage() {
         title="Kelola Event"
         description="Buat dan kelola event turnamen esport"
         actions={
-          <Button onClick={openCreateDialog} className="bg-esi-red text-white hover:bg-esi-red/90">
+          <Button onClick={() => router.push('/admin/events/new')} className="bg-esi-red text-white hover:bg-esi-red/90">
             <Plus size={16} className="mr-1.5" />
             Buat Event
           </Button>
@@ -471,6 +208,8 @@ export default function AdminEventsPage() {
           icon={Trophy}
           title="Belum ada event"
           description="Buat event pertama untuk memulai pengelolaan turnamen esport."
+          actionLabel="Buat Event Pertama"
+          onAction={() => router.push('/admin/events/new')}
         />
       ) : (
         <div className={`rounded-xl border border-esi-border bg-white dark:bg-zinc-900 overflow-hidden ${selectedIds.length > 0 ? 'mb-32 sm:mb-24' : ''}`}>
@@ -482,19 +221,17 @@ export default function AdminEventsPage() {
                     type="checkbox"
                     className="h-4 w-4 accent-esi-red"
                     checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected
-                    }}
+                    ref={(el) => { if (el) el.indeterminate = someSelected }}
                     onChange={toggleAll}
                     aria-label="Pilih semua event"
                   />
                 </TableHead>
                 <TableHead>Event</TableHead>
-                <TableHead>Slug</TableHead>
+                <TableHead className="hidden md:table-cell">Slug</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Tanggal Mulai</TableHead>
-                <TableHead>Tanggal Selesai</TableHead>
-                <TableHead className="text-center">Sekolah</TableHead>
+                <TableHead className="hidden sm:table-cell">Tanggal Mulai</TableHead>
+                <TableHead className="hidden sm:table-cell">Tanggal Selesai</TableHead>
+                <TableHead className="hidden md:table-cell text-center">Sekolah</TableHead>
                 <TableHead className="text-right">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -502,81 +239,77 @@ export default function AdminEventsPage() {
               {events.map(event => {
                 const checked = selectedIds.includes(event.id)
                 return (
-                <TableRow
-                  key={event.id}
-                  className={checked ? 'bg-red-50/40 dark:bg-red-950/20' : undefined}
-                >
-                  <TableCell>
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 accent-esi-red"
-                      checked={checked}
-                      onChange={() => toggleOne(event.id)}
-                      aria-label={`Pilih ${event.name}`}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: event.primary_color + '20' }}>
-                        <Trophy size={16} weight="fill" style={{ color: event.primary_color }} />
+                  <TableRow key={event.id} className={checked ? 'bg-red-50/40 dark:bg-red-950/20' : undefined}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-esi-red"
+                        checked={checked}
+                        onChange={() => toggleOne(event.id)}
+                        aria-label={`Pilih ${event.name}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ background: event.primary_color + '20' }}>
+                          <Trophy size={16} weight="fill" style={{ color: event.primary_color }} />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-esi-text">{event.name}</p>
+                          {event.short_name && <p className="text-xs text-esi-muted">{event.short_name}</p>}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-esi-text">{event.name}</p>
-                        {event.short_name && <p className="text-xs text-esi-muted">{event.short_name}</p>}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <code className="rounded bg-stone-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs">{event.slug}</code>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANT[event.status]}>
+                        {STATUS_OPTIONS.find(o => o.value === event.status)?.label || event.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{formatDate(event.start_date)}</TableCell>
+                    <TableCell className="hidden sm:table-cell text-sm">{formatDate(event.end_date)}</TableCell>
+                    <TableCell className="hidden md:table-cell text-center">
+                      {event.requires_school && <GraduationCap size={16} weight="fill" className="inline text-esi-red" />}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/events/${event.id}/sections`}>
+                          <Button variant="ghost" size="sm" title="Sections">
+                            <Rows size={16} />
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/events/${event.id}/admins`}>
+                          <Button variant="ghost" size="sm" title="Admin Event">
+                            <UsersThree size={16} />
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/events/${event.id}/point-rules`}>
+                          <Button variant="ghost" size="sm" title="Point Rules">
+                            <Medal size={16} />
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/events/${event.id}/edit`}>
+                          <Button variant="ghost" size="sm" title="Edit event">
+                            <PencilSimple size={16} />
+                          </Button>
+                        </Link>
+                        {event.status === 'completed' && (
+                          <Button
+                            variant="ghost" size="sm" title="Arsipkan event"
+                            disabled={archivingId === event.id}
+                            onClick={() => handleArchive(event)}
+                          >
+                            {archivingId === event.id
+                              ? <Spinner size={16} className="animate-spin" />
+                              : <Archive size={16} />
+                            }
+                          </Button>
+                        )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <code className="rounded bg-stone-100 dark:bg-zinc-800 px-1.5 py-0.5 text-xs">{event.slug}</code>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[event.status]}>
-                      {STATUS_OPTIONS.find(o => o.value === event.status)?.label || event.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{formatDate(event.start_date)}</TableCell>
-                  <TableCell className="text-sm">{formatDate(event.end_date)}</TableCell>
-                  <TableCell className="text-center">
-                    {event.requires_school && <GraduationCap size={16} weight="fill" className="inline text-esi-red" />}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Link href={`/admin/events/${event.id}/sections`}>
-                        <Button variant="ghost" size="sm" title="Sections">
-                          <Rows size={16} />
-                        </Button>
-                      </Link>
-                      <Link href={`/admin/events/${event.id}/admins`}>
-                        <Button variant="ghost" size="sm" title="Admin Event">
-                          <UsersThree size={16} />
-                        </Button>
-                      </Link>
-                      <Link href={`/admin/events/${event.id}/point-rules`}>
-                        <Button variant="ghost" size="sm" title="Point Rules">
-                          <Medal size={16} />
-                        </Button>
-                      </Link>
-                      <Button variant="ghost" size="sm" onClick={() => openEditDialog(event)}>
-                        <PencilSimple size={16} />
-                      </Button>
-                      {event.status === 'completed' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Arsipkan event"
-                          disabled={archivingId === event.id}
-                          onClick={() => handleArchive(event)}
-                        >
-                          {archivingId === event.id ? (
-                            <Spinner size={16} className="animate-spin" />
-                          ) : (
-                            <Archive size={16} />
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                  </TableRow>
                 )
               })}
             </TableBody>
@@ -584,7 +317,7 @@ export default function AdminEventsPage() {
         </div>
       )}
 
-      {/* Bulk delete confirmation dialog */}
+      {/* Bulk delete confirmation */}
       <Dialog open={bulkConfirmOpen} onOpenChange={(o) => { if (!o && !bulkProcessing) setBulkConfirmOpen(false) }}>
         <DialogContent className="bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100 sm:max-w-md">
           <DialogHeader>
@@ -594,19 +327,11 @@ export default function AdminEventsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setBulkConfirmOpen(false)}
-              disabled={bulkProcessing}
-              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400"
-            >
+            <Button variant="outline" onClick={() => setBulkConfirmOpen(false)} disabled={bulkProcessing}
+              className="border-stone-300 dark:border-zinc-600 text-stone-600 dark:text-zinc-400">
               Batal
             </Button>
-            <Button
-              onClick={handleBulkDelete}
-              disabled={bulkProcessing}
-              className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40"
-            >
+            <Button onClick={handleBulkDelete} disabled={bulkProcessing} className="bg-red-600 hover:bg-red-700 text-white">
               {bulkProcessing ? 'Menghapus...' : 'Hapus Semua'}
             </Button>
           </DialogFooter>
@@ -621,385 +346,14 @@ export default function AdminEventsPage() {
               <b>{selectedIds.length}</b> event dipilih
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                variant="outline"
-                onClick={clearSelection}
-                disabled={bulkProcessing}
-              >
-                Batal
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setBulkConfirmOpen(true)}
-                disabled={bulkProcessing}
-              >
+              <Button variant="outline" onClick={clearSelection} disabled={bulkProcessing}>Batal</Button>
+              <Button variant="destructive" onClick={() => setBulkConfirmOpen(true)} disabled={bulkProcessing}>
                 <Trash size={14} className="mr-1" /> Hapus Semua
               </Button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? 'Edit Event' : 'Buat Event Baru'}</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-5 py-2">
-            {/* Informasi Dasar */}
-            <Section title="Informasi Dasar">
-              <div>
-                <Label htmlFor="name">Nama Event *</Label>
-                <Input id="name" name="name" value={form.name} onChange={handleChange} placeholder="ESI Kota Denpasar 2026" />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="slug">Slug *</Label>
-                  <Input id="slug" name="slug" value={form.slug} onChange={handleChange} placeholder="esi-denpasar-2026" />
-                </div>
-                <div>
-                  <Label htmlFor="short_name">Nama Singkat</Label>
-                  <Input id="short_name" name="short_name" value={form.short_name} onChange={handleChange} placeholder="ESI 2026" />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="description">Deskripsi</Label>
-                <textarea
-                  id="description"
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="Deskripsi singkat event"
-                  className="flex min-h-[80px] w-full rounded-md border border-esi-border bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-esi-text placeholder:text-esi-muted focus:outline-none focus:ring-2 focus:ring-esi-red/40 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-            </Section>
-
-            {/* Tampilan */}
-            <Section title="Tampilan">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="primary_color">Warna Utama</Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      id="primary_color"
-                      name="primary_color"
-                      value={form.primary_color}
-                      onChange={handleChange}
-                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
-                    />
-                    <Input
-                      name="primary_color"
-                      value={form.primary_color}
-                      onChange={handleChange}
-                      className="font-mono text-sm"
-                      aria-label="Kode warna utama"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="secondary_color">Warna Sekunder</Label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      id="secondary_color"
-                      name="secondary_color"
-                      value={form.secondary_color}
-                      onChange={handleChange}
-                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-esi-border"
-                    />
-                    <Input
-                      name="secondary_color"
-                      value={form.secondary_color}
-                      onChange={handleChange}
-                      className="font-mono text-sm"
-                      aria-label="Kode warna sekunder"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Logo URL */}
-              <div>
-                <Label htmlFor="logo_url">Logo Event</Label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); logoUpload.setDragOver(true) }}
-                  onDragLeave={() => logoUpload.setDragOver(false)}
-                  onDrop={(e) => { e.preventDefault(); logoUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) logoUpload.upload(f) }}
-                  onClick={() => logoUpload.inputRef.current?.click()}
-                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${logoUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
-                >
-                  {logoUpload.uploading ? (
-                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
-                  ) : form.logo_url ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <img src={resolveMediaUrl(form.logo_url) ?? form.logo_url} alt="Logo preview" className="h-14 w-14 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
-                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
-                      <UploadSimple size={22} />
-                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload logo</p>
-                    </div>
-                  )}
-                  <input ref={logoUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) logoUpload.upload(f); e.target.value = '' }} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input id="logo_url" name="logo_url" type="url" value={form.logo_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
-                  {form.logo_url ? (
-                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, logo_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
-                  ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Banner URL */}
-              <div>
-                <Label htmlFor="banner_url">Banner Event</Label>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); bannerUpload.setDragOver(true) }}
-                  onDragLeave={() => bannerUpload.setDragOver(false)}
-                  onDrop={(e) => { e.preventDefault(); bannerUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) bannerUpload.upload(f) }}
-                  onClick={() => bannerUpload.inputRef.current?.click()}
-                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${bannerUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
-                >
-                  {bannerUpload.uploading ? (
-                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
-                  ) : form.banner_url ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <img src={resolveMediaUrl(form.banner_url) ?? form.banner_url} alt="Banner preview" className="h-12 w-32 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
-                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
-                      <UploadSimple size={22} />
-                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload banner</p>
-                      <p className="text-[10px]">Rasio 16:9 disarankan</p>
-                    </div>
-                  )}
-                  <input ref={bannerUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) bannerUpload.upload(f); e.target.value = '' }} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input id="banner_url" name="banner_url" type="url" value={form.banner_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
-                  {form.banner_url ? (
-                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, banner_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
-                  ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
-                  )}
-                </div>
-              </div>
-
-              {/* Poster URL */}
-              <div>
-                <Label htmlFor="poster_url">Poster Event</Label>
-                <p className="text-xs text-stone-500 dark:text-zinc-400 mb-2">Gambar vertikal untuk promosi (rasio 2:3 atau 9:16)</p>
-                <div
-                  onDragOver={(e) => { e.preventDefault(); posterUpload.setDragOver(true) }}
-                  onDragLeave={() => posterUpload.setDragOver(false)}
-                  onDrop={(e) => { e.preventDefault(); posterUpload.setDragOver(false); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) posterUpload.upload(f) }}
-                  onClick={() => posterUpload.inputRef.current?.click()}
-                  className={`mb-2 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-4 transition-colors ${posterUpload.dragOver ? 'border-esi-red bg-esi-red/5' : 'border-stone-300 dark:border-zinc-600 hover:border-esi-red/50 hover:bg-stone-50 dark:hover:bg-zinc-800/50'}`}
-                >
-                  {posterUpload.uploading ? (
-                    <p className="text-xs text-stone-500 dark:text-zinc-400">Mengupload...</p>
-                  ) : form.poster_url ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <img src={resolveMediaUrl(form.poster_url) ?? form.poster_url} alt="Poster preview" className="h-24 w-16 rounded-lg border border-stone-200 dark:border-zinc-700 object-cover" />
-                      <p className="text-[10px] text-stone-400 dark:text-zinc-500">Klik atau drag untuk ganti</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1 text-stone-400 dark:text-zinc-500">
-                      <UploadSimple size={22} />
-                      <p className="text-xs font-medium">Drag & drop atau klik untuk upload poster</p>
-                      <p className="text-[10px]">Rasio 2:3 atau 9:16 (format vertikal)</p>
-                    </div>
-                  )}
-                  <input ref={posterUpload.inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) posterUpload.upload(f); e.target.value = '' }} />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Input id="poster_url" name="poster_url" type="url" value={form.poster_url} onChange={handleChange} placeholder="https://..." className="text-xs" />
-                  {form.poster_url ? (
-                    <button type="button" onClick={() => { setDirty(true); setForm(prev => ({ ...prev, poster_url: '' })) }} className="shrink-0 rounded-md p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"><X size={14} /></button>
-                  ) : (
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"><ImageIcon size={14} className="text-stone-400 dark:text-zinc-500" /></div>
-                  )}
-                </div>
-              </div>
-            </Section>
-
-            {/* Jadwal */}
-            <Section title="Jadwal">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_date">Tanggal Mulai</Label>
-                  <Input id="start_date" name="start_date" type="datetime-local" value={form.start_date} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label htmlFor="end_date">Tanggal Selesai</Label>
-                  <Input id="end_date" name="end_date" type="datetime-local" value={form.end_date} onChange={handleChange} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="registration_start">Pendaftaran Dibuka</Label>
-                  <Input id="registration_start" name="registration_start" type="datetime-local" value={form.registration_start} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label htmlFor="registration_end">Pendaftaran Ditutup</Label>
-                  <Input id="registration_end" name="registration_end" type="datetime-local" value={form.registration_end} onChange={handleChange} />
-                </div>
-              </div>
-            </Section>
-
-            {/* Lokasi */}
-            <Section title="Lokasi">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="venue">Venue</Label>
-                  <Input id="venue" name="venue" value={form.venue} onChange={handleChange} placeholder="Graha Yowana Suci" />
-                </div>
-                <div>
-                  <Label htmlFor="city">Kota</Label>
-                  <Input id="city" name="city" value={form.city} onChange={handleChange} placeholder="Denpasar, Bali" />
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="organizer">Penyelenggara</Label>
-                <Input id="organizer" name="organizer" value={form.organizer} onChange={handleChange} placeholder="ESI Kota Denpasar" />
-              </div>
-            </Section>
-
-            {/* Kontak & Sosmed */}
-            <Section title="Kontak & Sosmed">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="contact_phone">Nomor Telepon</Label>
-                  <Input id="contact_phone" name="contact_phone" type="tel" value={form.contact_phone} onChange={handleChange} placeholder="+62 812-3456-7890" />
-                </div>
-                <div>
-                  <Label htmlFor="contact_email">Email</Label>
-                  <Input id="contact_email" name="contact_email" type="email" value={form.contact_email} onChange={handleChange} placeholder="info@porjar.id" />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="instagram_url">Instagram URL</Label>
-                  <Input id="instagram_url" name="instagram_url" type="url" value={form.instagram_url} onChange={handleChange} placeholder="https://instagram.com/..." />
-                </div>
-                <div>
-                  <Label htmlFor="website_url">Website URL</Label>
-                  <Input id="website_url" name="website_url" type="url" value={form.website_url} onChange={handleChange} placeholder="https://..." />
-                </div>
-              </div>
-            </Section>
-
-            {/* Pengumuman */}
-            <Section title="Pengumuman">
-              <div>
-                <Label htmlFor="announcement">Pengumuman</Label>
-                <textarea
-                  id="announcement"
-                  name="announcement"
-                  value={form.announcement}
-                  onChange={handleChange}
-                  rows={4}
-                  placeholder="Tulis pengumuman yang akan ditampilkan di halaman event"
-                  className="flex min-h-[96px] w-full rounded-md border border-esi-border bg-white dark:bg-zinc-950 px-3 py-2 text-sm text-esi-text placeholder:text-esi-muted focus:outline-none focus:ring-2 focus:ring-esi-red/40 disabled:cursor-not-allowed disabled:opacity-50"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="announcement_active"
-                  checked={form.announcement_active}
-                  onChange={handleCheck('announcement_active')}
-                  className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
-                />
-                <Label htmlFor="announcement_active">Tampilkan pengumuman (aktif)</Label>
-              </div>
-            </Section>
-
-            {/* Status & Flag */}
-            <Section title="Status & Flag">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={form.status} onValueChange={(val) => { setDirty(true); setForm(prev => ({ ...prev, status: val as EventStatus })) }}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {STATUS_OPTIONS.map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="sort_order">Urutan (Sort Order)</Label>
-                  <Input
-                    id="sort_order"
-                    name="sort_order"
-                    type="number"
-                    value={form.sort_order}
-                    onChange={(e) => { setDirty(true); setForm(prev => ({ ...prev, sort_order: Number(e.target.value) || 0 })) }}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="registration_open"
-                    checked={form.registration_open}
-                    onChange={handleCheck('registration_open')}
-                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
-                  />
-                  <Label htmlFor="registration_open">Pendaftaran dibuka</Label>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="rules_published"
-                    checked={form.rules_published}
-                    onChange={handleCheck('rules_published')}
-                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
-                  />
-                  <Label htmlFor="rules_published">Peraturan dipublikasikan</Label>
-                </div>
-                <div className="flex items-center gap-3 md:col-span-2">
-                  <input
-                    type="checkbox"
-                    id="requires_school"
-                    checked={form.requires_school}
-                    onChange={handleCheck('requires_school')}
-                    className="h-4 w-4 rounded border-stone-300 text-esi-red focus:ring-esi-red"
-                  />
-                  <Label htmlFor="requires_school">Wajib sekolah (tim harus terdaftar di sekolah, tidak boleh duplikat)</Label>
-                </div>
-              </div>
-            </Section>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => handleCloseDialog(false)}>Batal</Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="bg-esi-red text-white hover:bg-esi-red/90">
-              {submitting && <Spinner size={16} className="mr-1.5 animate-spin" />}
-              {editingId ? 'Simpan' : 'Buat Event'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
