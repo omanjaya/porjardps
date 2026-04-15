@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/lib/api'
@@ -141,7 +140,7 @@ export default function AdminAnalyticsPage() {
   ]
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Analitik"
         description="Statistik dan visualisasi data ESI Denpasar"
@@ -237,6 +236,6 @@ export default function AdminAnalyticsPage() {
           <SchoolParticipationChart data={data.top_schools || []} />
         </div>
       ) : null}
-    </AdminLayout>
+    </>
   )
 }

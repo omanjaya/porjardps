@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ExportButton } from '@/components/shared/ExportButton'
@@ -38,15 +37,15 @@ export default function AdminTeamsPage() {
 
   if (paged.loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Manajemen Tim"
         description="Kelola dan approve pendaftaran tim"
@@ -188,6 +187,6 @@ export default function AdminTeamsPage() {
         onAssignPlayer={assign.handleAssignPlayer}
         onRemoveMember={assign.handleRemoveMember}
       />
-    </AdminLayout>
+    </>
   )
 }

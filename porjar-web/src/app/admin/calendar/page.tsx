@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { StatusBadge } from '@/components/shared/StatusBadge'
@@ -790,7 +789,7 @@ export default function AdminCalendarPage() {
   if (authLoading) return null
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Kalender Event"
         description="Tampilan kalender semua event dan turnamen esport."
@@ -888,6 +887,6 @@ export default function AdminCalendarPage() {
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
       />
-    </AdminLayout>
+    </>
   )
 }

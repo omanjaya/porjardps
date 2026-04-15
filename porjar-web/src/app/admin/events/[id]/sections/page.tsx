@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api, resolveMediaUrl } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -953,17 +952,17 @@ export default function EventSectionsPage() {
 
   if (authLoading || loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
           <Skeleton className="h-96 w-full bg-stone-100 dark:bg-zinc-800" />
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Landing Page Sections"
         description={event ? `Konfigurasi halaman publik untuk ${event.name}` : 'Konfigurasi sections halaman publik event'}
@@ -1205,6 +1204,6 @@ export default function EventSectionsPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }

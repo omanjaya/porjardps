@@ -2,7 +2,6 @@
 
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -55,7 +54,7 @@ function AdminSubmissionsContent() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Verifikasi Hasil"
         description={`${pendingCount} submission menunggu verifikasi`}
@@ -114,7 +113,7 @@ function AdminSubmissionsContent() {
         onOpenChange={(o) => { if (!o) setDetailId(null) }}
         onSuccess={handleSheetVerified}
       />
-    </AdminLayout>
+    </>
   )
 }
 

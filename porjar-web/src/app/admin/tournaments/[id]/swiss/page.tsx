@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -175,7 +174,7 @@ export default function AdminSwissPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <div className="mt-4 grid gap-4 sm:grid-cols-4">
           <Skeleton className="h-20 bg-stone-200" />
@@ -184,12 +183,12 @@ export default function AdminSwissPage() {
           <Skeleton className="h-20 bg-stone-200" />
         </div>
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Swiss System"
         description={tournament?.name}
@@ -448,7 +447,7 @@ export default function AdminSwissPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   )
 }
 

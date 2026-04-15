@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { LobbyRotationManager } from '@/components/modules/admin/LobbyRotationManager'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -42,18 +41,18 @@ export default function AdminRotationPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-100 dark:bg-zinc-800" />
-      </AdminLayout>
+      </>
     )
   }
 
   if (!tournament) {
     return (
-      <AdminLayout>
+      <>
         <div className="py-16 text-center text-stone-400">Turnamen tidak ditemukan.</div>
-      </AdminLayout>
+      </>
     )
   }
 
@@ -64,7 +63,7 @@ export default function AdminRotationPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Rotasi Lobby"
         description={tournament.name}
@@ -97,6 +96,6 @@ export default function AdminRotationPage() {
           </TabsContent>
         ))}
       </Tabs>
-    </AdminLayout>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -40,15 +39,15 @@ export default function AdminSiteSettingsPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Pengaturan Situs"
         description="Kelola FAQ, Tentang Kami, dan kontak yang tampil di halaman publik"
@@ -83,6 +82,6 @@ export default function AdminSiteSettingsPage() {
           </TabsContent>
         </Tabs>
       </Card>
-    </AdminLayout>
+    </>
   )
 }

@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
@@ -199,7 +198,7 @@ export default function AdminActivityPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Log Aktivitas"
         description="Riwayat aktivitas pengguna dan admin"
@@ -421,6 +420,6 @@ export default function AdminActivityPage() {
           )}
         </>
       )}
-    </AdminLayout>
+    </>
   )
 }

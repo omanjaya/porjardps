@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -130,7 +129,7 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Pengaturan Event"
         description="Kelola informasi event, kontak, dan fitur toggle"
@@ -278,7 +277,7 @@ export default function AdminSettingsPage() {
           )}
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }
 

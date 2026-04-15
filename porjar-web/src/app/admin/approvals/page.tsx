@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -145,7 +144,7 @@ export default function AdminApprovalsPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Pusat Persetujuan"
         description="Review pending team registrations, school requests, dan lainnya"
@@ -484,6 +483,6 @@ export default function AdminApprovalsPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }

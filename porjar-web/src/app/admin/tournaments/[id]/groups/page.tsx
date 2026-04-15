@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -177,15 +176,15 @@ export default function AdminGroupsPage() {
   const completedMatches = Object.values(groupMatches).flat().filter(m => m.status === 'completed').length
 
   if (loading) return (
-    <AdminLayout>
+    <>
       <Skeleton className="h-10 w-64 bg-stone-200" />
       <div className="mt-4 grid gap-4 sm:grid-cols-3"><Skeleton className="h-20 bg-stone-200" /><Skeleton className="h-20 bg-stone-200" /><Skeleton className="h-20 bg-stone-200" /></div>
       <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-    </AdminLayout>
+    </>
   )
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Fase Grup"
         description={tournament?.name}
@@ -363,6 +362,6 @@ export default function AdminGroupsPage() {
           </div>
         </SheetContent>
       </Sheet>
-    </AdminLayout>
+    </>
   )
 }

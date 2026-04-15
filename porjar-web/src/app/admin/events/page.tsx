@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
@@ -210,13 +209,13 @@ export default function AdminEventsPage() {
 
   if (authLoading) {
     return (
-      <AdminLayout>
+      <>
         <div className="space-y-4">
           {[1, 2, 3].map(i => (
             <Skeleton key={i} className="h-16 w-full rounded-xl" />
           ))}
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
@@ -449,7 +448,7 @@ export default function AdminEventsPage() {
   const someSelected = pageIds.some(id => selectedIds.includes(id)) && !allSelected
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Kelola Event"
         description="Buat dan kelola event turnamen esport"
@@ -1001,6 +1000,6 @@ export default function AdminEventsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   )
 }

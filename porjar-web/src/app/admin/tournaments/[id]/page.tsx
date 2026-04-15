@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -230,23 +229,23 @@ export default function AdminTournamentDetailPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   if (!tournament) {
     return (
-      <AdminLayout>
+      <>
         <EmptyState icon={Trophy} title="Turnamen Tidak Ditemukan" description="Turnamen tidak ada atau sudah dihapus." />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title={tournament.name}
         description="Kelola tim yang terdaftar di turnamen ini"
@@ -748,6 +747,6 @@ export default function AdminTournamentDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   )
 }

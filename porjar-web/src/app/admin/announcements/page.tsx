@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
@@ -125,7 +124,7 @@ export default function AdminAnnouncementsPage() {
   )
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Pengumuman Event"
         description="Kirim pengumuman ke peserta event"
@@ -231,6 +230,6 @@ export default function AdminAnnouncementsPage() {
         processing={processing}
         onConfirm={handleDeleteConfirm}
       />
-    </AdminLayout>
+    </>
   )
 }

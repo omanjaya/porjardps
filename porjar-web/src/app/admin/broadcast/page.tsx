@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -153,7 +152,7 @@ export default function AdminBroadcastPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6 p-4 sm:p-6">
         <PageHeader
           title="Broadcast WhatsApp"
@@ -305,6 +304,6 @@ export default function AdminBroadcastPage() {
           </div>
         )}
       </div>
-    </AdminLayout>
+    </>
   )
 }

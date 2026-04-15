@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Users, Trophy, Buildings, DownloadSimple, Spinner } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { api } from '@/lib/api'
 
@@ -73,7 +72,7 @@ export default function AdminExportPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Export Data"
         description="Download data peserta, tim, sekolah dalam format CSV"
@@ -129,6 +128,6 @@ export default function AdminExportPage() {
         File CSV menggunakan encoding UTF-8 dan dapat dibuka langsung di
         Microsoft Excel, Google Sheets, atau LibreOffice Calc.
       </p>
-    </AdminLayout>
+    </>
   )
 }

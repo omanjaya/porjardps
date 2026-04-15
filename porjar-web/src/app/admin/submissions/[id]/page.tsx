@@ -15,7 +15,6 @@ import {
   ShieldWarning,
   Warning,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -117,19 +116,19 @@ export default function SubmissionDetailPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-8 w-64 bg-esi-border" />
           <Skeleton className="h-64 rounded-xl bg-esi-border" />
           <Skeleton className="h-48 rounded-xl bg-esi-border" />
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   if (!submission) {
     return (
-      <AdminLayout>
+      <>
         <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-10 text-center shadow-sm">
           <WarningCircle size={40} weight="duotone" className="mx-auto mb-3 text-esi-border" />
           <p className="text-sm text-esi-muted">Submission tidak ditemukan</p>
@@ -142,7 +141,7 @@ export default function SubmissionDetailPage() {
             Kembali
           </Button>
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
@@ -150,7 +149,7 @@ export default function SubmissionDetailPage() {
   const opponentScreenshots = submission.opponent_submission?.screenshots ?? []
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Detail Submission"
         breadcrumbs={[
@@ -536,6 +535,6 @@ export default function SubmissionDetailPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }

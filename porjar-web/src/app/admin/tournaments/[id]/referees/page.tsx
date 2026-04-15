@@ -12,7 +12,6 @@ import {
   MagnifyingGlass,
   Users,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -209,15 +208,15 @@ export default function AdminTournamentRefereesPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200 dark:bg-zinc-700" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200 dark:bg-zinc-700" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Penugasan Wasit"
         description={tournament ? `Kelola wasit untuk turnamen ${tournament.name}` : 'Kelola wasit pertandingan'}
@@ -474,6 +473,6 @@ export default function AdminTournamentRefereesPage() {
         loading={removing}
         variant="destructive"
       />
-    </AdminLayout>
+    </>
   )
 }

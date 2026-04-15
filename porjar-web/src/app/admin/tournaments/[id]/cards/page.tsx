@@ -10,7 +10,6 @@ import {
   Funnel,
   Spinner,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -116,15 +115,15 @@ export default function AdminTournamentCardsPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Riwayat Kartu"
         description={tournament ? `Semua kartu pelanggaran di turnamen ${tournament.name}` : 'Riwayat kartu pelanggaran'}
@@ -321,6 +320,6 @@ export default function AdminTournamentCardsPage() {
         loading={revokingAll}
         variant="destructive"
       />
-    </AdminLayout>
+    </>
   )
 }

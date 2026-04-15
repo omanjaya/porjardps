@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { BracketManager } from '@/components/modules/admin/BracketManager'
 import { Button } from '@/components/ui/button'
@@ -38,18 +37,18 @@ export default function AdminBracketPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-12 w-full bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   const isBR = tournament?.format === 'battle_royale_points' || tournament?.format === 'battle_royale_placement'
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Kelola Bracket"
         description={tournament?.name}
@@ -94,6 +93,6 @@ export default function AdminBracketPage() {
           tournamentName={tournament.name}
         />
       ) : null}
-    </AdminLayout>
+    </>
   )
 }

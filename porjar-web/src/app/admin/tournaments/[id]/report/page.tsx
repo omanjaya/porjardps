@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -245,17 +244,17 @@ export default function TournamentReportPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200 dark:bg-zinc-700" />
         <Skeleton className="mt-4 h-12 w-full bg-stone-200 dark:bg-zinc-700" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200 dark:bg-zinc-700" />
-      </AdminLayout>
+      </>
     )
   }
 
   if (!report) {
     return (
-      <AdminLayout>
+      <>
         <div className="py-16 text-center">
           <p className="text-sm text-stone-500 dark:text-zinc-400">
             {error ?? 'Laporan tidak tersedia'}
@@ -274,14 +273,14 @@ export default function TournamentReportPage() {
             </Button>
           )}
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   const t = report.tournament
 
   return (
-    <AdminLayout>
+    <>
       {/* Print-only styles */}
       <style>{`
         @media print {
@@ -563,6 +562,6 @@ export default function TournamentReportPage() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </>
   )
 }

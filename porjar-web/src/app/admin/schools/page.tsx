@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { ExportButton } from '@/components/shared/ExportButton'
 import { Button } from '@/components/ui/button'
@@ -82,15 +81,15 @@ export default function AdminSchoolsPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Manajemen Sekolah"
         description="Kelola data sekolah peserta"
@@ -154,6 +153,6 @@ export default function AdminSchoolsPage() {
         submitting={submitting}
         onSubmit={handleSubmit}
       />
-    </AdminLayout>
+    </>
   )
 }

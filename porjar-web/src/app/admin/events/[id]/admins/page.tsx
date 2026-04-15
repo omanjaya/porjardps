@@ -11,7 +11,6 @@ import {
   UsersThree,
   Spinner,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -174,17 +173,17 @@ export default function EventAdminsPage() {
 
   if (authLoading || loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
           <Skeleton className="h-64 w-full bg-stone-100 dark:bg-zinc-800" />
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title={event ? `Admin Event: ${event.name}` : 'Admin Event'}
         description="Kelola pengguna yang memiliki akses admin untuk event ini"
@@ -380,6 +379,6 @@ export default function EventAdminsPage() {
         loading={removing}
         variant="destructive"
       />
-    </AdminLayout>
+    </>
   )
 }

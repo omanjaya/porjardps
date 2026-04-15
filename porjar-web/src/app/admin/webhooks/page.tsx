@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -153,19 +152,19 @@ export default function AdminWebhooksPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <div className="mt-4 space-y-2">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-16 w-full bg-stone-200" />
           ))}
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Webhooks"
         description="Kelola webhook untuk integrasi dengan layanan eksternal"
@@ -358,6 +357,6 @@ export default function AdminWebhooksPage() {
         logs={logs}
         loading={logsLoading}
       />
-    </AdminLayout>
+    </>
   )
 }

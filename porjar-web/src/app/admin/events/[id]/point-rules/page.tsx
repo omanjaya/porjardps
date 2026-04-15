@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -87,17 +86,17 @@ export default function PointRulesPage() {
 
   if (authLoading || loading) {
     return (
-      <AdminLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-10 w-64 bg-stone-100 dark:bg-zinc-800" />
           <Skeleton className="h-64 w-full bg-stone-100 dark:bg-zinc-800" />
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Point Rules"
         description={event ? `Konfigurasi poin untuk ${event.name}` : 'Konfigurasi poin event'}
@@ -177,6 +176,6 @@ export default function PointRulesPage() {
           <li>Admin bisa trigger ulang distribusi poin dari halaman tournament.</li>
         </ul>
       </div>
-    </AdminLayout>
+    </>
   )
 }

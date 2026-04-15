@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { BRResultInput, type TeamResult } from '@/components/modules/admin/BRResultInput'
 import { BRGridInput } from '@/components/modules/admin/BRGridInput'
@@ -325,15 +324,15 @@ export default function AdminLobbiesPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Kelola POT"
         description={tournament?.name}
@@ -612,6 +611,6 @@ export default function AdminLobbiesPage() {
         lobbyTeams={lobbyTeams}
         onSuccess={loadData}
       />
-    </AdminLayout>
+    </>
   )
 }

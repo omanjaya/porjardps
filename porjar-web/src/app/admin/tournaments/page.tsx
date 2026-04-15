@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -118,7 +117,7 @@ export default function AdminTournamentsPage() {
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Kelola Turnamen"
         description="Buat dan kelola semua turnamen ESI Denpasar"
@@ -391,6 +390,6 @@ export default function AdminTournamentsPage() {
         loading={deleting}
         variant="destructive"
       />
-    </AdminLayout>
+    </>
   )
 }

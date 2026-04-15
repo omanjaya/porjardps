@@ -7,7 +7,6 @@ import {
   CheckCircle, ClipboardText, CalendarPlus, UploadSimple,
   GraduationCap, UsersFour, ArrowRight, Sword,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LiveScoreCard } from '@/components/modules/match/LiveScoreCard'
 import { api } from '@/lib/api'
@@ -80,7 +79,7 @@ export default function AdminDashboardPage() {
   }, [isAuthenticated, authLoading])
 
   return (
-    <AdminLayout>
+    <>
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div>
@@ -228,7 +227,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       </div>
-    </AdminLayout>
+    </>
   )
 }
 

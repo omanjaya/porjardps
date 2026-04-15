@@ -7,7 +7,6 @@ import {
   FloppyDisk,
   Spinner,
 } from '@phosphor-icons/react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -98,7 +97,7 @@ export default function AdminPenaltiesPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Konfigurasi Penalti Kartu"
         description="Atur poin pengurangan kartu kuning dan merah per turnamen"
@@ -245,6 +244,6 @@ export default function AdminPenaltiesPage() {
           <p className="text-sm text-esi-muted">Belum ada turnamen terdaftar</p>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }

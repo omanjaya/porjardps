@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { GAME_CONFIG } from '@/constants/games'
 import { cn } from '@/lib/utils'
 import { api } from '@/lib/api'
@@ -183,7 +182,7 @@ export default function AdminRulesPage() {
   }
 
   return (
-    <AdminLayout>
+    <>
       <div className="mb-4 sm:mb-6">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-zinc-100">Aturan Turnamen</h1>
         <p className="mt-1 text-sm text-stone-500 dark:text-zinc-400">
@@ -344,6 +343,6 @@ export default function AdminRulesPage() {
           </div>
         </>
       )}
-    </AdminLayout>
+    </>
   )
 }

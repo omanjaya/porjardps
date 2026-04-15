@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -378,7 +377,7 @@ export default function AdminSchedulesPage() {
   // ─── Loading state ───
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200 dark:bg-zinc-700" />
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
@@ -386,12 +385,12 @@ export default function AdminSchedulesPage() {
           <Skeleton className="h-24 rounded-xl bg-stone-100 dark:bg-zinc-800" />
         </div>
         <Skeleton className="mt-4 h-96 w-full bg-stone-200 dark:bg-zinc-700" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Manajemen Jadwal"
         description="Kelola jadwal pertandingan dan acara turnamen"
@@ -685,6 +684,6 @@ export default function AdminSchedulesPage() {
         loading={bulkDeleting}
         variant="destructive"
       />
-    </AdminLayout>
+    </>
   )
 }

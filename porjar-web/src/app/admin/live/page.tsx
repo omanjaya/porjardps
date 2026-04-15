@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { AdminScoreInput, type GameScore } from '@/components/modules/admin/AdminScoreInput'
 import { Button } from '@/components/ui/button'
@@ -297,13 +296,13 @@ export default function AdminLivePage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-3 h-10 w-full bg-stone-200" />
         <div className="mt-4 space-y-4">
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 w-full bg-stone-200" />)}
         </div>
-      </AdminLayout>
+      </>
     )
   }
 
@@ -311,7 +310,7 @@ export default function AdminLivePage() {
   const activeSection = days.find(d => d.date === activeDay)
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Live Score Panel"
         description={totalLive > 0
@@ -535,6 +534,6 @@ export default function AdminLivePage() {
           )}
         </SheetContent>
       </Sheet>
-    </AdminLayout>
+    </>
   )
 }

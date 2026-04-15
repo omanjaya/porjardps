@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
-import { AdminLayout } from '@/components/layouts/AdminLayout'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -92,15 +91,15 @@ export default function AdminNewsPage() {
 
   if (loading) {
     return (
-      <AdminLayout>
+      <>
         <Skeleton className="h-10 w-64 bg-stone-200" />
         <Skeleton className="mt-4 h-96 w-full bg-stone-200" />
-      </AdminLayout>
+      </>
     )
   }
 
   return (
-    <AdminLayout>
+    <>
       <PageHeader
         title="Manajemen Berita"
         description="Kelola artikel berita, pengumuman, dan update event"
@@ -211,6 +210,6 @@ export default function AdminNewsPage() {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   )
 }
