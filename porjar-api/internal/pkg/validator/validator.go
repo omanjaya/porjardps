@@ -46,6 +46,44 @@ func ValidatePassword(password string) bool {
 	return hasLower && hasUpper && hasNumber
 }
 
+// PasswordStrength returns 0-4 based on requirements met.
+// 0-1 = weak, 2 = fair, 3 = strong, 4 = very strong
+func PasswordStrength(pw string) int {
+	if len(pw) < 8 {
+		return 0
+	}
+	score := 0
+	hasLower := false
+	hasUpper := false
+	hasDigit := false
+	hasSpecial := false
+	for _, c := range pw {
+		switch {
+		case c >= 'a' && c <= 'z':
+			hasLower = true
+		case c >= 'A' && c <= 'Z':
+			hasUpper = true
+		case c >= '0' && c <= '9':
+			hasDigit = true
+		case c > 32 && c < 127:
+			hasSpecial = true
+		}
+	}
+	if hasLower {
+		score++
+	}
+	if hasDigit {
+		score++
+	}
+	if hasUpper {
+		score++
+	}
+	if hasSpecial {
+		score++
+	}
+	return score
+}
+
 // ValidateStringLength checks min/max length after trim
 func ValidateStringLength(s string, min, max int) bool {
 	trimmed := strings.TrimSpace(s)

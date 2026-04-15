@@ -32,6 +32,8 @@ export function TournamentEditDialog({
   const [editDefaultNumMaps, setEditDefaultNumMaps] = useState(1)
   const [editDefaultMapNames, setEditDefaultMapNames] = useState<string[]>([])
   const [editTiebreakerOrder, setEditTiebreakerOrder] = useState<string[]>(['wwcd', 'placement_points', 'kills'])
+  const [editPrizePool, setEditPrizePool] = useState('')
+  const [editPrizeDescription, setEditPrizeDescription] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -47,6 +49,8 @@ export function TournamentEditDialog({
       setEditDefaultMapNames(tournament.default_map_names ?? [])
       const order = (tournament.tiebreaker_order ?? []).filter(k => k !== 'best_placement')
       setEditTiebreakerOrder(order.length ? order : ['wwcd', 'placement_points', 'kills'])
+      setEditPrizePool(tournament.prize_pool ?? '')
+      setEditPrizeDescription(tournament.prize_description ?? '')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tournament])
@@ -87,6 +91,8 @@ export function TournamentEditDialog({
         default_num_maps: editDefaultNumMaps,
         default_map_names: editDefaultMapNames.filter(Boolean),
         tiebreaker_order: [...editTiebreakerOrder, 'best_placement'],
+        prize_pool: editPrizePool.trim() || null,
+        prize_description: editPrizeDescription.trim() || null,
       })
       toast.success('Turnamen berhasil diperbarui')
       onOpenChange(false)
@@ -348,6 +354,26 @@ export function TournamentEditDialog({
                   className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
                 />
               </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Hadiah (Prize Pool)</label>
+              <Input
+                value={editPrizePool}
+                onChange={(e) => setEditPrizePool(e.target.value)}
+                placeholder='mis. "Rp 5.000.000" atau "Trofi + Sertifikat"'
+                className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 focus:border-esi-red"
+              />
+              <p className="mt-1 text-xs text-stone-500 dark:text-zinc-500">Ditampilkan di halaman detail turnamen. Kosongkan jika tidak ada.</p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Rincian Hadiah</label>
+              <textarea
+                value={editPrizeDescription}
+                onChange={(e) => setEditPrizeDescription(e.target.value)}
+                placeholder={'Contoh:\nJuara 1: Rp 3.000.000 + Trofi\nJuara 2: Rp 1.500.000\nJuara 3: Rp 500.000'}
+                rows={4}
+                className="w-full rounded-md border border-stone-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-stone-900 dark:text-zinc-100 focus:border-esi-red focus:outline-none focus:ring-2 focus:ring-esi-red/20"
+              />
             </div>
           </div>
           <div className="mt-6 flex justify-end gap-2">

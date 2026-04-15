@@ -363,6 +363,22 @@ export default function TournamentDetailPage() {
         })}
       </div>
 
+      {/* Prize Pool Section */}
+      {(tournament.prize_pool || tournament.prize_description) && (
+        <div className="anim-section rounded-2xl border-2 border-amber-200 dark:border-amber-900 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-950/40 dark:to-yellow-950/40 p-6 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy size={22} weight="fill" className="text-amber-500" />
+            <h3 className="text-lg font-black text-amber-900 dark:text-amber-200">Hadiah</h3>
+          </div>
+          {tournament.prize_pool && (
+            <p className="text-2xl font-black text-amber-800 dark:text-amber-200 mb-2">{tournament.prize_pool}</p>
+          )}
+          {tournament.prize_description && (
+            <p className="text-sm text-amber-800 dark:text-amber-300 whitespace-pre-wrap">{tournament.prize_description}</p>
+          )}
+        </div>
+      )}
+
       {/* Rules Section */}
       {tournament.rules && (
         <div className="anim-section mb-8 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 shadow-sm">

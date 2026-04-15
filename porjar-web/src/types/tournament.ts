@@ -26,6 +26,8 @@ export interface Tournament {
   default_num_maps: number
   default_map_names: string[]
   tiebreaker_order: string[]
+  prize_pool?: string | null
+  prize_description?: string | null
 }
 
 export type TournamentFormat =

@@ -29,13 +29,27 @@ export default function RegisterPage() {
   const [consentGiven, setConsentGiven] = useState(false)
 
   function getPasswordStrength(pw: string) {
-    if (!pw) return { level: 0, label: '', color: '' }
+    if (!pw) return { level: 0, label: '', color: '', hint: '' }
+    if (pw.length < 8) {
+      return { level: 1, label: 'Lemah', color: 'bg-esi-red', hint: 'Minimal 8 karakter' }
+    }
+    const hasLower = /[a-z]/.test(pw)
     const hasUpper = /[A-Z]/.test(pw)
     const hasNumber = /[0-9]/.test(pw)
-    if (pw.length < 8) return { level: 1, label: 'Lemah', color: 'bg-esi-red' }
-    if (hasUpper && hasNumber) return { level: 3, label: 'Kuat', color: 'bg-green-500' }
-    if (hasUpper || hasNumber) return { level: 2, label: 'Sedang', color: 'bg-amber-500' }
-    return { level: 1, label: 'Lemah', color: 'bg-esi-red' }
+    const hasSpecial = /[^A-Za-z0-9\s]/.test(pw)
+    let score = 0
+    if (hasLower) score++
+    if (hasNumber) score++
+    if (hasUpper) score++
+    if (hasSpecial) score++
+    // Build hint for missing improvements
+    let hint = ''
+    if (!hasUpper) hint = 'Tambahkan huruf besar untuk password lebih kuat'
+    else if (!hasSpecial) hint = 'Tambahkan karakter spesial (!@#$) untuk password lebih kuat'
+    if (score <= 1) return { level: 1, label: 'Lemah', color: 'bg-esi-red', hint }
+    if (score === 2) return { level: 2, label: 'Sedang', color: 'bg-amber-500', hint }
+    if (score === 3) return { level: 3, label: 'Kuat', color: 'bg-green-500', hint }
+    return { level: 4, label: 'Sangat Kuat', color: 'bg-emerald-600', hint: '' }
   }
 
   const passwordStrength = getPasswordStrength(form.password)
@@ -236,7 +250,7 @@ export default function RegisterPage() {
             {form.password && (
               <div className="space-y-1">
                 <div className="flex gap-1">
-                  {[1, 2, 3].map((i) => (
+                  {[1, 2, 3, 4].map((i) => (
                     <div
                       key={i}
                       className={`h-1 flex-1 rounded-full transition-all duration-300 ${
@@ -247,10 +261,16 @@ export default function RegisterPage() {
                 </div>
                 <p className={`text-xs ${
                   passwordStrength.level === 1 ? 'text-esi-red' :
-                  passwordStrength.level === 2 ? 'text-amber-600' : 'text-green-600'
+                  passwordStrength.level === 2 ? 'text-amber-600' :
+                  passwordStrength.level === 3 ? 'text-green-600' : 'text-emerald-700 dark:text-emerald-400'
                 }`}>
                   {passwordStrength.label}
                 </p>
+                {passwordStrength.hint && (
+                  <p className="text-xs text-stone-500 dark:text-zinc-400">
+                    {passwordStrength.hint}
+                  </p>
+                )}
               </div>
             )}
             {errors.password && (

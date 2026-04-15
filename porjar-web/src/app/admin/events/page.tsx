@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import Link from 'next/link'
-import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash } from '@phosphor-icons/react'
+import { Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap, Trash, Archive } from '@phosphor-icons/react'
 import type { Event } from '@/types'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 
@@ -178,6 +178,9 @@ export default function AdminEventsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
   const [bulkProcessing, setBulkProcessing] = useState(false)
+
+  // Archive state
+  const [archivingId, setArchivingId] = useState<string | null>(null)
 
   const loadEvents = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
@@ -387,6 +390,48 @@ export default function AdminEventsPage() {
     }
   }
 
+  async function handleArchive(event: Event) {
+    if (archivingId) return
+    if (!confirm('Arsipkan event ini? Event akan tersembunyi dari halaman publik tapi data tetap ada.')) return
+    try {
+      setArchivingId(event.id)
+      await api.put(`/admin/events/${event.id}`, {
+        name: event.name,
+        slug: event.slug,
+        short_name: event.short_name || null,
+        description: event.description || null,
+        primary_color: event.primary_color,
+        secondary_color: event.secondary_color || null,
+        logo_url: event.logo_url || null,
+        banner_url: event.banner_url || null,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        registration_start: event.registration_start,
+        registration_end: event.registration_end,
+        venue: event.venue || null,
+        city: event.city || null,
+        organizer: event.organizer || null,
+        contact_phone: event.contact_phone || null,
+        contact_email: event.contact_email || null,
+        instagram_url: event.instagram_url || null,
+        website_url: event.website_url || null,
+        announcement: event.announcement || null,
+        announcement_active: event.announcement_active ?? false,
+        status: 'archived',
+        registration_open: event.registration_open ?? false,
+        rules_published: event.rules_published ?? false,
+        requires_school: event.requires_school ?? false,
+        sort_order: event.sort_order ?? 0,
+      })
+      toast.success('Event berhasil diarsipkan')
+      await loadEvents()
+    } catch {
+      toast.error('Gagal mengarsipkan event')
+    } finally {
+      setArchivingId(null)
+    }
+  }
+
   const pageIds = events.map(e => e.id)
   const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id))
   const someSelected = pageIds.some(id => selectedIds.includes(id)) && !allSelected
@@ -493,6 +538,21 @@ export default function AdminEventsPage() {
                       <Button variant="ghost" size="sm" onClick={() => openEditDialog(event)}>
                         <PencilSimple size={16} />
                       </Button>
+                      {event.status === 'completed' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Arsipkan event"
+                          disabled={archivingId === event.id}
+                          onClick={() => handleArchive(event)}
+                        >
+                          {archivingId === event.id ? (
+                            <Spinner size={16} className="animate-spin" />
+                          ) : (
+                            <Archive size={16} />
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

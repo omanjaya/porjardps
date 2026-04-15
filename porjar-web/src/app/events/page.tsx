@@ -25,6 +25,7 @@ function formatDateRange(start?: string, end?: string): string {
 export default function EventsListPage() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [showArchived, setShowArchived] = useState(false)
 
   useEffect(() => {
     api.get<Event[]>('/events')
@@ -33,9 +34,14 @@ export default function EventsListPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const archivedCount = events.filter(e => e.status === 'archived').length
   const ongoing = events.filter(e => e.status === 'ongoing')
   const upcoming = events.filter(e => e.status === 'published' || e.status === 'draft')
-  const completed = events.filter(e => e.status === 'completed' || e.status === 'archived')
+  const completed = events.filter(e => {
+    if (e.status === 'completed') return true
+    if (e.status === 'archived') return showArchived
+    return false
+  })
 
   return (
     <PublicLayout>
@@ -92,14 +98,29 @@ export default function EventsListPage() {
             )}
 
             {/* Selesai */}
-            {completed.length > 0 && (
+            {(completed.length > 0 || archivedCount > 0) && (
               <section>
-                <h2 className="text-sm font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500 mb-4">
-                  Selesai
-                </h2>
-                <div className="grid gap-6 sm:grid-cols-2">
-                  {completed.map(event => <EventCard key={event.id} event={event} />)}
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">
+                    Selesai
+                  </h2>
+                  {archivedCount > 0 && (
+                    <label className="flex items-center gap-2 text-sm text-stone-500 dark:text-zinc-400 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={showArchived}
+                        onChange={e => setShowArchived(e.target.checked)}
+                        className="h-4 w-4 rounded border-stone-300 dark:border-zinc-600 text-esi-red focus:ring-esi-red"
+                      />
+                      Tampilkan event yang diarsipkan ({archivedCount})
+                    </label>
+                  )}
                 </div>
+                {completed.length > 0 && (
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    {completed.map(event => <EventCard key={event.id} event={event} />)}
+                  </div>
+                )}
               </section>
             )}
           </div>

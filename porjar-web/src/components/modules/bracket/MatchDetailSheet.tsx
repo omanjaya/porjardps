@@ -20,11 +20,24 @@ import { AdminScoreInput } from './AdminScoreInput'
 import { AdminActions } from './AdminActions'
 import { MatchSubmissions } from './MatchSubmissions'
 import { CheckInButton } from '@/components/shared/CheckInButton'
-import { CalendarBlank, Warning, ShieldWarning, Printer } from '@phosphor-icons/react'
+import { CalendarBlank, Warning, ShieldWarning, Printer, VideoCamera, ArrowSquareOut } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { sanitizeUrl } from '@/lib/utils'
 import type { BracketMatch } from '@/types'
 import type { MatchCard } from '@/types/referee'
+
+function getEmbedUrl(url: string): string | null {
+  // YouTube
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+  // Twitch
+  const tw = url.match(/twitch\.tv\/([^/?#]+)/)
+  if (tw) {
+    const parent = typeof window !== 'undefined' ? window.location.hostname : 'esidenpasar.com'
+    return `https://player.twitch.tv/?channel=${tw[1]}&parent=${parent}`
+  }
+  return null
+}
 
 interface MatchDetailSheetProps {
   match: BracketMatch | null
@@ -149,22 +162,43 @@ export function MatchDetailSheet({
             <span className="text-esi-red font-mono text-sm">#{match.match_number}</span>
             <span>{roundLabel}</span>
           </SheetTitle>
-          <SheetDescription className="text-stone-500 dark:text-zinc-400">
-            <StatusBadge status={match.status} />
-            {sanitizeUrl(match.stream_url) && (
-              <a
-                href={sanitizeUrl(match.stream_url)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline"
-              >
-                Watch Stream
-              </a>
-            )}
+          <SheetDescription className="text-stone-500 dark:text-zinc-400 sr-only">
+            Detail pertandingan
           </SheetDescription>
+          <div className="text-stone-500 dark:text-zinc-400">
+            <StatusBadge status={match.status} />
+          </div>
         </SheetHeader>
 
         <div className="flex-1 space-y-6 p-4">
+          {/* Live Stream */}
+          {match.stream_url && sanitizeUrl(match.stream_url) && (
+            <div className="rounded-xl overflow-hidden border border-stone-200 dark:border-zinc-700">
+              <div className="flex items-center gap-2 bg-esi-red/10 text-esi-red font-semibold text-sm px-3 py-2">
+                <VideoCamera size={14} weight="fill" /> Live Stream
+              </div>
+              {getEmbedUrl(match.stream_url) ? (
+                <div className="relative aspect-video bg-black">
+                  <iframe
+                    src={getEmbedUrl(match.stream_url)!}
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    sandbox="allow-scripts allow-same-origin allow-presentation"
+                  />
+                </div>
+              ) : (
+                <a
+                  href={sanitizeUrl(match.stream_url)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-8 bg-stone-100 dark:bg-zinc-800 text-sm font-semibold text-stone-700 dark:text-zinc-300 hover:bg-stone-200 dark:hover:bg-zinc-700 transition"
+                >
+                  <ArrowSquareOut size={16} /> Buka Stream
+                </a>
+              )}
+            </div>
+          )}
+
           {/* Teams & Big Score */}
           <MatchScoreDisplay
             match={match}
