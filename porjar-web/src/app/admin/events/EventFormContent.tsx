@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Spinner, FloppyDisk, UploadSimple, X, Image as ImageIcon } from '@phosphor-icons/react'
+import { Spinner, FloppyDisk, UploadSimple, X, Image as ImageIcon, Trophy, CalendarBlank, MapPin, Buildings, ArrowRight, Eye } from '@phosphor-icons/react'
 import { useLogoUpload } from '@/app/admin/schools/hooks/useLogoUpload'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 import type { Event } from '@/types'
@@ -455,6 +455,133 @@ export function EventFormContent({ eventId }: Props) {
         {/* Right sidebar */}
         <div className="space-y-5">
 
+          {/* Live Preview */}
+          <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+            <div className="border-b border-stone-100 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50 px-5 py-3 flex items-center gap-2">
+              <Eye size={14} className="text-stone-400 dark:text-zinc-500" />
+              <h3 className="text-sm font-semibold text-stone-700 dark:text-zinc-300">Preview Publik</h3>
+              <span className="ml-auto text-[10px] text-stone-400 dark:text-zinc-500">Tampilan di halaman event</span>
+            </div>
+            <div className="p-4">
+              {/* Event card preview — mirrors the public EventCard component */}
+              <div
+                className="relative overflow-hidden rounded-xl border border-stone-200 dark:border-zinc-700 border-l-4 bg-white dark:bg-zinc-900 shadow-sm"
+                style={{ borderLeftColor: form.primary_color || '#C41E2A' }}
+              >
+                {/* Header: banner image or color fill */}
+                <div
+                  className="relative h-28 overflow-hidden"
+                  style={
+                    form.banner_url
+                      ? undefined
+                      : { background: form.primary_color || '#C41E2A' }
+                  }
+                >
+                  {form.banner_url && (
+                    <>
+                      <img
+                        src={resolveMediaUrl(form.banner_url) ?? form.banner_url}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                      {/* Tint overlay to keep logo/text readable */}
+                      <div className="absolute inset-0" style={{ background: (form.primary_color || '#C41E2A') + '99' }} />
+                    </>
+                  )}
+                  {/* Decorative polygon */}
+                  <div className="pointer-events-none absolute inset-0">
+                    <svg className="absolute right-0 top-0 h-full w-[120px] opacity-[0.1]" preserveAspectRatio="none" viewBox="0 0 120 120" fill="none">
+                      <polygon points="30,0 120,0 120,120 0,120" fill="white" />
+                    </svg>
+                  </div>
+                  {/* Logo or trophy icon */}
+                  <div className="relative z-10 flex h-full items-center justify-center">
+                    {form.logo_url ? (
+                      <img
+                        src={resolveMediaUrl(form.logo_url) ?? form.logo_url}
+                        alt=""
+                        className="h-14 w-14 rounded-xl object-contain bg-white/10 backdrop-blur-sm p-1 border border-white/20"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+                        <Trophy size={28} weight="fill" className="text-white" />
+                      </div>
+                    )}
+                  </div>
+                  {/* Status pill */}
+                  <div className="absolute top-2 right-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                      form.status === 'ongoing' ? 'bg-green-500 text-white' :
+                      form.status === 'published' ? 'bg-blue-500 text-white' :
+                      form.status === 'completed' ? 'bg-stone-500 text-white' :
+                      form.status === 'archived' ? 'bg-stone-400 text-white' :
+                      'bg-zinc-600 text-zinc-200'
+                    }`}>
+                      {form.status === 'ongoing' && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-white animate-pulse inline-block" />}
+                      {STATUS_OPTIONS.find(o => o.value === form.status)?.label ?? form.status}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Card body */}
+                <div className="p-4">
+                  <h3 className="text-base font-bold text-stone-900 dark:text-zinc-100 leading-tight">
+                    {form.name || <span className="text-stone-300 dark:text-zinc-600 italic font-normal">Nama event...</span>}
+                  </h3>
+                  {form.short_name && (
+                    <p className="mt-0.5 text-xs text-stone-400 dark:text-zinc-500">{form.short_name}</p>
+                  )}
+                  <p className="mt-1.5 text-xs text-stone-500 dark:text-zinc-400 line-clamp-2">
+                    {form.description || <span className="italic text-stone-300 dark:text-zinc-600">Deskripsi event akan tampil di sini...</span>}
+                  </p>
+
+                  {/* Meta row */}
+                  <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-stone-400 dark:text-zinc-500">
+                    {form.start_date && (
+                      <span className="flex items-center gap-1">
+                        <CalendarBlank size={11} />
+                        {new Date(form.start_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {form.end_date && ` – ${new Date(form.end_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+                      </span>
+                    )}
+                    {form.venue && (
+                      <span className="flex items-center gap-1">
+                        <Buildings size={11} />
+                        {form.venue}
+                      </span>
+                    )}
+                    {form.city && (
+                      <span className="flex items-center gap-1">
+                        <MapPin size={11} />
+                        {form.city}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* CTA */}
+                  <div className="mt-3 flex items-center justify-end">
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold" style={{ color: form.primary_color || '#C41E2A' }}>
+                      Lihat Event <ArrowRight size={12} weight="bold" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Poster preview if set */}
+              {form.poster_url && (
+                <div className="mt-3">
+                  <p className="text-[10px] text-stone-400 dark:text-zinc-500 mb-1.5">Poster</p>
+                  <img
+                    src={resolveMediaUrl(form.poster_url) ?? form.poster_url}
+                    alt="Poster"
+                    className="h-40 w-full rounded-lg object-cover border border-stone-200 dark:border-zinc-700"
+                    style={{ objectPosition: 'top' }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Status & Flag */}
           <Section title="Status & Pengaturan">
             <div>
@@ -516,12 +643,6 @@ export function EventFormContent({ eventId }: Props) {
                   <Input name="secondary_color" value={form.secondary_color} onChange={handleChange} className="font-mono text-xs" aria-label="Kode warna sekunder" />
                 </div>
               </div>
-            </div>
-
-            {/* Color preview */}
-            <div className="rounded-lg overflow-hidden border border-stone-200 dark:border-zinc-700">
-              <div className="h-10 w-full" style={{ background: form.primary_color }} />
-              <div className="h-4 w-full" style={{ background: form.secondary_color }} />
             </div>
 
             <UploadField
