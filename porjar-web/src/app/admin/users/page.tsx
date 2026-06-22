@@ -34,6 +34,7 @@ export default function AdminUsersPage() {
     setCurrentPage,
     perPage,
     refetch,
+    fetchAllUsers,
   } = usePaginatedUsers()
 
   const crud = useUserCrud(refetch)
@@ -73,8 +74,9 @@ export default function AdminUsersPage() {
                   {
                     label: 'Export CSV',
                     type: 'csv',
-                    onExport: () => {
-                      const data = users.map((u) => ({
+                    onExport: async () => {
+                      const allUsers = await fetchAllUsers()
+                      const data = allUsers.map((u) => ({
                         full_name: u.full_name,
                         email: u.email,
                         phone: u.phone ?? '-',

@@ -56,6 +56,31 @@ export function usePaginatedUsers() {
     loadData()
   }, [loadData])
 
+  // Fetch ALL users matching the current filters (across every page),
+  // not just the current page — used for export.
+  const fetchAllUsers = useCallback(async (): Promise<User[]> => {
+    if (!isAuthenticated || authLoading) return []
+    const EXPORT_PER_PAGE = 100 // backend caps per_page at 100
+    const all: User[] = []
+    let page = 1
+    let totalPages = 1
+    do {
+      const params = new URLSearchParams({
+        per_page: String(EXPORT_PER_PAGE),
+        page: String(page),
+      })
+      if (filterRole === 'captain') params.set('is_captain', 'true')
+      else if (filterRole !== 'all') params.set('role', filterRole)
+      if (debouncedSearch.length >= 2) params.set('search', debouncedSearch)
+
+      const res = await api.getPaginated<User[]>(`/admin/users?${params}`)
+      if (Array.isArray(res.data)) all.push(...res.data)
+      totalPages = res.meta?.total_pages ?? 1
+      page++
+    } while (page <= totalPages)
+    return all
+  }, [isAuthenticated, authLoading, filterRole, debouncedSearch])
+
   return {
     users,
     totalUsers,
@@ -69,5 +94,6 @@ export function usePaginatedUsers() {
     setCurrentPage,
     perPage: PER_PAGE,
     refetch: loadData,
+    fetchAllUsers,
   }
 }
