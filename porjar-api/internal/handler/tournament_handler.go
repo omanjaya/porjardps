@@ -22,10 +22,15 @@ import (
 
 type TournamentHandler struct {
 	tournamentService *service.TournamentService
+	eventAdminRepo    model.EventAdminRepository
 }
 
 func NewTournamentHandler(tournamentService *service.TournamentService) *TournamentHandler {
 	return &TournamentHandler{tournamentService: tournamentService}
+}
+
+func (h *TournamentHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 func (h *TournamentHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw fiber.Handler, createRL ...fiber.Handler) {
@@ -96,12 +101,28 @@ func (h *TournamentHandler) Create(c *fiber.Ctx) error {
 		return response.Err(c, apperror.ValidationError(details))
 	}
 
-	var eventID uuid.UUID
-	if req.EventID != "" {
-		eventID, err = uuid.Parse(req.EventID)
+	// Every tournament must belong to an event (event_id is NOT NULL + FK in DB).
+	// Reject an empty/invalid event_id here with a clear field error instead of
+	// letting a zero-UUID reach the DB and fail with an opaque FK violation.
+	if req.EventID == "" {
+		details["event_id"] = "Event wajib dipilih"
+		return response.Err(c, apperror.ValidationError(details))
+	}
+	eventID, err := uuid.Parse(req.EventID)
+	if err != nil {
+		details["event_id"] = "Event ID tidak valid"
+		return response.Err(c, apperror.ValidationError(details))
+	}
+
+	// Scope check: a non-superadmin admin may only create tournaments under an
+	// event they are assigned to. Superadmins bypass this.
+	if h.eventAdminRepo != nil && middleware.GetUserRole(c) == "admin" {
+		ok, err := h.eventAdminRepo.IsAdminOfEvent(c.Context(), middleware.GetUserID(c), eventID)
 		if err != nil {
-			details["event_id"] = "Event ID tidak valid"
-			return response.Err(c, apperror.ValidationError(details))
+			return response.HandleError(c, apperror.Wrap(err, "check event admin"))
+		}
+		if !ok {
+			return response.Forbidden(c, "EVENT_FORBIDDEN")
 		}
 	}
 
@@ -323,6 +344,41 @@ func (h *TournamentHandler) List(c *fiber.Ctx) error {
 	}
 	if st := c.Query("status"); st != "" {
 		filter.Status = &st
+	}
+	if eid := c.Query("event_id"); eid != "" {
+		if id, err := uuid.Parse(eid); err == nil {
+			filter.EventID = &id
+		}
+	}
+
+	// Scope admin users to their assigned events (only for authenticated admin, not public)
+	role := middleware.GetUserRole(c)
+	if h.eventAdminRepo != nil && (role == "admin" || role == "superadmin") {
+		allowedIDs, ok := middleware.GetAllowedEventIDs(c, h.eventAdminRepo)
+		if !ok {
+			return nil
+		}
+		// nil means superadmin — no restriction; non-nil (even empty) means restrict
+		if allowedIDs != nil {
+			if filter.EventID != nil {
+				// If a specific event_id was requested, check it's in the allowed list
+				allowed := false
+				for _, id := range allowedIDs {
+					if id == *filter.EventID {
+						allowed = true
+						break
+					}
+				}
+				if !allowed {
+					// Return empty result — the requested event is not accessible
+					return response.Paginated(c, []*model.Tournament{}, response.Meta{
+						Page: filter.Page, PerPage: filter.Limit, Total: 0, TotalPages: 0,
+					})
+				}
+			} else {
+				filter.EventIDs = allowedIDs
+			}
+		}
 	}
 
 	tournaments, total, err := h.tournamentService.List(c.Context(), filter)

@@ -66,11 +66,12 @@ type TournamentTeam struct {
 }
 
 type TournamentFilter struct {
-	EventID *uuid.UUID
-	GameID  *uuid.UUID
-	Status  *string
-	Page    int
-	Limit   int
+	EventID  *uuid.UUID
+	EventIDs []uuid.UUID // when set, restricts to these events (used for admin scoping)
+	GameID   *uuid.UUID
+	Status   *string
+	Page     int
+	Limit    int
 }
 
 type TournamentRepository interface {

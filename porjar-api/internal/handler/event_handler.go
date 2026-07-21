@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
@@ -15,10 +16,15 @@ import (
 type EventHandler struct {
 	eventRepo      model.EventRepository
 	tournamentRepo model.TournamentRepository
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewEventHandler(eventRepo model.EventRepository, tournamentRepo model.TournamentRepository) *EventHandler {
 	return &EventHandler{eventRepo: eventRepo, tournamentRepo: tournamentRepo}
+}
+
+func (h *EventHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 // validEventTransitions defines allowed status transitions.
@@ -135,6 +141,19 @@ func (h *EventHandler) List(c *fiber.Ctx) error {
 	if status := c.Query("status"); status != "" {
 		filter.Status = &status
 	}
+
+	// Scope admin users to their assigned events
+	if h.eventAdminRepo != nil {
+		allowedIDs, ok := middleware.GetAllowedEventIDs(c, h.eventAdminRepo)
+		if !ok {
+			return nil
+		}
+		// nil means superadmin — no restriction; non-nil (even empty) means restrict
+		if allowedIDs != nil {
+			filter.IDs = allowedIDs
+		}
+	}
+
 	events, err := h.eventRepo.List(c.Context(), filter)
 	if err != nil {
 		return response.HandleError(c, err)

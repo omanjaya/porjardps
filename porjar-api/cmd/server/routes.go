@@ -157,6 +157,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	tournamentService := service.NewTournamentService(tournamentRepo, tournamentTeamRepo, teamRepo, teamMemberRepo, gameRepo)
 	tournamentService.SetHub(hub)
 	tournamentService.SetSchoolRepo(schoolRepo)
+	tournamentService.SetEventRepo(eventRepo)
 
 	// Event points service
 	eventPointsService := service.NewEventPointsService(
@@ -271,6 +272,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	gameHandler := handler.NewGameHandler(gameRepo, tournamentRepo)
 	teamHandler := handler.NewTeamHandler(teamService)
 	tournamentHandler := handler.NewTournamentHandler(tournamentService)
+	tournamentHandler.SetEventAdminRepo(eventAdminRepo)
 	schoolHandler := handler.NewSchoolHandler(schoolService)
 	schoolRequestHandler := handler.NewSchoolRequestHandler(schoolRequestService)
 
@@ -330,6 +332,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Event handler
 	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
+	eventHandler.SetEventAdminRepo(eventAdminRepo)
 
 	// Event sections handler
 	eventSectionHandler := handler.NewEventSectionHandler(eventRepo, eventSectionRepo)
@@ -407,6 +410,11 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Game routes (public)
 	api.Get("/games", gameHandler.ListGames)
 	api.Get("/games/:slug", gameHandler.GetGameBySlug)
+
+	// Admin tournament scope middleware — restricts admin (non-superadmin) users
+	// to only manage tournaments in events they're assigned to.
+	tournamentScopeMw := middleware.TournamentScopeMw(tournamentRepo, eventAdminRepo)
+	api.Use("/admin/tournaments/:id", authMw, tournamentScopeMw)
 
 	// Phase 1 — Team, Tournament, School
 	teamHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, createTeamRL)

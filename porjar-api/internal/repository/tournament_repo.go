@@ -141,6 +141,11 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 		conditions = append(conditions, fmt.Sprintf("event_id = $%d", argIdx))
 		args = append(args, *filter.EventID)
 	}
+	if len(filter.EventIDs) > 0 {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("event_id = ANY($%d)", argIdx))
+		args = append(args, filter.EventIDs)
+	}
 	if filter.GameID != nil {
 		argIdx++
 		conditions = append(conditions, fmt.Sprintf("game_id = $%d", argIdx))

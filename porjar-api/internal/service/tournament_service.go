@@ -30,6 +30,7 @@ type TournamentService struct {
 	teamMemberRepo     model.TeamMemberRepository
 	gameRepo           model.GameRepository
 	schoolRepo         model.SchoolRepository
+	eventRepo          model.EventRepository
 	hub                *ws.Hub
 	pointDistributor   PointDistributor
 }
@@ -37,6 +38,7 @@ type TournamentService struct {
 func (s *TournamentService) SetHub(h *ws.Hub)                     { s.hub = h }
 func (s *TournamentService) SetPointDistributor(pd PointDistributor) { s.pointDistributor = pd }
 func (s *TournamentService) SetSchoolRepo(r model.SchoolRepository)  { s.schoolRepo = r }
+func (s *TournamentService) SetEventRepo(r model.EventRepository)    { s.eventRepo = r }
 
 func (s *TournamentService) broadcastTournamentUpdate(tournamentID uuid.UUID, action string, data interface{}) {
 	if s.hub == nil {
@@ -109,6 +111,18 @@ type UpdateTournamentInput struct {
 }
 
 func (s *TournamentService) Create(ctx context.Context, input CreateTournamentInput) (*model.Tournament, error) {
+	// Validate event exists — tournaments must always belong to a real event
+	// (event_id is NOT NULL + FK). This turns an opaque DB FK error into a clear 404.
+	if input.EventID == uuid.Nil {
+		return nil, apperror.BusinessRule("EVENT_REQUIRED", "Event wajib dipilih")
+	}
+	if s.eventRepo != nil {
+		event, err := s.eventRepo.FindByID(ctx, input.EventID)
+		if err != nil || event == nil {
+			return nil, apperror.NotFound("EVENT")
+		}
+	}
+
 	// Validate game exists
 	game, err := s.gameRepo.FindByID(ctx, input.GameID)
 	if err != nil || game == nil {

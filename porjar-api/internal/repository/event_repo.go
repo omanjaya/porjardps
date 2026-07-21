@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -108,15 +109,26 @@ func (r *eventRepo) FindBySlug(ctx context.Context, slug string) (*model.Event, 
 }
 
 func (r *eventRepo) List(ctx context.Context, filter model.EventFilter) ([]*model.Event, error) {
-	var query string
+	var conditions []string
 	var args []interface{}
+	argIdx := 0
 
 	if filter.Status != nil {
-		query = `SELECT ` + eventColumns + ` FROM events WHERE status = $1 ORDER BY sort_order, created_at DESC`
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
 		args = append(args, *filter.Status)
-	} else {
-		query = `SELECT ` + eventColumns + ` FROM events ORDER BY sort_order, created_at DESC`
 	}
+	if len(filter.IDs) > 0 {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("id = ANY($%d)", argIdx))
+		args = append(args, filter.IDs)
+	}
+
+	where := ""
+	if len(conditions) > 0 {
+		where = " WHERE " + strings.Join(conditions, " AND ")
+	}
+	query := `SELECT ` + eventColumns + ` FROM events` + where + ` ORDER BY sort_order, created_at DESC`
 
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {

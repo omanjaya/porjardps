@@ -48,6 +48,7 @@ type Event struct {
 
 type EventFilter struct {
 	Status *string
+	IDs    []uuid.UUID // when set, restricts to these event IDs (used for admin scoping)
 }
 
 type EventRepository interface {
