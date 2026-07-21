@@ -116,7 +116,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: https://esidenpasar.com/api/v1
-        NEXT_PUBLIC_WS_URL: wss://esidenpasar.com/ws
+        NEXT_PUBLIC_WS_URL: wss://esidenpasar.com/ws/connection/websocket
     container_name: porjar-web
     restart: always
     env_file: ./porjar-web/.env
