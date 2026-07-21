@@ -27,15 +27,15 @@ func (h *SchoolHandler) SetCoachService(cs *service.CoachService) {
 	h.coachService = cs
 }
 
-func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL fiber.Handler, coachMw ...fiber.Handler) {
+func (h *SchoolHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL fiber.Handler, coachMw ...fiber.Handler) {
 	// Public (rate limited)
 	app.Get("/schools", publicRL, h.List)
-	// Admin
-	app.Get("/admin/schools", authMw, adminMw, h.List)
-	app.Post("/admin/schools", authMw, adminMw, h.Create)
-	app.Put("/admin/schools/:id", authMw, adminMw, h.Update)
-	app.Get("/admin/schools/:id", authMw, adminMw, h.GetByID)
-	app.Delete("/admin/schools/:id", authMw, adminMw, h.Delete)
+	// Admin — school directory is global, managed by superadmin only
+	app.Get("/admin/schools", authMw, superadminMw, h.List)
+	app.Post("/admin/schools", authMw, superadminMw, h.Create)
+	app.Put("/admin/schools/:id", authMw, superadminMw, h.Update)
+	app.Get("/admin/schools/:id", authMw, superadminMw, h.GetByID)
+	app.Delete("/admin/schools/:id", authMw, superadminMw, h.Delete)
 	// Coach — upload school logo
 	if len(coachMw) > 0 {
 		app.Put("/schools/:id/logo", authMw, coachMw[0], h.UploadSchoolLogo)

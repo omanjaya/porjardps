@@ -44,7 +44,8 @@ type TeamServiceInterface interface {
 }
 
 type TeamHandler struct {
-	teamService TeamServiceInterface
+	teamService    TeamServiceInterface
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewTeamHandler(teamService *service.TeamService) *TeamHandler {
@@ -54,6 +55,12 @@ func NewTeamHandler(teamService *service.TeamService) *TeamHandler {
 // NewTeamHandlerWithInterface creates a TeamHandler with any TeamServiceInterface implementation.
 func NewTeamHandlerWithInterface(teamService TeamServiceInterface) *TeamHandler {
 	return &TeamHandler{teamService: teamService}
+}
+
+// SetEventAdminRepo wires the event-admin repo used to scope the admin team
+// list to an admin's assigned events.
+func (h *TeamHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL fiber.Handler, createRL ...fiber.Handler) {
@@ -83,6 +90,9 @@ func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadm
 	app.Delete("/teams/:id", authMw, h.Delete)
 
 	// Admin routes
+	// Authenticated admin list — same handler as public /teams, but the auth
+	// context lets List() scope results to the admin's assigned events.
+	app.Get("/admin/teams", authMw, adminMw, h.List)
 	app.Put("/admin/teams/:id/approve", authMw, adminMw, h.Approve)
 	app.Put("/admin/teams/:id/reject", authMw, adminMw, h.Reject)
 	app.Put("/admin/teams/:id", authMw, adminMw, h.AdminUpdate)
@@ -220,6 +230,20 @@ func (h *TeamHandler) List(c *fiber.Ctx) error {
 		trimmed := validator.TrimString(s)
 		if len(trimmed) >= 2 {
 			filter.Search = &trimmed
+		}
+	}
+
+	// Scope admin users to teams participating in their assigned events.
+	// Only applies on authenticated admin routes (role set); the public /teams
+	// route has no auth context so role is empty and this is skipped.
+	if role := middleware.GetUserRole(c); h.eventAdminRepo != nil && (role == "admin" || role == "superadmin") {
+		allowedIDs, ok := middleware.GetAllowedEventIDs(c, h.eventAdminRepo)
+		if !ok {
+			return nil
+		}
+		// nil means superadmin — no restriction; non-nil (even empty) restricts.
+		if allowedIDs != nil {
+			filter.EventIDs = allowedIDs
 		}
 	}
 

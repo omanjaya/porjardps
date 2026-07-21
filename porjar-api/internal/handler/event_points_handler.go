@@ -19,7 +19,7 @@ func NewEventPointsHandler(svc *service.EventPointsService) *EventPointsHandler 
 	return &EventPointsHandler{service: svc}
 }
 
-func (h *EventPointsHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL fiber.Handler) {
+func (h *EventPointsHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL, eventScopeMw fiber.Handler) {
 	// Public: leaderboards
 	app.Get("/leaderboards/teams", publicRL, h.TeamLeaderboard)
 	app.Get("/leaderboards/users", publicRL, h.UserLeaderboard)
@@ -36,17 +36,17 @@ func (h *EventPointsHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, p
 	app.Get("/my-events", authMw, h.GetMyEvents)
 
 	// Admin: point rule management
-	app.Get("/admin/events/:eventId/point-rules", authMw, adminMw, h.GetPointRules)
-	app.Put("/admin/events/:eventId/point-rules", authMw, adminMw, h.UpdatePointRules)
+	app.Get("/admin/events/:eventId/point-rules", authMw, adminMw, eventScopeMw, h.GetPointRules)
+	app.Put("/admin/events/:eventId/point-rules", authMw, adminMw, eventScopeMw, h.UpdatePointRules)
 
-	// Admin: manual point distribution
+	// Admin: manual point distribution (tournament-scoped param, not event)
 	app.Post("/admin/tournaments/:id/distribute-points", authMw, adminMw, h.DistributePoints)
 
 	// Admin: auto-assign event registrations to tournament
-	app.Post("/admin/events/:eventId/auto-assign/:tournamentId", authMw, adminMw, h.AutoAssignToTournament)
+	app.Post("/admin/events/:eventId/auto-assign/:tournamentId", authMw, adminMw, eventScopeMw, h.AutoAssignToTournament)
 
 	// Admin: remove registration
-	app.Delete("/admin/events/:eventId/registrations/:teamId", authMw, adminMw, h.RemoveRegistration)
+	app.Delete("/admin/events/:eventId/registrations/:teamId", authMw, adminMw, eventScopeMw, h.RemoveRegistration)
 }
 
 // ──────────────────────────────────────────────

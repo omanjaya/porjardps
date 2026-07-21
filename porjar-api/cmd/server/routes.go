@@ -417,10 +417,11 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	api.Use("/admin/tournaments/:id", authMw, tournamentScopeMw)
 
 	// Phase 1 — Team, Tournament, School
+	teamHandler.SetEventAdminRepo(eventAdminRepo)
 	teamHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, createTeamRL)
 	tournamentHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, createTournamentRL)
 	schoolHandler.SetCoachService(coachService)
-	schoolHandler.RegisterRoutes(api, authMw, adminMw, publicRL, coachMw)
+	schoolHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, coachMw)
 	schoolRequestHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Phase 2 — Bracket & Live Score, Battle Royale
@@ -467,14 +468,18 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	matchSubmissionHandler.RegisterRoutes(api, authMw, adminMw, matchSubmitRL)
 	coachHandler.RegisterRoutes(api, authMw, coachMw, adminMw)
 
+	// Event-scope middleware: restricts non-superadmin admins to events they are
+	// assigned to (via event_admins). Applied to all /admin/events/:id(:eventId)/* routes.
+	eventScopeMw := middleware.EventScopeMw(eventAdminRepo)
+
 	// Events (multi-event)
-	eventHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+	eventHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, eventScopeMw)
 
 	// Event Sections
-	eventSectionHandler.RegisterRoutes(api, authMw, adminMw)
+	eventSectionHandler.RegisterRoutes(api, authMw, adminMw, eventScopeMw)
 
-	// Event Admins
-	eventAdminHandler.RegisterRoutes(api, authMw, adminMw)
+	// Event Admins (assignment is superadmin-only)
+	eventAdminHandler.RegisterRoutes(api, authMw, superadminMw)
 
 	// Calendar
 	calendarHandler.RegisterRoutes(api, authMw, adminMw)
@@ -483,10 +488,10 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	eventAnnouncementRepo := repository.NewEventAnnouncementRepository(db)
 	eventAnnouncementService := service.NewEventAnnouncementService(eventAnnouncementRepo)
 	eventAnnouncementHandler := handler.NewEventAnnouncementHandler(eventAnnouncementService, eventRepo)
-	eventAnnouncementHandler.RegisterRoutes(api, authMw, adminMw)
+	eventAnnouncementHandler.RegisterRoutes(api, authMw, adminMw, eventScopeMw)
 
 	// Event Points & Leaderboards
-	eventPointsHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
+	eventPointsHandler.RegisterRoutes(api, authMw, adminMw, publicRL, eventScopeMw)
 
 	// Event Settings
 	eventSettingsHandler.RegisterRoutes(api, authMw, adminMw)

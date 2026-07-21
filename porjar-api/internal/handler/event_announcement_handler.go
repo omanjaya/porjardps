@@ -20,10 +20,10 @@ func NewEventAnnouncementHandler(svc *service.EventAnnouncementService, eventRep
 	return &EventAnnouncementHandler{svc: svc, eventRepo: eventRepo}
 }
 
-func (h *EventAnnouncementHandler) RegisterRoutes(api fiber.Router, authMw, adminMw fiber.Handler) {
+func (h *EventAnnouncementHandler) RegisterRoutes(api fiber.Router, authMw, adminMw, eventScopeMw fiber.Handler) {
 	api.Get("/events/:slug/announcements", h.ListByEventSlug)
 	api.Get("/announcements/active", h.ListActive)
-	api.Post("/admin/events/:eventId/announcements", authMw, adminMw, h.Create)
+	api.Post("/admin/events/:eventId/announcements", authMw, adminMw, eventScopeMw, h.Create)
 	api.Delete("/admin/announcements/:id", authMw, adminMw, h.Delete)
 }
 

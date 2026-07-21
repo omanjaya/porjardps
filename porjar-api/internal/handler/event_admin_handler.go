@@ -19,11 +19,11 @@ func NewEventAdminHandler(eventRepo model.EventRepository, eventAdminRepo model.
 	return &EventAdminHandler{eventRepo: eventRepo, eventAdminRepo: eventAdminRepo}
 }
 
-func (h *EventAdminHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
-	// Event admins management
-	app.Get("/admin/events/:id/admins", authMw, adminMw, h.List)
-	app.Post("/admin/events/:id/admins", authMw, adminMw, h.Add)
-	app.Delete("/admin/events/:id/admins/:userId", authMw, adminMw, h.Remove)
+func (h *EventAdminHandler) RegisterRoutes(app fiber.Router, authMw, superadminMw fiber.Handler) {
+	// Event admins management (superadmin-only)
+	app.Get("/admin/events/:id/admins", authMw, superadminMw, h.List)
+	app.Post("/admin/events/:id/admins", authMw, superadminMw, h.Add)
+	app.Delete("/admin/events/:id/admins/:userId", authMw, superadminMw, h.Remove)
 
 	// Logged-in user: list events they are admin of
 	app.Get("/admin/me/events", authMw, h.MyEvents)

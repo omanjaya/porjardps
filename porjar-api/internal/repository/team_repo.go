@@ -152,6 +152,14 @@ func (r *teamRepo) List(ctx context.Context, filter model.TeamFilter) ([]*model.
 		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argIdx))
 		args = append(args, "%"+*filter.Search+"%")
 	}
+	// Non-nil (even empty) means "restrict": admin with no events sees nothing.
+	if filter.EventIDs != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf(
+			`EXISTS (SELECT 1 FROM tournament_teams tt JOIN tournaments tr ON tr.id = tt.tournament_id WHERE tt.team_id = teams.id AND tr.event_id = ANY($%d))`,
+			argIdx))
+		args = append(args, filter.EventIDs)
+	}
 
 	where := ""
 	if len(conditions) > 0 {

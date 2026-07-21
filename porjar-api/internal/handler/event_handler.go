@@ -43,16 +43,16 @@ func isValidEventTransition(from, to string) bool {
 	return validEventTransitions[from] == to
 }
 
-func (h *EventHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, publicRL fiber.Handler) {
+func (h *EventHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL, eventScopeMw fiber.Handler) {
 	// Public
 	app.Get("/events", publicRL, h.ListPublished)
 	app.Get("/events/:slug", publicRL, h.GetBySlug)
 	// Admin
 	app.Get("/admin/events", authMw, adminMw, h.List)
-	app.Post("/admin/events", authMw, adminMw, h.Create)
-	app.Get("/admin/events/:id", authMw, adminMw, h.GetByID)
-	app.Put("/admin/events/:id", authMw, adminMw, h.Update)
-	app.Delete("/admin/events/:id", authMw, adminMw, h.Delete)
+	app.Post("/admin/events", authMw, superadminMw, h.Create)
+	app.Get("/admin/events/:id", authMw, adminMw, eventScopeMw, h.GetByID)
+	app.Put("/admin/events/:id", authMw, adminMw, eventScopeMw, h.Update)
+	app.Delete("/admin/events/:id", authMw, superadminMw, h.Delete)
 }
 
 type createEventRequest struct {

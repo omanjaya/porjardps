@@ -118,7 +118,9 @@ func (r *eventRepo) List(ctx context.Context, filter model.EventFilter) ([]*mode
 		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
 		args = append(args, *filter.Status)
 	}
-	if len(filter.IDs) > 0 {
+	// Non-nil (even empty) means "restrict to these": an admin assigned to no
+	// events must see nothing, not everything. ANY('{}') matches zero rows.
+	if filter.IDs != nil {
 		argIdx++
 		conditions = append(conditions, fmt.Sprintf("id = ANY($%d)", argIdx))
 		args = append(args, filter.IDs)

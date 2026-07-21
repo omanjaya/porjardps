@@ -50,6 +50,7 @@ type TeamFilter struct {
 	SchoolID *uuid.UUID
 	Status   *string
 	Search   *string
+	EventIDs []uuid.UUID // when set, restrict to teams participating in these events (admin scoping)
 	Page     int
 	Limit    int
 }

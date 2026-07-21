@@ -141,7 +141,8 @@ func (r *tournamentRepo) List(ctx context.Context, filter model.TournamentFilter
 		conditions = append(conditions, fmt.Sprintf("event_id = $%d", argIdx))
 		args = append(args, *filter.EventID)
 	}
-	if len(filter.EventIDs) > 0 {
+	// Non-nil (even empty) means "restrict": admin with no events sees nothing.
+	if filter.EventIDs != nil {
 		argIdx++
 		conditions = append(conditions, fmt.Sprintf("event_id = ANY($%d)", argIdx))
 		args = append(args, filter.EventIDs)

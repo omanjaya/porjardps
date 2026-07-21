@@ -19,16 +19,16 @@ func NewEventSectionHandler(eventRepo model.EventRepository, sectionRepo model.E
 	return &EventSectionHandler{eventRepo: eventRepo, sectionRepo: sectionRepo}
 }
 
-func (h *EventSectionHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
+func (h *EventSectionHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, eventScopeMw fiber.Handler) {
 	// Public — returns only enabled sections
 	app.Get("/events/:slug/sections", h.ListPublic)
 
 	// Admin — returns all sections
-	app.Get("/admin/events/:id/sections", authMw, adminMw, h.ListAdmin)
-	app.Post("/admin/events/:id/sections", authMw, adminMw, h.Create)
-	app.Put("/admin/events/:id/sections/reorder", authMw, adminMw, h.Reorder)
-	app.Put("/admin/events/:id/sections/:sectionId", authMw, adminMw, h.Update)
-	app.Delete("/admin/events/:id/sections/:sectionId", authMw, adminMw, h.Delete)
+	app.Get("/admin/events/:id/sections", authMw, adminMw, eventScopeMw, h.ListAdmin)
+	app.Post("/admin/events/:id/sections", authMw, adminMw, eventScopeMw, h.Create)
+	app.Put("/admin/events/:id/sections/reorder", authMw, adminMw, eventScopeMw, h.Reorder)
+	app.Put("/admin/events/:id/sections/:sectionId", authMw, adminMw, eventScopeMw, h.Update)
+	app.Delete("/admin/events/:id/sections/:sectionId", authMw, adminMw, eventScopeMw, h.Delete)
 }
 
 // ListPublic returns enabled sections for a public event (identified by slug).

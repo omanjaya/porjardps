@@ -39,6 +39,10 @@ func (h *TournamentHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, su
 	app.Get("/tournaments/:id", h.GetByID)
 	app.Get("/tournaments/:id/teams", h.GetTeams)
 
+	// Authenticated admin list — same handler, but with an auth context so
+	// List() can scope results to the admin's assigned events.
+	app.Get("/admin/tournaments", authMw, adminMw, h.List)
+
 	// Authenticated player routes
 	app.Post("/tournaments/:id/register", authMw, h.RegisterTeam)
 
