@@ -109,25 +109,14 @@ func (h *AdminHandler) GetUserCredential(c *fiber.Ctx) error {
 		}
 	}
 
-	// Retrieve plain password from Redis; if not found, auto-reset so card always shows a password
+	// Retrieve plain password from Redis. This is a read-only endpoint: viewing a
+	// credential must never rotate the participant's password. If no plaintext
+	// password is stored (e.g. it expired or was never set), show a placeholder
+	// instead of generating and persisting a new one. Use the intentional reset
+	// endpoints (ResetUserPassword / ResetSchoolPasswords) to rotate a password.
 	cred.Password = credcrypto.GetCredPassword(c.Context(), h.rdb, h.encKey, targetID)
 	if cred.Password == "" {
-		plain, err := generateRandomPassword()
-		if err != nil {
-			return response.HandleError(c, apperror.Wrap(err, "generate password"))
-		}
-		hash, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost)
-		if err != nil {
-			return response.HandleError(c, apperror.Wrap(err, "hash password"))
-		}
-		user.PasswordHash = string(hash)
-		user.NeedsPasswordChange = false
-		user.UpdatedAt = time.Now()
-		if err := h.userRepo.Update(c.Context(), user); err != nil {
-			return response.HandleError(c, apperror.Wrap(err, "update user password"))
-		}
-		credcrypto.StoreCredPassword(c.Context(), h.rdb, h.encKey, targetID, plain)
-		cred.Password = plain
+		cred.Password = "Lihat distribusi WA"
 	}
 
 	return response.OK(c, cred)

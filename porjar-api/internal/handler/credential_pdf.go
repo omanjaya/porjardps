@@ -18,6 +18,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jung-kurt/gofpdf"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/credcrypto"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 )
 
@@ -131,9 +132,9 @@ func (h *ImportHandler) generateSchoolCredentialPDF(ctx context.Context, schoolU
 			tingkat = *u.Tingkat
 		}
 
-		// Look up plaintext password from Redis (stored 90 days after import)
+		// Look up plaintext password from Redis (stored encrypted, decrypt before display)
 		password := "Lihat distribusi WA"
-		if val, err := h.rdb.Get(ctx, credPWKeyPrefix+u.ID.String()).Result(); err == nil && val != "" {
+		if val := credcrypto.GetCredPassword(ctx, h.rdb, h.encKey, u.ID); val != "" {
 			password = val
 		}
 

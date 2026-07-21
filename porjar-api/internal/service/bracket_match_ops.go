@@ -350,11 +350,67 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		go s.notifSvc.NotifyAdminMatchCompleted(context.Background(), winnerName, loserName, gameName, matchID)
 	}
 
-	// Auto-set tournament champion if this is the final match (no next match to advance to).
+	// Auto-set tournament champion, format-aware.
 	// Best-effort: log error but don't fail the submission flow.
-	if match.NextMatchID == nil && match.LoserNextMatchID == nil && s.tournamentSvc != nil {
-		if err := s.tournamentSvc.SetChampion(ctx, match.TournamentID, winnerID); err != nil {
-			slog.Error("failed to auto-set tournament champion", "tournament_id", match.TournamentID, "winner_id", winnerID, "error", err)
+	//
+	// Elimination formats (single/double) have a true "final" match: the one
+	// whose winner has nowhere left to advance to (NextMatchID == nil &&
+	// LoserNextMatchID == nil). Crowning on that condition is correct there.
+	//
+	// round_robin has NO next-match links on ANY match (every match satisfies
+	// NextMatchID == nil && LoserNextMatchID == nil), so that rule must not be
+	// used to auto-crown a champion after just the first match completes.
+	// Instead, only once every match in the tournament is completed do we look
+	// up the rank-1 team from standings (after refreshing rank positions) and
+	// crown that team.
+	if s.tournamentSvc != nil {
+		tournament, tErr := s.tournamentRepo.FindByID(ctx, match.TournamentID)
+		if tErr != nil || tournament == nil {
+			slog.Error("failed to load tournament for champion auto-set", "tournament_id", match.TournamentID, "error", tErr)
+		} else {
+			switch tournament.Format {
+			case "single_elimination", "double_elimination":
+				if match.NextMatchID == nil && match.LoserNextMatchID == nil {
+					if err := s.tournamentSvc.SetChampion(ctx, match.TournamentID, winnerID); err != nil {
+						slog.Error("failed to auto-set tournament champion", "tournament_id", match.TournamentID, "winner_id", winnerID, "error", err)
+					}
+				}
+			case "round_robin":
+				allMatches, mErr := s.bracketRepo.ListByTournament(ctx, match.TournamentID)
+				if mErr != nil {
+					slog.Error("failed to list matches for round_robin champion check", "tournament_id", match.TournamentID, "error", mErr)
+					break
+				}
+				allCompleted := true
+				for _, m := range allMatches {
+					if m.Status != "completed" {
+						allCompleted = false
+						break
+					}
+				}
+				if allCompleted && s.standingsRepo != nil {
+					if err := s.standingsRepo.UpdateRankPositions(ctx, match.TournamentID, nil); err != nil {
+						slog.Error("failed to update rank positions for round_robin champion", "tournament_id", match.TournamentID, "error", err)
+						break
+					}
+					standings, sErr := s.standingsRepo.ListByTournament(ctx, match.TournamentID)
+					if sErr != nil {
+						slog.Error("failed to list standings for round_robin champion", "tournament_id", match.TournamentID, "error", sErr)
+						break
+					}
+					for _, st := range standings {
+						if st.RankPosition != nil && *st.RankPosition == 1 {
+							if err := s.tournamentSvc.SetChampion(ctx, match.TournamentID, st.TeamID); err != nil {
+								slog.Error("failed to auto-set tournament champion", "tournament_id", match.TournamentID, "winner_id", st.TeamID, "error", err)
+							}
+							break
+						}
+					}
+				}
+				// Other formats (group_stage_playoff/swiss/multi_stage/battle_royale_points)
+				// don't reach this elimination auto-champion rule in normal flow; leave
+				// their behavior unchanged.
+			}
 		}
 	}
 

@@ -105,6 +105,37 @@ func (h *BracketHandler) GenerateBracket(c *fiber.Ctx) error {
 		}
 	}
 
+	// Validate manual seeds BEFORE they reach the seeding/pairing logic.
+	// bracket.ApplySeeding / StandardSeedPairing assume the set of seed values
+	// exactly covers 1..N (N = number of teams). An out-of-range or duplicate
+	// seed leaves a "hole" in that range, which later causes seedMap[seed] to
+	// return nil in single_elim.go/double_elim.go and panics on entryA.TeamID.
+	if len(manualSeeds) > 0 {
+		teams, svcErr := h.tournamentService.GetTeams(c.Context(), tournamentID)
+		if svcErr != nil {
+			return response.HandleError(c, svcErr)
+		}
+		n := len(teams)
+
+		// manualSeeds is map[uuid.UUID]int, so each team ID appears at most once;
+		// a collision in seenSeeds therefore always means two distinct teams
+		// were assigned the same seed value.
+		seenSeeds := make(map[int]bool, len(manualSeeds))
+		for _, seed := range manualSeeds {
+			if seed < 1 || seed > n {
+				return response.Err(c, apperror.ValidationError(map[string]string{
+					"manual_seeds": fmt.Sprintf("Seed harus unik dan dalam rentang 1..%d", n),
+				}))
+			}
+			if seenSeeds[seed] {
+				return response.Err(c, apperror.ValidationError(map[string]string{
+					"manual_seeds": fmt.Sprintf("Seed harus unik dan dalam rentang 1..%d", n),
+				}))
+			}
+			seenSeeds[seed] = true
+		}
+	}
+
 	matchesCreated, totalRounds, svcErr := h.bracketService.GenerateBracket(c.Context(), tournamentID, manualSeeds)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)

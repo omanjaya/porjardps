@@ -358,6 +358,14 @@ func (r *standingsRepo) UpdateRankPositions(ctx context.Context, tournamentID uu
 	if !seen["best_placement"] {
 		orderParts = append(orderParts, validTiebreakerFields["best_placement"])
 	}
+	// Append wins/losses as a final tiebreaker after points and the configured
+	// BR tiebreakers. Bracket-format matches (single/double elimination,
+	// round_robin) only ever increment wins/losses — total_points and all BR
+	// tiebreaker columns stay 0 for every team — so without this, rank_position
+	// was effectively row-order noise for brackets. For battle_royale/points
+	// formats this only breaks EXACT ties on every column above (an edge case),
+	// since their total_points normally already differ between teams.
+	orderParts = append(orderParts, "wins DESC", "losses ASC", "matches_played DESC")
 
 	orderBy := ""
 	for i, p := range orderParts {
