@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/queue"
@@ -18,6 +20,15 @@ type MatchSubmissionHandler struct {
 	// submissionQueue is optional. When non-nil, submit endpoints enqueue the job
 	// and return 202 Accepted. When nil, they fall back to synchronous processing.
 	submissionQueue *queue.SubmissionQueue
+
+	// Read-only repos used only to resolve a submission's underlying
+	// match/lobby/group-match -> tournament -> event for the in-handler RBAC
+	// checks on the admin verify/reset routes (see scope_helpers.go).
+	bracketRepo    model.BracketRepository
+	brLobbyRepo    model.BRLobbyRepository
+	groupRepo      model.GroupRepository
+	tournamentRepo model.TournamentRepository
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewMatchSubmissionHandler(submissionService *service.MatchSubmissionService) *MatchSubmissionHandler {
@@ -28,6 +39,113 @@ func NewMatchSubmissionHandler(submissionService *service.MatchSubmissionService
 func (h *MatchSubmissionHandler) WithQueue(q *queue.SubmissionQueue) *MatchSubmissionHandler {
 	h.submissionQueue = q
 	return h
+}
+
+// SetBracketRepo, SetBRLobbyRepo, SetGroupRepo, SetTournamentRepo and
+// SetEventAdminRepo wire the repos needed to gate PUT
+// /admin/submissions/:id/verify and DELETE /admin/submissions/match/:id — a
+// scoped admin must not be able to verify/reset another event's submissions
+// by guessing a submission/match UUID.
+// NEEDS ROUTES.GO WIRING:
+//   matchSubmissionHandler.SetBracketRepo(bracketRepo)
+//   matchSubmissionHandler.SetBRLobbyRepo(brLobbyRepo)
+//   matchSubmissionHandler.SetGroupRepo(groupRepo)
+//   matchSubmissionHandler.SetTournamentRepo(tournamentRepo)
+//   matchSubmissionHandler.SetEventAdminRepo(eventAdminRepo)
+func (h *MatchSubmissionHandler) SetBracketRepo(repo model.BracketRepository) { h.bracketRepo = repo }
+func (h *MatchSubmissionHandler) SetBRLobbyRepo(repo model.BRLobbyRepository) { h.brLobbyRepo = repo }
+func (h *MatchSubmissionHandler) SetGroupRepo(repo model.GroupRepository)     { h.groupRepo = repo }
+func (h *MatchSubmissionHandler) SetTournamentRepo(repo model.TournamentRepository) {
+	h.tournamentRepo = repo
+}
+func (h *MatchSubmissionHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
+}
+
+// resolveMatchTournamentID resolves a bracket match / BR lobby / group match
+// ID (exactly one of which should be non-nil) to its tournament ID.
+func (h *MatchSubmissionHandler) resolveMatchTournamentID(ctx context.Context, bracketMatchID, brLobbyID, groupMatchID *uuid.UUID) (uuid.UUID, bool) {
+	if bracketMatchID != nil && h.bracketRepo != nil {
+		m, err := h.bracketRepo.FindByID(ctx, *bracketMatchID)
+		if err == nil && m != nil {
+			return m.TournamentID, true
+		}
+	}
+	if brLobbyID != nil && h.brLobbyRepo != nil {
+		l, err := h.brLobbyRepo.FindByID(ctx, *brLobbyID)
+		if err == nil && l != nil {
+			return l.TournamentID, true
+		}
+	}
+	if groupMatchID != nil && h.groupRepo != nil {
+		gm, err := h.groupRepo.FindMatchByID(ctx, *groupMatchID)
+		if err == nil && gm != nil {
+			g, err2 := h.groupRepo.FindGroupByID(ctx, gm.GroupID)
+			if err2 == nil && g != nil {
+				return g.TournamentID, true
+			}
+		}
+	}
+	return uuid.Nil, false
+}
+
+// checkSubmissionAccessMw gates PUT /admin/submissions/:id/verify. The
+// actual handler (VerifySubmission) lives in match_submission_mutation.go,
+// a file outside this task's edit scope, so the check is applied as route
+// middleware instead of inline in the handler body.
+func (h *MatchSubmissionHandler) checkSubmissionAccessMw(c *fiber.Ctx) error {
+	role := middleware.GetUserRole(c)
+	if role != "admin" {
+		return c.Next()
+	}
+	id, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Next() // let the real handler return its own validation error
+	}
+	sub, svcErr := h.submissionService.GetSubmission(c.Context(), id)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+	if sub == nil {
+		return c.Next()
+	}
+	tournamentID, ok := h.resolveMatchTournamentID(c.Context(), sub.BracketMatchID, sub.BRLobbyID, sub.GroupMatchID)
+	if !ok {
+		return c.Next() // can't resolve (repos not wired yet) — fail open
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
+	}
+	return c.Next()
+}
+
+// checkResetMatchAccessMw gates DELETE /admin/submissions/match/:id, whose
+// handler (ResetMatchSubmissions) also lives in match_submission_mutation.go.
+func (h *MatchSubmissionHandler) checkResetMatchAccessMw(c *fiber.Ctx) error {
+	role := middleware.GetUserRole(c)
+	if role != "admin" {
+		return c.Next()
+	}
+	matchID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Next()
+	}
+	matchType := c.Query("type", "bracket")
+	var bracketMatchID, groupMatchID *uuid.UUID
+	switch matchType {
+	case "group":
+		groupMatchID = &matchID
+	default:
+		bracketMatchID = &matchID
+	}
+	tournamentID, ok := h.resolveMatchTournamentID(c.Context(), bracketMatchID, nil, groupMatchID)
+	if !ok {
+		return c.Next()
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
+	}
+	return c.Next()
 }
 
 func (h *MatchSubmissionHandler) RegisterRoutes(api fiber.Router, authMw, adminMw fiber.Handler, rateLimitMws ...fiber.Handler) {
@@ -85,11 +203,15 @@ func (h *MatchSubmissionHandler) RegisterRoutes(api fiber.Router, authMw, adminM
 	// Submission status (async queue) — returns DB record when available
 	api.Get("/submissions/:id/status", authMw, h.GetSubmissionStatus)
 
-	// Admin routes — manage submissions
+	// Admin routes — manage submissions.
+	// TODO(event-scoping): ListPendingSubmissions/GetSubmissionDetail are not
+	// yet filtered to the admin's assigned events — a scoped admin can list/
+	// view (but, per checkSubmissionAccessMw below, not verify or reset)
+	// other events' submissions. Needs a repo-level filter by event/tournament.
 	api.Get("/admin/submissions", authMw, adminMw, h.ListPendingSubmissions)
 	api.Get("/admin/submissions/:id", authMw, adminMw, h.GetSubmissionDetail)
-	api.Put("/admin/submissions/:id/verify", authMw, adminMw, h.VerifySubmission)
-	api.Delete("/admin/submissions/match/:id", authMw, adminMw, h.ResetMatchSubmissions)
+	api.Put("/admin/submissions/:id/verify", authMw, adminMw, h.checkSubmissionAccessMw, h.VerifySubmission)
+	api.Delete("/admin/submissions/match/:id", authMw, adminMw, h.checkResetMatchAccessMw, h.ResetMatchSubmissions)
 }
 
 // --- Request DTOs ---

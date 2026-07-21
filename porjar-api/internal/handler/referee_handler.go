@@ -14,6 +14,9 @@ type RefereeHandler struct {
 	refereeService *service.RefereeService
 	userRepo       model.UserRepository
 	teamMemberRepo model.TeamMemberRepository
+	matchCardRepo  model.MatchCardRepository
+	tournamentRepo model.TournamentRepository
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewRefereeHandler(refereeService *service.RefereeService, userRepo model.UserRepository, teamMemberRepo model.TeamMemberRepository) *RefereeHandler {
@@ -22,6 +25,30 @@ func NewRefereeHandler(refereeService *service.RefereeService, userRepo model.Us
 		userRepo:       userRepo,
 		teamMemberRepo: teamMemberRepo,
 	}
+}
+
+// SetMatchCardRepo, SetTournamentRepo and SetEventAdminRepo wire the repos
+// needed to gate POST /admin/referee-assignments and POST
+// /admin/cards/:id/revoke, which are outside the /admin/tournaments/:id/*
+// prefix already scoped by TournamentScopeMw.
+// NEEDS ROUTES.GO WIRING:
+//   refereeHandler.SetMatchCardRepo(matchCardRepo)
+//   refereeHandler.SetTournamentRepo(tournamentRepo)
+//   refereeHandler.SetEventAdminRepo(eventAdminRepo)
+//
+// NOTE: DELETE /admin/referee-assignments/:id (UnassignReferee) is NOT
+// gated here — model.RefereeAssignmentRepository has no FindByID method,
+// only FindByReferee/FindByTournament, so there is no clean way to resolve
+// an assignment ID to its tournament from this handler without adding a
+// repo method (out of scope for this change). See report.
+func (h *RefereeHandler) SetMatchCardRepo(repo model.MatchCardRepository) {
+	h.matchCardRepo = repo
+}
+func (h *RefereeHandler) SetTournamentRepo(repo model.TournamentRepository) {
+	h.tournamentRepo = repo
+}
+func (h *RefereeHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 func (h *RefereeHandler) RegisterRoutes(api fiber.Router, authMw, refereeMw, adminMw fiber.Handler) {
@@ -267,6 +294,9 @@ func (h *RefereeHandler) AssignReferee(c *fiber.Ctx) error {
 	if len(errs) > 0 {
 		return response.Err(c, apperror.ValidationError(errs))
 	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
+	}
 
 	// Verify the user being assigned has the referee role
 	user, userErr := h.userRepo.FindByID(c.Context(), refereeID)
@@ -319,6 +349,17 @@ func (h *RefereeHandler) RevokeCard(c *fiber.Ctx) error {
 	cardID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Card ID tidak valid")
+	}
+	if h.matchCardRepo != nil {
+		card, cardErr := h.matchCardRepo.FindByID(c.Context(), cardID)
+		if cardErr != nil {
+			return response.HandleError(c, cardErr)
+		}
+		if card != nil {
+			if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, card.TournamentID); err != nil {
+				return err
+			}
+		}
 	}
 
 	if svcErr := h.refereeService.RevokeCard(c.Context(), adminID, cardID); svcErr != nil {

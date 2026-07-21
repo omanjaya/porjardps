@@ -5,16 +5,71 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/service"
 )
 
 type GroupHandler struct {
-	groupService *service.GroupService
+	groupService   *service.GroupService
+	groupRepo      model.GroupRepository
+	tournamentRepo model.TournamentRepository
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewGroupHandler(groupService *service.GroupService) *GroupHandler {
 	return &GroupHandler{groupService: groupService}
+}
+
+// The three setters below wire the read-only repos needed to resolve
+// group ID -> tournament -> event for the in-handler RBAC checks added to
+// this file (see scope_helpers.go). GroupHandler previously only held
+// groupService, which has no exposed way to fetch a bare group by ID.
+// NEEDS ROUTES.GO WIRING:
+//   groupHandler.SetGroupRepo(groupRepo)
+//   groupHandler.SetTournamentRepo(tournamentRepo)
+//   groupHandler.SetEventAdminRepo(eventAdminRepo)
+func (h *GroupHandler) SetGroupRepo(repo model.GroupRepository) { h.groupRepo = repo }
+func (h *GroupHandler) SetTournamentRepo(repo model.TournamentRepository) {
+	h.tournamentRepo = repo
+}
+func (h *GroupHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
+}
+
+// checkGroupAccess gates a mutating /admin/groups/:id/* route: resolves
+// groupID -> tournament -> event and verifies the requesting admin manages
+// that event. Superadmins always pass; if groupRepo isn't wired yet this
+// fails open (see scope_helpers.go header).
+func (h *GroupHandler) checkGroupAccess(c *fiber.Ctx, groupID uuid.UUID) error {
+	if h.groupRepo == nil {
+		return nil
+	}
+	group, err := h.groupRepo.FindGroupByID(c.Context(), groupID)
+	if err != nil {
+		return response.HandleError(c, apperror.Wrap(err, "find group"))
+	}
+	if group == nil {
+		return nil
+	}
+	return requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, group.TournamentID)
+}
+
+// groupAccessMw is route middleware wrapping every `/admin/groups/:id/*`
+// route (whose handler may live in group_standings_handler.go,
+// group_admin_handler.go or swiss_handler.go — files outside this task's
+// edit scope). It re-checks group -> tournament -> event access using the
+// group ID in the `:id` route param before calling into the handler chain.
+func (h *GroupHandler) groupAccessMw(c *fiber.Ctx) error {
+	groupID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Next() // let the real handler return its own validation error
+	}
+	if err := h.checkGroupAccess(c, groupID); err != nil {
+		return err
+	}
+	return c.Next()
 }
 
 func (h *GroupHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
@@ -23,25 +78,27 @@ func (h *GroupHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Ha
 	app.Get("/groups/:id/matches", h.GetGroupMatches)
 	app.Get("/groups/:id/standings", h.GetGroupStandings)
 
-	// Admin routes — explicit middleware params (no slice append)
+	// Admin routes — explicit middleware params (no slice append).
+	// Every `/admin/groups/:id/*` route gets groupAccessMw after adminMw so a
+	// scoped admin can't mutate another event's group via a guessed group ID.
 	app.Post("/admin/groups", authMw, adminMw, h.CreateGroup)
-	app.Put("/admin/groups/:id", authMw, adminMw, h.UpdateGroup)
-	app.Delete("/admin/groups/:id", authMw, adminMw, h.DeleteGroup)
-	app.Post("/admin/groups/:id/teams", authMw, adminMw, h.AddTeams)
-	app.Delete("/admin/groups/:id/teams/:teamId", authMw, adminMw, h.RemoveTeam)
-	app.Post("/admin/groups/:id/generate", authMw, adminMw, h.GenerateMatches)
-	app.Put("/admin/groups/:id/matches/:matchId", authMw, adminMw, h.UpdateMatchScore)
-	app.Put("/admin/groups/:id/matches/:matchId/live", authMw, adminMw, h.SetMatchLive)
+	app.Put("/admin/groups/:id", authMw, adminMw, h.groupAccessMw, h.UpdateGroup)
+	app.Delete("/admin/groups/:id", authMw, adminMw, h.groupAccessMw, h.DeleteGroup)
+	app.Post("/admin/groups/:id/teams", authMw, adminMw, h.groupAccessMw, h.AddTeams)
+	app.Delete("/admin/groups/:id/teams/:teamId", authMw, adminMw, h.groupAccessMw, h.RemoveTeam)
+	app.Post("/admin/groups/:id/generate", authMw, adminMw, h.groupAccessMw, h.GenerateMatches)
+	app.Put("/admin/groups/:id/matches/:matchId", authMw, adminMw, h.groupAccessMw, h.UpdateMatchScore)
+	app.Put("/admin/groups/:id/matches/:matchId/live", authMw, adminMw, h.groupAccessMw, h.SetMatchLive)
 	app.Post("/admin/tournaments/:id/auto-draw", authMw, adminMw, h.AutoDraw)
 	app.Post("/admin/tournaments/:id/advance-playoff", authMw, adminMw, h.AdvanceToPlayoff)
-	app.Put("/admin/groups/:id/standings/:teamId/penalty", authMw, adminMw, h.SetPenaltyPoints)
+	app.Put("/admin/groups/:id/standings/:teamId/penalty", authMw, adminMw, h.groupAccessMw, h.SetPenaltyPoints)
 	app.Post("/admin/tournaments/:id/groups/reset-results", authMw, adminMw, h.ResetGroupResults)
-	app.Post("/admin/groups/:id/reset-results", authMw, adminMw, h.ResetSingleGroupResults)
+	app.Post("/admin/groups/:id/reset-results", authMw, adminMw, h.groupAccessMw, h.ResetSingleGroupResults)
 	app.Get("/admin/tournaments/:id/groups/export-pdf", authMw, adminMw, h.ExportStandingsPDF)
 
 	// Swiss routes
 	app.Post("/admin/tournaments/:id/swiss/init", authMw, adminMw, h.InitSwiss)
-	app.Post("/admin/groups/:id/swiss/generate-round", authMw, adminMw, h.GenerateSwissRound)
+	app.Post("/admin/groups/:id/swiss/generate-round", authMw, adminMw, h.groupAccessMw, h.GenerateSwissRound)
 	app.Get("/groups/:id/swiss/status", h.GetSwissStatus)
 }
 
@@ -85,6 +142,9 @@ func (h *GroupHandler) CreateGroup(c *fiber.Ctx) error {
 	tournamentID, err := uuid.Parse(req.TournamentID)
 	if err != nil {
 		return response.BadRequest(c, "Tournament ID tidak valid")
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
 	}
 
 	if req.AdvanceCount <= 0 {

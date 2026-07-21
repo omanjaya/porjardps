@@ -202,6 +202,13 @@ func (r *userRepo) List(ctx context.Context, filter model.UserFilter) ([]*model.
 		)`, argIdx))
 		args = append(args, *filter.NotInGameID)
 	}
+	if filter.EventIDs != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf(
+			`EXISTS (SELECT 1 FROM team_members tm JOIN tournament_teams tt ON tt.team_id = tm.team_id JOIN tournaments tr ON tr.id = tt.tournament_id WHERE tm.user_id = users.id AND tr.event_id = ANY($%d))`,
+			argIdx))
+		args = append(args, filter.EventIDs)
+	}
 
 	where := ""
 	if len(conditions) > 0 {

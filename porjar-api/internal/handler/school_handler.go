@@ -179,6 +179,11 @@ func (h *SchoolHandler) List(c *fiber.Ctx) error {
 			filter.Search = &trimmed
 		}
 	}
+	if eid := c.Query("event_id"); eid != "" {
+		if id, err := uuid.Parse(eid); err == nil {
+			filter.EventIDs = []uuid.UUID{id}
+		}
+	}
 
 	schools, total, err := h.schoolService.List(c.Context(), filter)
 	if err != nil {

@@ -16,6 +16,9 @@ type BRHandler struct {
 	brService        *service.BRService
 	standingsService *service.StandingsService
 	tournamentRepo   model.TournamentRepository
+	eventAdminRepo   model.EventAdminRepository
+	penaltyRepo      model.BRPenaltyRepository
+	lobbyResultRepo  model.BRLobbyResultRepository
 }
 
 func NewBRHandler(brService *service.BRService, standingsService *service.StandingsService) *BRHandler {
@@ -29,6 +32,62 @@ func (h *BRHandler) SetTournamentRepo(repo model.TournamentRepository) {
 	h.tournamentRepo = repo
 }
 
+// SetEventAdminRepo, SetPenaltyRepo and SetLobbyResultRepo wire the repos
+// needed to gate /admin/lobbies*, /admin/lobbies/:id/player-results and
+// /admin/penalties/:id — all outside the /admin/tournaments/:id/* prefix
+// that TournamentScopeMw already scopes.
+// NEEDS ROUTES.GO WIRING:
+//   brHandler.SetEventAdminRepo(eventAdminRepo)
+//   brHandler.SetPenaltyRepo(brPenaltyRepo)
+//   brHandler.SetLobbyResultRepo(brResultRepo)
+func (h *BRHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
+}
+func (h *BRHandler) SetPenaltyRepo(repo model.BRPenaltyRepository) {
+	h.penaltyRepo = repo
+}
+func (h *BRHandler) SetLobbyResultRepo(repo model.BRLobbyResultRepository) {
+	h.lobbyResultRepo = repo
+}
+
+// checkLobbyAccess gates a mutating /admin/lobbies/:id/* route: resolves
+// lobbyID -> tournament -> event. Superadmins always pass.
+func (h *BRHandler) checkLobbyAccess(c *fiber.Ctx, lobbyID uuid.UUID) error {
+	lobby, _, svcErr := h.brService.GetLobby(c.Context(), lobbyID)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+	if lobby == nil {
+		return nil
+	}
+	return requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, lobby.TournamentID)
+}
+
+// checkPenaltyAccessMw gates DELETE /admin/penalties/:id, whose handler
+// (RemovePenalty) lives in br_penalty_handler.go — a file outside this
+// task's edit scope. BRPenalty already carries TournamentID directly, so no
+// extra lookup is needed beyond the penalty record itself.
+func (h *BRHandler) checkPenaltyAccessMw(c *fiber.Ctx) error {
+	penaltyID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Next() // let the real handler return its own validation error
+	}
+	if h.penaltyRepo == nil {
+		return c.Next()
+	}
+	penalty, pErr := h.penaltyRepo.FindByID(c.Context(), penaltyID)
+	if pErr != nil {
+		return response.HandleError(c, pErr)
+	}
+	if penalty == nil {
+		return c.Next()
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, penalty.TournamentID); err != nil {
+		return err
+	}
+	return c.Next()
+}
+
 func (h *BRHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
 	// Admin routes
 	app.Post("/admin/lobbies", authMw, adminMw, h.CreateLobby)
@@ -40,7 +99,7 @@ func (h *BRHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handl
 	app.Post("/admin/lobbies/:id/player-results", authMw, adminMw, h.InputPlayerResults)
 	app.Post("/admin/tournaments/:id/penalties", authMw, adminMw, h.ApplyPenalty)
 	app.Get("/admin/tournaments/:id/penalties", authMw, adminMw, h.GetPenalties)
-	app.Delete("/admin/penalties/:id", authMw, adminMw, h.RemovePenalty)
+	app.Delete("/admin/penalties/:id", authMw, adminMw, h.checkPenaltyAccessMw, h.RemovePenalty)
 
 	// Public routes
 	app.Get("/lobbies/:id", h.GetLobby)
@@ -85,6 +144,9 @@ func (h *BRHandler) CreateLobby(c *fiber.Ctx) error {
 	}
 	if len(details) > 0 {
 		return response.Err(c, apperror.ValidationError(details))
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
 	}
 
 	var scheduledAt *time.Time
@@ -132,6 +194,9 @@ func (h *BRHandler) UpdateLobby(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "Lobby ID tidak valid")
 	}
+	if err := h.checkLobbyAccess(c, lobbyID); err != nil {
+		return err
+	}
 
 	var req updateLobbyRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -167,6 +232,9 @@ func (h *BRHandler) DeleteLobby(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "Lobby ID tidak valid")
 	}
+	if err := h.checkLobbyAccess(c, lobbyID); err != nil {
+		return err
+	}
 
 	if svcErr := h.brService.DeleteLobby(c.Context(), lobbyID); svcErr != nil {
 		return response.HandleError(c, svcErr)
@@ -179,6 +247,9 @@ func (h *BRHandler) UpdateLobbyStatus(c *fiber.Ctx) error {
 	lobbyID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Lobby ID tidak valid")
+	}
+	if err := h.checkLobbyAccess(c, lobbyID); err != nil {
+		return err
 	}
 
 	var req updateLobbyStatusRequest
@@ -222,6 +293,9 @@ func (h *BRHandler) InputResults(c *fiber.Ctx) error {
 	lobbyID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Lobby ID tidak valid")
+	}
+	if err := h.checkLobbyAccess(c, lobbyID); err != nil {
+		return err
 	}
 
 	var req inputResultsRequest
@@ -340,6 +414,17 @@ func (h *BRHandler) InputPlayerResults(c *fiber.Ctx) error {
 	lobbyResultID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Lobby Result ID tidak valid")
+	}
+	if h.lobbyResultRepo != nil {
+		lr, lrErr := h.lobbyResultRepo.FindByID(c.Context(), lobbyResultID)
+		if lrErr != nil {
+			return response.HandleError(c, lrErr)
+		}
+		if lr != nil {
+			if err := h.checkLobbyAccess(c, lr.LobbyID); err != nil {
+				return err
+			}
+		}
 	}
 
 	var req playerResultInputRequest

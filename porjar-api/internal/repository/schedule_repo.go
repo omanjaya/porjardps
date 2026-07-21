@@ -192,6 +192,12 @@ func (r *scheduleRepo) List(ctx context.Context, filter model.ScheduleFilter) ([
 		conditions = append(conditions, fmt.Sprintf("s.scheduled_at <= $%d", argIdx))
 		args = append(args, *filter.To)
 	}
+	if filter.EventIDs != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf(
+			"s.tournament_id IN (SELECT id FROM tournaments WHERE event_id = ANY($%d))", argIdx))
+		args = append(args, filter.EventIDs)
+	}
 
 	where := ""
 	if len(conditions) > 0 {

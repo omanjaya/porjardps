@@ -51,7 +51,14 @@ func (h *PlayerHandler) ListPlayers(c *fiber.Ctx) error {
 		limit = 20
 	}
 
-	players, total, svcErr := h.statsService.ListPlayers(c.Context(), search, page, limit)
+	var eventIDs []uuid.UUID
+	if eid := c.Query("event_id"); eid != "" {
+		if id, err := uuid.Parse(eid); err == nil {
+			eventIDs = []uuid.UUID{id}
+		}
+	}
+
+	players, total, svcErr := h.statsService.ListPlayers(c.Context(), search, page, limit, eventIDs)
 	if svcErr != nil {
 		return response.HandleError(c, svcErr)
 	}

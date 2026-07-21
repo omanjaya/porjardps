@@ -93,6 +93,16 @@ func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadm
 	// Authenticated admin list — same handler as public /teams, but the auth
 	// context lets List() scope results to the admin's assigned events.
 	app.Get("/admin/teams", authMw, adminMw, h.List)
+	// KNOWN GAP (not fixed here — see task report): Approve/Reject/AdminUpdate/
+	// AdminDelete/AdminAddMember take a bare team ID with no in-handler event
+	// check. A team maps to event(s) only indirectly via tournament_teams, and
+	// model.TournamentTeamRepository has no "list tournaments/events for a
+	// team" method (only ListByTournament, the reverse direction) — so this
+	// handler cannot resolve team -> event without a new repo method, which is
+	// outside this task's edit scope (team_service.go / tournament.go model
+	// file). A scoped ("admin") event-admin can currently approve/reject/
+	// edit/delete/add-members-to a team belonging to another event's
+	// tournament if they know/guess its team UUID.
 	app.Put("/admin/teams/:id/approve", authMw, adminMw, h.Approve)
 	app.Put("/admin/teams/:id/reject", authMw, adminMw, h.Reject)
 	app.Put("/admin/teams/:id", authMw, adminMw, h.AdminUpdate)

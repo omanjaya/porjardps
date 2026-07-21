@@ -19,10 +19,11 @@ type School struct {
 }
 
 type SchoolFilter struct {
-	Level  *string
-	Search *string
-	Page   int
-	Limit  int
+	Level    *string
+	Search   *string
+	EventIDs []uuid.UUID
+	Page     int
+	Limit    int
 }
 
 type SchoolRepository interface {

@@ -224,6 +224,11 @@ func (h *ScheduleHandler) List(c *fiber.Ctx) error {
 			filter.To = &t
 		}
 	}
+	if eid := c.Query("event_id"); eid != "" {
+		if id, err := uuid.Parse(eid); err == nil {
+			filter.EventIDs = []uuid.UUID{id}
+		}
+	}
 
 	schedules, total, err := h.scheduleService.List(c.Context(), filter)
 	if err != nil {

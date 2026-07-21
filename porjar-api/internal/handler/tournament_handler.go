@@ -256,6 +256,23 @@ func (h *TournamentHandler) Update(c *fiber.Ctx) error {
 			return response.BadRequest(c, "Event ID tidak valid")
 		}
 		eventIDPtr = &eid
+
+		// TournamentScopeMw (wired in routes.go on the /admin/tournaments/:id
+		// prefix) only verifies the admin manages the tournament's CURRENT
+		// event. Without this extra check here, a scoped admin could move a
+		// tournament they legitimately manage into an event they do NOT
+		// administer (or, more importantly, "steal" an event's tournament by
+		// re-pointing it into their own event). Create() already runs this
+		// same check for the target event; mirror it here for Update().
+		if h.eventAdminRepo != nil && middleware.GetUserRole(c) == "admin" {
+			ok, err := h.eventAdminRepo.IsAdminOfEvent(c.Context(), middleware.GetUserID(c), eid)
+			if err != nil {
+				return response.HandleError(c, apperror.Wrap(err, "check event admin"))
+			}
+			if !ok {
+				return response.Forbidden(c, "EVENT_FORBIDDEN")
+			}
+		}
 	}
 
 	input := service.UpdateTournamentInput{

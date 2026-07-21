@@ -322,6 +322,29 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// players saw "success" but the worker rejected the submission (e.g. wrong
 	// BO score). Synchronous mode returns validation errors directly to the user.
 	matchSubmissionHandler := handler.NewMatchSubmissionHandler(matchSubmissionService)
+
+	// ── Activate event-admin RBAC scoping on entity-ID mutation routes (fail-open until wired) ──
+	bracketHandler.SetEventAdminRepo(eventAdminRepo)
+	groupHandler.SetGroupRepo(groupRepo)
+	groupHandler.SetTournamentRepo(tournamentRepo)
+	groupHandler.SetEventAdminRepo(eventAdminRepo)
+	brHandler.SetEventAdminRepo(eventAdminRepo)
+	brHandler.SetPenaltyRepo(brPenaltyRepo)
+	brHandler.SetLobbyResultRepo(brResultRepo)
+	lobbyRotationHandler.SetTournamentRepo(tournamentRepo)
+	lobbyRotationHandler.SetEventAdminRepo(eventAdminRepo)
+	stageHandler.SetStageRepo(stageRepo)
+	stageHandler.SetTournamentRepo(tournamentRepo)
+	stageHandler.SetEventAdminRepo(eventAdminRepo)
+	matchSubmissionHandler.SetBracketRepo(bracketRepo)
+	matchSubmissionHandler.SetBRLobbyRepo(brLobbyRepo)
+	matchSubmissionHandler.SetGroupRepo(groupRepo)
+	matchSubmissionHandler.SetTournamentRepo(tournamentRepo)
+	matchSubmissionHandler.SetEventAdminRepo(eventAdminRepo)
+	refereeHandler.SetMatchCardRepo(matchCardRepo)
+	refereeHandler.SetTournamentRepo(tournamentRepo)
+	refereeHandler.SetEventAdminRepo(eventAdminRepo)
+	challongeHandler.SetEventAdminRepo(eventAdminRepo)
 	// Queue and workers are still available for future use if needed:
 	_ = submissionQueue
 
@@ -441,11 +464,11 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Phase 3 — Schedule, Admin Dashboard, Analytics
 	scheduleHandler.RegisterRoutes(api, authMw, adminMw, publicRL)
 	adminHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL)
-	adminExportHandler.RegisterRoutes(api, authMw, adminMw)
+	adminExportHandler.RegisterRoutes(api, authMw, superadminMw) // export = global PII → superadmin only
 	analyticsHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Bulk import routes
-	importHandler.RegisterRoutes(api, authMw, adminMw)
+	importHandler.RegisterRoutes(api, authMw, superadminMw) // import/credentials = global → superadmin only
 	challongeHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Phase 4 — Notifications
@@ -469,7 +492,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Phase 8 — Match Submissions & Coach
 	matchSubmissionHandler.RegisterRoutes(api, authMw, adminMw, matchSubmitRL)
-	coachHandler.RegisterRoutes(api, authMw, coachMw, adminMw)
+	coachHandler.RegisterRoutes(api, authMw, coachMw, superadminMw) // /admin/coaches* = user-directory → superadmin only
 
 	// Event-scope middleware: restricts non-superadmin admins to events they are
 	// assigned to (via event_admins). Applied to all /admin/events/:id(:eventId)/* routes.

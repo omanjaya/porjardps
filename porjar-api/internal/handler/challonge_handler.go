@@ -24,6 +24,7 @@ type ChallongeHandler struct {
 	tournamentRepo model.TournamentRepository
 	ttRepo         model.TournamentTeamRepository
 	db             *pgxpool.Pool
+	eventAdminRepo model.EventAdminRepository
 }
 
 func NewChallongeHandler(
@@ -40,6 +41,14 @@ func NewChallongeHandler(
 		ttRepo:         ttRepo,
 		db:             db,
 	}
+}
+
+// SetEventAdminRepo wires the event-admin repo used to gate POST
+// /admin/import/challonge (body-supplied tournament_id) — outside the
+// /admin/tournaments/:id/* prefix already scoped by TournamentScopeMw.
+// NEEDS ROUTES.GO WIRING: challongeHandler.SetEventAdminRepo(eventAdminRepo)
+func (h *ChallongeHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 // ── Challonge API types ──────────────────────────────────────────────
@@ -283,6 +292,9 @@ func (h *ChallongeHandler) ImportBracket(c *fiber.Ctx) error {
 	tournamentID, err := uuid.Parse(body.TournamentID)
 	if err != nil {
 		return response.BadRequest(c, "tournament_id tidak valid")
+	}
+	if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, tournamentID); err != nil {
+		return err
 	}
 
 	// Parse team mapping: string keys → int (challonge participant ID) → uuid

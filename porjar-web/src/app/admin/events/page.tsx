@@ -29,7 +29,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
 import {
   Trophy, Plus, PencilSimple, Spinner, Medal, GraduationCap,
-  Trash, Archive, Rows, UsersThree,
+  Trash, Archive, Rows, UsersThree, UsersFour,
 } from '@phosphor-icons/react'
 import type { Event } from '@/types'
 
@@ -275,6 +275,11 @@ export default function AdminEventsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Link href={`/admin/events/${event.id}/teams`}>
+                          <Button variant="ghost" size="sm" title="Kelola & Assign Tim">
+                            <UsersFour size={16} />
+                          </Button>
+                        </Link>
                         <Link href={`/admin/events/${event.id}/sections`}>
                           <Button variant="ghost" size="sm" title="Sections">
                             <Rows size={16} />

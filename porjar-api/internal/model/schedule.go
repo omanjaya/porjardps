@@ -37,6 +37,7 @@ type ScheduleFilter struct {
 	Status       *string
 	From         *time.Time
 	To           *time.Time
+	EventIDs     []uuid.UUID
 	Page         int
 	Limit        int
 }

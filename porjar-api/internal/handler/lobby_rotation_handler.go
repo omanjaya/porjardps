@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/service"
@@ -13,6 +14,8 @@ import (
 type LobbyRotationHandler struct {
 	rotationService *service.LobbyRotationService
 	brService       *service.BRService
+	tournamentRepo  model.TournamentRepository
+	eventAdminRepo  model.EventAdminRepository
 }
 
 func NewLobbyRotationHandler(
@@ -23,6 +26,19 @@ func NewLobbyRotationHandler(
 		rotationService: rotationService,
 		brService:       brService,
 	}
+}
+
+// SetTournamentRepo and SetEventAdminRepo wire the repos needed to gate
+// POST /admin/lobbies/:id/assign-teams, which is outside the
+// /admin/tournaments/:id/* prefix already scoped by TournamentScopeMw.
+// NEEDS ROUTES.GO WIRING:
+//   lobbyRotationHandler.SetTournamentRepo(tournamentRepo)
+//   lobbyRotationHandler.SetEventAdminRepo(eventAdminRepo)
+func (h *LobbyRotationHandler) SetTournamentRepo(repo model.TournamentRepository) {
+	h.tournamentRepo = repo
+}
+func (h *LobbyRotationHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
 }
 
 func (h *LobbyRotationHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler) {
@@ -84,6 +100,11 @@ func (h *LobbyRotationHandler) AssignTeams(c *fiber.Ctx) error {
 	lobbyID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Lobby ID tidak valid")
+	}
+	if lobby, _, svcErr := h.brService.GetLobby(c.Context(), lobbyID); svcErr == nil && lobby != nil {
+		if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, lobby.TournamentID); err != nil {
+			return err
+		}
 	}
 
 	var req assignTeamsRequest

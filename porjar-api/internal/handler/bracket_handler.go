@@ -9,6 +9,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
 	"github.com/porjar-denpasar/porjar-api/internal/service"
@@ -19,10 +20,40 @@ type BracketHandler struct {
 	bracketService    *service.BracketService
 	tournamentService *service.TournamentService
 	hub               *ws.Hub
+	eventAdminRepo    model.EventAdminRepository
 }
 
 func NewBracketHandler(bracketService *service.BracketService, tournamentService *service.TournamentService, hub *ws.Hub) *BracketHandler {
 	return &BracketHandler{bracketService: bracketService, tournamentService: tournamentService, hub: hub}
+}
+
+// SetEventAdminRepo wires the event-admin repo used to gate /admin/matches/:id/*
+// routes, which take a match ID (not a tournament/event ID) and therefore fall
+// outside TournamentScopeMw/EventScopeMw's prefix matching.
+// NEEDS ROUTES.GO WIRING: bracketHandler.SetEventAdminRepo(eventAdminRepo)
+func (h *BracketHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
+	h.eventAdminRepo = repo
+}
+
+// checkMatchAccess gates a mutating /admin/matches/:id/* route: resolves
+// matchID -> tournament -> event and verifies the requesting admin manages
+// that event. Superadmins always pass. See scope_helpers.go.
+func (h *BracketHandler) checkMatchAccess(c *fiber.Ctx, matchID uuid.UUID) error {
+	match, svcErr := h.bracketService.GetMatch(c.Context(), matchID)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+	if match == nil {
+		return nil // let the caller's own lookup return its own 404
+	}
+	tournament, svcErr := h.tournamentService.GetByID(c.Context(), match.TournamentID)
+	if svcErr != nil {
+		return response.HandleError(c, svcErr)
+	}
+	if tournament == nil {
+		return nil
+	}
+	return requireEventAccess(c, h.eventAdminRepo, tournament.EventID)
 }
 
 func (h *BracketHandler) RegisterRoutes(app fiber.Router, authMw, adminMw fiber.Handler, rateLimitMws ...fiber.Handler) {
@@ -197,6 +228,9 @@ func (h *BracketHandler) UpdateMatchStatus(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "Match ID tidak valid")
 	}
+	if err := h.checkMatchAccess(c, matchID); err != nil {
+		return err
+	}
 
 	var req updateMatchStatusRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -228,6 +262,9 @@ func (h *BracketHandler) UpdateMatchScore(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "Match ID tidak valid")
 	}
+	if err := h.checkMatchAccess(c, matchID); err != nil {
+		return err
+	}
 
 	var req updateMatchScoreRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -250,6 +287,9 @@ func (h *BracketHandler) InputGameScore(c *fiber.Ctx) error {
 	gameNumber, err := strconv.Atoi(c.Params("gn"))
 	if err != nil || gameNumber < 1 {
 		return response.BadRequest(c, "Game number tidak valid")
+	}
+	if err := h.checkMatchAccess(c, matchID); err != nil {
+		return err
 	}
 
 	var req inputGameScoreRequest
@@ -292,6 +332,9 @@ func (h *BracketHandler) CompleteMatch(c *fiber.Ctx) error {
 	matchID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Match ID tidak valid")
+	}
+	if err := h.checkMatchAccess(c, matchID); err != nil {
+		return err
 	}
 
 	var req completeMatchRequest
@@ -381,6 +424,9 @@ func (h *BracketHandler) ScheduleMatch(c *fiber.Ctx) error {
 	matchID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Match ID tidak valid")
+	}
+	if err := h.checkMatchAccess(c, matchID); err != nil {
+		return err
 	}
 
 	var req scheduleMatchRequest

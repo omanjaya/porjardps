@@ -39,7 +39,9 @@ type PlayerSummary struct {
 }
 
 // ListPlayers returns a paginated list of players (role=player) for public discovery.
-func (s *PlayerStatsService) ListPlayers(ctx context.Context, search string, page, limit int) ([]*PlayerSummary, int, error) {
+// eventIDs, when non-nil, restricts results to players participating in one of the
+// given events' tournaments; nil (or empty) means no restriction.
+func (s *PlayerStatsService) ListPlayers(ctx context.Context, search string, page, limit int, eventIDs []uuid.UUID) ([]*PlayerSummary, int, error) {
 	role := model.RolePlayer
 	filter := model.UserFilter{
 		Role:  &role,
@@ -48,6 +50,9 @@ func (s *PlayerStatsService) ListPlayers(ctx context.Context, search string, pag
 	}
 	if search != "" {
 		filter.Search = &search
+	}
+	if eventIDs != nil {
+		filter.EventIDs = eventIDs
 	}
 
 	users, total, err := s.userRepo.List(ctx, filter)

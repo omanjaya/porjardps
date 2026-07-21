@@ -16,7 +16,10 @@ export function usePendingTeams() {
     if (!isAuthenticated || authLoading) return
     setLoading(true)
     try {
-      const res = await api.getPaginated<Team[]>('/teams?status=pending&per_page=100')
+      // Use the authenticated /admin/teams endpoint (not the public /teams
+      // one) so a scoped event-admin only sees pending teams from their own
+      // assigned events, per TeamHandler.List's event scoping.
+      const res = await api.getPaginated<Team[]>('/admin/teams?status=pending&per_page=100')
       setTeams(Array.isArray(res.data) ? res.data : [])
     } catch {
       toast.error('Gagal memuat tim pending')

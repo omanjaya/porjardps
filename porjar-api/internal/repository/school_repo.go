@@ -115,6 +115,13 @@ func (r *schoolRepo) List(ctx context.Context, filter model.SchoolFilter) ([]*mo
 		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argIdx))
 		args = append(args, "%"+*filter.Search+"%")
 	}
+	if filter.EventIDs != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf(
+			`EXISTS (SELECT 1 FROM tournament_teams tt JOIN tournaments tr ON tr.id = tt.tournament_id JOIN teams t ON t.id = tt.team_id WHERE t.school_id = schools.id AND tr.event_id = ANY($%d))`,
+			argIdx))
+		args = append(args, filter.EventIDs)
+	}
 
 	where := ""
 	if len(conditions) > 0 {

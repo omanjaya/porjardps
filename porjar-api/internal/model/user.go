@@ -39,7 +39,8 @@ type UserFilter struct {
 	Role        *string
 	Search      *string
 	IsCaptain   *bool
-	NotInGameID *uuid.UUID // exclude users already in a team for this game
+	NotInGameID *uuid.UUID  // exclude users already in a team for this game
+	EventIDs    []uuid.UUID // restrict to users participating in these events' tournaments; nil = no restriction
 	Page        int
 	Limit       int
 }
