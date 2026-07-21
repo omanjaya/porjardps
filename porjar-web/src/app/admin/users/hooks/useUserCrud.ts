@@ -98,6 +98,22 @@ export function useUserCrud(refetch: () => Promise<void> | void) {
     }
   }
 
+  async function assignCoachSchool(user: User, schoolId: string): Promise<boolean> {
+    setProcessing(true)
+    try {
+      await api.post(`/admin/coaches/${user.id}/assign-school`, { school_id: schoolId })
+      toast.success(`${user.full_name} berhasil ditugaskan sebagai coach`)
+      await refetch()
+      return true
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Gagal menugaskan coach'
+      toast.error(msg)
+      return false
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   async function resetPassword(user: User): Promise<{ password: string; credential: CredentialData | null } | null> {
     setProcessing(true)
     try {
@@ -134,6 +150,7 @@ export function useUserCrud(refetch: () => Promise<void> | void) {
     editUser,
     deleteUser,
     changeRole,
+    assignCoachSchool,
     resetPassword,
     fetchCredential,
   }

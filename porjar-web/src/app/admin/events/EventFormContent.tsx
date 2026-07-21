@@ -259,6 +259,14 @@ export function EventFormContent({ eventId }: Props) {
     if (!form.name.trim()) { toast.error('Nama event wajib diisi'); return }
     if (!form.slug.trim()) { toast.error('Slug wajib diisi'); return }
     if (form.short_name.trim().length < 2) { toast.error('Nama Singkat wajib diisi (2-20 karakter)'); return }
+    if (form.start_date && form.end_date && new Date(form.end_date) < new Date(form.start_date)) {
+      toast.error('Tanggal Selesai tidak boleh sebelum Tanggal Mulai')
+      return
+    }
+    if (form.registration_start && form.registration_end && new Date(form.registration_end) < new Date(form.registration_start)) {
+      toast.error('Pendaftaran Ditutup tidak boleh sebelum Pendaftaran Dibuka')
+      return
+    }
 
     const payload = {
       name: form.name,

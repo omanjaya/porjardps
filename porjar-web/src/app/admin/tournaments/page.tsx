@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
@@ -23,6 +24,7 @@ import { TournamentEditDialog } from './TournamentEditDialog'
 
 export default function AdminTournamentsPage() {
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
+  const searchParams = useSearchParams()
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [games, setGames] = useState<Game[]>([])
   const [events, setEvents] = useState<Event[]>([])
@@ -86,6 +88,15 @@ export default function AdminTournamentsPage() {
     if (!isAuthenticated || authLoading) return
     load()
   }, [isAuthenticated, authLoading])
+
+  // Deep-link from an event page: /admin/tournaments?event_id=...&new=1
+  // pre-selects the event filter and auto-opens the create wizard.
+  useEffect(() => {
+    const eventId = searchParams.get('event_id')
+    const openNew = searchParams.get('new')
+    if (eventId) setFilterEvent(eventId)
+    if (openNew === '1') setCreateOpen(true)
+  }, [searchParams])
 
   useWebSocket({
     channels: ['live-scores'],

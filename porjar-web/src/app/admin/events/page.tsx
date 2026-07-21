@@ -77,6 +77,9 @@ export default function AdminEventsPage() {
   // Archive
   const [archivingId, setArchivingId] = useState<string | null>(null)
 
+  // Publish / Unpublish
+  const [publishingId, setPublishingId] = useState<string | null>(null)
+
   const loadEvents = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
     try {
@@ -219,6 +222,50 @@ export default function AdminEventsPage() {
     }
   }
 
+  async function handleTogglePublish(event: Event) {
+    if (publishingId) return
+    const nextStatus: EventStatus = event.status === 'draft' ? 'published' : 'draft'
+    try {
+      setPublishingId(event.id)
+      await api.put(`/admin/events/${event.id}`, {
+        name: event.name,
+        slug: event.slug,
+        short_name: event.short_name || null,
+        description: event.description || null,
+        primary_color: event.primary_color,
+        secondary_color: event.secondary_color || null,
+        logo_url: event.logo_url || null,
+        banner_url: event.banner_url || null,
+        poster_url: event.poster_url || null,
+        start_date: event.start_date,
+        end_date: event.end_date,
+        registration_start: event.registration_start,
+        registration_end: event.registration_end,
+        venue: event.venue || null,
+        city: event.city || null,
+        organizer: event.organizer || null,
+        contact_phone: event.contact_phone || null,
+        contact_email: event.contact_email || null,
+        instagram_url: event.instagram_url || null,
+        website_url: event.website_url || null,
+        announcement: event.announcement || null,
+        announcement_active: event.announcement_active ?? false,
+        status: nextStatus,
+        registration_open: event.registration_open ?? false,
+        rules_published: event.rules_published ?? false,
+        requires_school: event.requires_school ?? false,
+        sort_order: event.sort_order ?? 0,
+      })
+      toast.success(nextStatus === 'published' ? 'Event berhasil dipublikasikan' : 'Event dikembalikan ke draft')
+      await loadEvents()
+      await loadHealth(true)
+    } catch {
+      toast.error('Gagal mengubah status event')
+    } finally {
+      setPublishingId(null)
+    }
+  }
+
   const pageIds = events.map(e => e.id)
   const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id))
   const someSelected = pageIds.some(id => selectedIds.includes(id)) && !allSelected
@@ -284,6 +331,8 @@ export default function AdminEventsPage() {
               onToggle={() => toggleOne(event.id)}
               archivingId={archivingId}
               onArchive={handleArchive}
+              publishingId={publishingId}
+              onTogglePublish={handleTogglePublish}
             />
           ))}
         </div>

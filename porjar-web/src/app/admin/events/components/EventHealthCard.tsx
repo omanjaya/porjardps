@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 import {
   Trophy, PencilSimple, Spinner, Medal,
   Archive, Rows, UsersThree, UsersFour, Lightning, Warning,
+  ClipboardText, CloudArrowUp, EyeSlash,
 } from '@phosphor-icons/react'
 import type { Event } from '@/types'
 import type { EventHealthEntry } from './types'
@@ -35,6 +36,7 @@ function formatDate(dateStr: string | null): string {
 
 export function EventHealthCard({
   event, health, checked, onToggle, archivingId, onArchive,
+  publishingId, onTogglePublish,
 }: {
   event: Event
   health: EventHealthEntry | undefined
@@ -42,6 +44,8 @@ export function EventHealthCard({
   onToggle: () => void
   archivingId: string | null
   onArchive: (event: Event) => void
+  publishingId?: string | null
+  onTogglePublish?: (event: Event) => void
 }) {
   const t = health?.tournaments
   const attentionTotal = health?.attention.total ?? 0
@@ -100,6 +104,26 @@ export function EventHealthCard({
           </div>
 
           <div className="flex items-center gap-0.5 shrink-0">
+            {onTogglePublish && (event.status === 'draft' || event.status === 'published') && (
+              <Button
+                variant="ghost" size="sm"
+                title={event.status === 'draft' ? 'Publish event' : 'Kembalikan ke draft'}
+                disabled={publishingId === event.id}
+                onClick={() => onTogglePublish(event)}
+              >
+                {publishingId === event.id
+                  ? <Spinner size={16} className="animate-spin" />
+                  : event.status === 'draft'
+                    ? <CloudArrowUp size={16} />
+                    : <EyeSlash size={16} />
+                }
+              </Button>
+            )}
+            <Link href={`/admin/events/${event.id}/registrations`}>
+              <Button variant="ghost" size="sm" title="Pendaftar Event">
+                <ClipboardText size={16} />
+              </Button>
+            </Link>
             <Link href={`/admin/events/${event.id}/teams`}>
               <Button variant="ghost" size="sm" title="Kelola & Assign Tim">
                 <UsersFour size={16} />

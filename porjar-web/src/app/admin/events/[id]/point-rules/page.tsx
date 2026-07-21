@@ -20,6 +20,25 @@ interface RuleRow {
   points: number
 }
 
+const DEFAULT_RULES: RuleRow[] = [
+  { rank_position: 1, points: 100 },
+  { rank_position: 2, points: 75 },
+  { rank_position: 3, points: 50 },
+  { rank_position: 4, points: 40 },
+  { rank_position: 5, points: 30 },
+  { rank_position: 6, points: 20 },
+  { rank_position: 7, points: 20 },
+  { rank_position: 8, points: 20 },
+  { rank_position: 9, points: 10 },
+  { rank_position: 10, points: 10 },
+  { rank_position: 11, points: 10 },
+  { rank_position: 12, points: 10 },
+  { rank_position: 13, points: 10 },
+  { rank_position: 14, points: 10 },
+  { rank_position: 15, points: 10 },
+  { rank_position: 16, points: 10 },
+]
+
 export default function PointRulesPage() {
   const params = useParams<{ id: string }>()
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
@@ -31,12 +50,11 @@ export default function PointRulesPage() {
   const loadData = useCallback(async () => {
     if (!isAuthenticated || authLoading) return
     try {
-      const [eventsData, rulesData] = await Promise.all([
-        api.get<Event[]>(`/admin/events`),
+      const [eventData, rulesData] = await Promise.all([
+        api.get<Event>(`/admin/events/${params.id}`),
         api.get<EventPointRule[]>(`/admin/events/${params.id}/point-rules`),
       ])
-      const eventData = (eventsData ?? []).find((e) => e.id === params.id) ?? null
-      setEvent(eventData)
+      setEvent(eventData ?? null)
       setRules(
         (rulesData ?? []).map((r) => ({
           rank_position: r.rank_position,
@@ -65,6 +83,20 @@ export default function PointRulesPage() {
 
   const updateRow = (idx: number, field: 'rank_position' | 'points', value: number) => {
     setRules(rules.map((r, i) => (i === idx ? { ...r, [field]: value } : r)))
+  }
+
+  const loadDefaultTemplate = async () => {
+    setSaving(true)
+    try {
+      await api.put(`/admin/events/${params.id}/point-rules`, { rules: DEFAULT_RULES })
+      toast.success('Template default berhasil dimuat')
+      await loadData()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Gagal memuat template'
+      toast.error(message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleSave = async () => {
@@ -131,7 +163,10 @@ export default function PointRulesPage() {
               {rules.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={3} className="text-center py-8 text-stone-400 dark:text-zinc-500">
-                    Belum ada rules. Klik &quot;Tambah&quot; untuk menambahkan.
+                    <p className="mb-3">Belum ada rules. Klik &quot;Tambah&quot; untuk menambahkan.</p>
+                    <Button variant="outline" size="sm" onClick={loadDefaultTemplate} disabled={saving}>
+                      {saving ? 'Memuat...' : 'Muat Template Default'}
+                    </Button>
                   </TableCell>
                 </TableRow>
               ) : (

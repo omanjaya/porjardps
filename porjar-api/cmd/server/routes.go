@@ -259,6 +259,10 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 		coachSchoolRepo, teamRepo, schoolRepo, standingsRepo,
 		bracketRepo, brResultRepo, matchSubmissionRepo,
 	)
+	// Assigning a school promotes a player to the coach role; needs userRepo + rdb
+	// (to invalidate the cached role) so /coach/* becomes reachable immediately.
+	coachService.SetUserRepo(userRepo)
+	coachService.SetRedis(rdb)
 
 	// Phase 7 services — webhooks & reports
 	webhookService := service.NewWebhookService(webhookRepo, webhookLogRepo)

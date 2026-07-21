@@ -29,6 +29,8 @@ import {
   PencilSimple,
   UserPlus,
   ArrowsClockwise,
+  ClipboardText,
+  Plus,
 } from '@phosphor-icons/react'
 import { GAME_CONFIG } from '@/constants/games'
 import type { GameSlug } from '@/types'
@@ -316,6 +318,18 @@ export default function AdminEventOverviewPage() {
           <Button variant="outline" className="border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300">
             <PencilSimple size={14} className="mr-1.5" />
             Edit Event
+          </Button>
+        </Link>
+        <Link href={`/admin/events/${params.id}/registrations`}>
+          <Button variant="outline" className="border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300">
+            <ClipboardText size={14} className="mr-1.5" />
+            Pendaftar Event
+          </Button>
+        </Link>
+        <Link href={`/admin/tournaments?event_id=${params.id}&new=1`}>
+          <Button variant="outline" className="border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300">
+            <Plus size={14} className="mr-1.5" />
+            Buat Turnamen
           </Button>
         </Link>
       </div>

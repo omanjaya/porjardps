@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
@@ -64,6 +64,11 @@ export default function EventRegisterPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const registeredTeamIds = useMemo(
+    () => new Set(registrations.map((r) => r.team.id)),
+    [registrations]
+  )
 
   const handleRegister = async () => {
     if (!selectedTeamId) {
@@ -213,11 +218,15 @@ export default function EventRegisterPage() {
                 <SelectValue placeholder="Pilih Tim" />
               </SelectTrigger>
               <SelectContent>
-                {myTeams.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name} ({t.game.name})
-                  </SelectItem>
-                ))}
+                {myTeams.map((t) => {
+                  const alreadyRegistered = registeredTeamIds.has(t.id)
+                  return (
+                    <SelectItem key={t.id} value={t.id} disabled={alreadyRegistered}>
+                      {t.name} ({t.game.name})
+                      {alreadyRegistered ? ' — sudah terdaftar' : ''}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             <Button onClick={handleRegister} disabled={submitting || !selectedTeamId}>
@@ -227,6 +236,11 @@ export default function EventRegisterPage() {
           {myTeams.length === 0 && (
             <p className="mt-3 text-sm text-stone-400 dark:text-zinc-500">
               Kamu belum punya tim. <Link href="/dashboard/teams/create" className="text-esi-red hover:underline">Buat tim dulu</Link>
+            </p>
+          )}
+          {myTeams.length > 0 && (
+            <p className="mt-3 text-xs text-stone-400 dark:text-zinc-500">
+              Pastikan game tim sesuai dengan cabang yang dipertandingkan di event ini. Tim yang game-nya tidak cocok bisa ditolak admin.
             </p>
           )}
         </div>

@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ExportButton } from '@/components/shared/ExportButton'
 import { Plus } from '@phosphor-icons/react'
 import { downloadCSV } from '@/lib/csv'
-import type { User, UserRole } from '@/types'
+import { api } from '@/lib/api'
+import type { School, User, UserRole } from '@/types'
 import { roleLabels, type FilterRole } from './constants'
 import { usePaginatedUsers } from './hooks/usePaginatedUsers'
 import { useUserCrud } from './hooks/useUserCrud'
@@ -19,6 +20,7 @@ import { DeleteUserDialog } from './dialogs/DeleteUserDialog'
 import { ChangeRoleDialog } from './dialogs/ChangeRoleDialog'
 import { ResetPasswordDialog } from './dialogs/ResetPasswordDialog'
 import { CredentialCardDialog } from './dialogs/CredentialCardDialog'
+import { AssignCoachDialog } from './dialogs/AssignCoachDialog'
 
 export default function AdminUsersPage() {
   const {
@@ -46,6 +48,19 @@ export default function AdminUsersPage() {
   const [changeRole, setChangeRole] = useState<{ user: User; newRole: UserRole } | null>(null)
   const [credentialUser, setCredentialUser] = useState<User | null>(null)
   const [credentialPassword, setCredentialPassword] = useState<string | null>(null)
+  const [assignCoachUser, setAssignCoachUser] = useState<User | null>(null)
+  const [schools, setSchools] = useState<School[]>([])
+  const [schoolsLoading, setSchoolsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!assignCoachUser || schools.length > 0) return
+    setSchoolsLoading(true)
+    api
+      .getPaginated<School[]>('/admin/schools?per_page=100&page=1')
+      .then((res) => setSchools(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setSchools([]))
+      .finally(() => setSchoolsLoading(false))
+  }, [assignCoachUser, schools.length])
 
   function handleFilterChange(role: FilterRole) {
     setFilterRole(role)
@@ -123,6 +138,7 @@ export default function AdminUsersPage() {
         onShowCredential={(u) => { setCredentialPassword(null); setCredentialUser(u) }}
         onDelete={setDeleteUser}
         onChangeRole={(user, newRole) => setChangeRole({ user, newRole })}
+        onAssignCoach={setAssignCoachUser}
       />
 
       <CreateUserDialog
@@ -171,6 +187,16 @@ export default function AdminUsersPage() {
         user={credentialUser}
         passwordOverride={credentialPassword}
         fetchCredential={crud.fetchCredential}
+      />
+
+      <AssignCoachDialog
+        open={!!assignCoachUser}
+        onOpenChange={(o) => { if (!o) setAssignCoachUser(null) }}
+        user={assignCoachUser}
+        schools={schools}
+        schoolsLoading={schoolsLoading}
+        processing={crud.processing}
+        onConfirm={crud.assignCoachSchool}
       />
     </>
   )

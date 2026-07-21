@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
@@ -218,7 +219,7 @@ export default function EventAssignTeamsPage() {
         description={`Cari tim yang belum terdaftar di ${event.name} dan tambahkan ke turnamen`}
         breadcrumbs={[
           { label: 'Events', href: '/admin/events' },
-          { label: event.name, href: `/admin/events/${params.id}/edit` },
+          { label: event.name, href: `/admin/events/${params.id}` },
           { label: 'Assign Tim' },
         ]}
       />
@@ -229,9 +230,17 @@ export default function EventAssignTeamsPage() {
           Pilih Turnamen
         </label>
         {tournaments.length === 0 ? (
-          <p className="text-sm text-stone-500 dark:text-zinc-400">
-            Event ini belum memiliki turnamen. Buat turnamen terlebih dahulu.
-          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-sm text-stone-500 dark:text-zinc-400">
+              Event ini belum memiliki turnamen.
+            </p>
+            <Link href={`/admin/tournaments?event_id=${params.id}&new=1`}>
+              <Button size="sm" className="bg-esi-red hover:bg-esi-red-dark text-white">
+                <Plus size={14} className="mr-1.5" />
+                Buat Turnamen
+              </Button>
+            </Link>
+          </div>
         ) : (
           <Select value={selectedTournamentId} onValueChange={(v) => setSelectedTournamentId(v ?? '')}>
             <SelectTrigger className="w-full bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100 sm:w-96">

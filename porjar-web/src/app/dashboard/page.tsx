@@ -236,6 +236,34 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Team Info Card empty state — surfaced above the fold for brand-new users
+            so they don't have to scroll past onboarding/checklist widgets before
+            seeing the primary "create/join a team" action. */}
+        {data && !data.team && (
+          <AnimatedCard delay={40}>
+            <div className="rounded-xl border-2 border-dashed border-esi-red/30 bg-gradient-to-br from-esi-red/5 via-white to-transparent dark:from-esi-red/10 dark:via-zinc-900 p-4 sm:p-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-esi-red/10">
+                  <Users size={28} weight="duotone" className="text-esi-red" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base sm:text-lg font-bold text-esi-text">Belum punya tim?</h2>
+                  <p className="mt-1 text-sm text-esi-muted">
+                    Buat tim baru atau minta captain untuk mengundang kamu sebelum turnamen mulai.
+                  </p>
+                </div>
+                <Link
+                  href="/dashboard/teams/create"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-esi-red px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-esi-red/90"
+                >
+                  Buat Tim
+                  <ArrowRight size={16} weight="bold" />
+                </Link>
+              </div>
+            </div>
+          </AnimatedCard>
+        )}
+
         {/* Celebration when all steps done and arriving via welcome link */}
         {showCelebration && (
           <AnimatedCard delay={25}>
@@ -268,31 +296,7 @@ export default function DashboardPage() {
         {/* Push notification opt-in — no-op when VAPID not configured */}
         <PushOptIn />
 
-        {/* Team Info Card — or prominent empty state */}
-        {data && !data.team && (
-          <AnimatedCard delay={50}>
-            <div className="rounded-xl border-2 border-dashed border-esi-red/30 bg-gradient-to-br from-esi-red/5 via-white to-transparent dark:from-esi-red/10 dark:via-zinc-900 p-4 sm:p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-esi-red/10">
-                  <Users size={28} weight="duotone" className="text-esi-red" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base sm:text-lg font-bold text-esi-text">Belum punya tim?</h2>
-                  <p className="mt-1 text-sm text-esi-muted">
-                    Buat tim baru atau minta captain untuk mengundang kamu sebelum turnamen mulai.
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/teams/create"
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-esi-red px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-esi-red/90"
-                >
-                  Buat Tim
-                  <ArrowRight size={16} weight="bold" />
-                </Link>
-              </div>
-            </div>
-          </AnimatedCard>
-        )}
+        {/* Team Info Card for users who already have a team */}
         {data?.team && (
           <AnimatedCard delay={75}>
             <div className="rounded-xl border border-esi-border bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-sm">

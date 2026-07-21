@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { Users, ShieldCheck, UserCircle, PencilSimple, Trash, Key, IdentificationCard } from '@phosphor-icons/react'
+import { Users, ShieldCheck, UserCircle, PencilSimple, Trash, Key, IdentificationCard, ChalkboardTeacher } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { ColumnToggle } from '@/components/shared/ColumnToggle'
 import { useColumnVisibility } from '@/hooks/useColumnVisibility'
@@ -43,6 +43,7 @@ interface UsersTableProps {
   onShowCredential: (user: User) => void
   onDelete: (user: User) => void
   onChangeRole: (user: User, newRole: UserRole) => void
+  onAssignCoach: (user: User) => void
 }
 
 export function UsersTable({
@@ -57,6 +58,7 @@ export function UsersTable({
   onShowCredential,
   onDelete,
   onChangeRole,
+  onAssignCoach,
 }: UsersTableProps) {
   const totalFiltered = totalUsers
   const { visible, toggle } = useColumnVisibility('admin-users-columns', USERS_COLUMNS_DEFAULT)
@@ -176,6 +178,15 @@ export function UsersTable({
                           title="Hapus pengguna"
                         >
                           <Trash size={15} />
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="ghost"
+                          onClick={() => onAssignCoach(user)}
+                          className="text-stone-500 dark:text-zinc-400 hover:text-emerald-600 h-7 w-7 p-0"
+                          title="Tugaskan sebagai coach"
+                        >
+                          <ChalkboardTeacher size={15} />
                         </Button>
                         <span className="mx-1 h-4 w-px bg-stone-200" />
                         {availableRoles

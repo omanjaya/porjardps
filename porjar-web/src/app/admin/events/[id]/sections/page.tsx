@@ -1046,9 +1046,9 @@ export default function EventSectionsPage() {
           </DropdownMenu>
         </div>
       ) : (
-        <div className="flex gap-4 items-start">
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
           {/* ── Left Panel: Section List ── */}
-          <div className="w-1/3 shrink-0 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
+          <div className="w-full sm:w-1/3 sm:shrink-0 rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-stone-100 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50">
               <p className="text-xs font-semibold text-stone-500 dark:text-zinc-400 uppercase tracking-wide">
                 Sections ({sections.length})

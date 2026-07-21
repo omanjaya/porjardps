@@ -166,6 +166,10 @@ export default function JoinTeamPage() {
               Tim ini sudah penuh dan tidak dapat menerima anggota baru.
             </div>
           )}
+
+          <div className="mt-4 rounded-lg border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 px-3 py-2 text-xs text-stone-500 dark:text-zinc-400">
+            Tim baru mungkin masih menunggu persetujuan admin sebelum dapat mengikuti turnamen.
+          </div>
         </div>
 
         {/* Join Form */}

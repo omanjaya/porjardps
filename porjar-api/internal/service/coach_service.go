@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/redis/go-redis/v9"
 )
 
 type SchoolDashboard struct {
@@ -34,6 +35,26 @@ type CoachService struct {
 	bracketRepo     model.BracketRepository
 	brResultRepo    model.BRLobbyResultRepository
 	submissionRepo  model.MatchSubmissionRepository
+	userRepo        model.UserRepository
+	rdb             *redis.Client
+}
+
+// SetUserRepo wires the user repository so AssignSchool can promote a
+// player/lower-role user to 'coach' when they are assigned a school.
+// Wiring needed in cmd/server/routes.go, right after NewCoachService(...):
+//
+//	coachService.SetUserRepo(userRepo)
+func (s *CoachService) SetUserRepo(userRepo model.UserRepository) {
+	s.userRepo = userRepo
+}
+
+// SetRedis wires the Redis client so AssignSchool can invalidate the
+// `user_role:<id>` cache entry used by the auth middleware (60s TTL).
+// Wiring needed in cmd/server/routes.go, right after NewCoachService(...):
+//
+//	coachService.SetRedis(rdb)
+func (s *CoachService) SetRedis(rdb *redis.Client) {
+	s.rdb = rdb
 }
 
 func NewCoachService(
@@ -69,20 +90,52 @@ func (s *CoachService) AssignSchool(ctx context.Context, coachUserID, schoolID u
 	if err != nil {
 		return apperror.Wrap(err, "check existing coach schools")
 	}
+	alreadyAssigned := false
 	for _, cs := range existing {
 		if cs.SchoolID == schoolID {
-			return apperror.Conflict("ALREADY_ASSIGNED", "Coach sudah ditugaskan ke sekolah ini")
+			alreadyAssigned = true
+			break
 		}
 	}
 
-	cs := &model.CoachSchool{
-		ID:       uuid.New(),
-		UserID:   coachUserID,
-		SchoolID: schoolID,
+	if !alreadyAssigned {
+		cs := &model.CoachSchool{
+			ID:       uuid.New(),
+			UserID:   coachUserID,
+			SchoolID: schoolID,
+		}
+
+		if err := s.coachSchoolRepo.Create(ctx, cs); err != nil {
+			return apperror.Wrap(err, "assign school to coach")
+		}
 	}
 
-	if err := s.coachSchoolRepo.Create(ctx, cs); err != nil {
-		return apperror.Wrap(err, "assign school to coach")
+	// Promote the user to role 'coach' so they can access /coach/* routes.
+	// Only promote up from player/empty — never downgrade an admin/superadmin.
+	if s.userRepo != nil {
+		user, err := s.userRepo.FindByID(ctx, coachUserID)
+		if err != nil {
+			return apperror.Wrap(err, "load user for role promotion")
+		}
+		if user == nil {
+			return apperror.NotFound("USER")
+		}
+		if user.Role == "" || user.Role == model.RolePlayer {
+			if err := s.userRepo.UpdateRole(ctx, coachUserID, model.RoleCoach); err != nil {
+				return apperror.Wrap(err, "promote user to coach role")
+			}
+			// Invalidate the cached role used by the auth middleware
+			// (`user_role:<id>`, 60s TTL) so the promotion takes effect
+			// immediately instead of waiting for the cache to expire.
+			if s.rdb != nil {
+				cacheKey := fmt.Sprintf("user_role:%s", coachUserID.String())
+				_ = s.rdb.Del(ctx, cacheKey).Err()
+			}
+		}
+	}
+
+	if alreadyAssigned {
+		return apperror.Conflict("ALREADY_ASSIGNED", "Coach sudah ditugaskan ke sekolah ini")
 	}
 
 	return nil

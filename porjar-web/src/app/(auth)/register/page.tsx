@@ -221,6 +221,9 @@ export default function RegisterPage() {
             {errors.phone && (
               <p className="text-xs text-esi-red">{errors.phone}</p>
             )}
+            <p className="text-xs text-esi-muted">
+              Digunakan admin untuk kirim info & kredensial via WhatsApp.
+            </p>
           </div>
 
           <div className="space-y-1.5">

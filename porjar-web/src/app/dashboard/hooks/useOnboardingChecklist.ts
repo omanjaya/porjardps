@@ -107,7 +107,7 @@ export function useOnboardingChecklist(
       {
         key: 'event',
         label: 'Pilih event aktif',
-        done: eventSelected || !!activeEvent,
+        done: eventSelected,
         href: activeSlug ? `/events/${activeSlug}` : '/events',
         icon: Trophy,
         cta: 'Masuk ke Event',
