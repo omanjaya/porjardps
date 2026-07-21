@@ -171,12 +171,12 @@ export default function EventLandingPage() {
   const [sections, setSections] = useState<EventSection[]>([])
 
   useEffect(() => {
-    api.get<{ total_games: number; total_schools: number; total_players: number }>('/stats').then(setStats).catch(() => {})
-    api.get<SchoolStanding[]>('/school-standings').then(d => setMedals(Array.isArray(d) ? d.slice(0, 5) : [])).catch(() => {})
+    api.get<{ total_games: number; total_schools: number; total_players: number }>(`/events/${event.id}/stats`).then(setStats).catch(() => {})
+    api.get<SchoolStanding[]>(`/school-standings?event_id=${event.id}`).then(d => setMedals(Array.isArray(d) ? d.slice(0, 5) : [])).catch(() => {})
     api.get<EventSection[]>(`/events/${event.slug}/sections`)
       .then(d => setSections(Array.isArray(d) ? d.sort((a, b) => a.sort_order - b.sort_order) : []))
       .catch(() => {})
-  }, [event.slug])
+  }, [event.slug, event.id])
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -302,10 +302,10 @@ export default function EventLandingPage() {
       {/* Quick links */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {[
-          { href: `/games`, label: 'Cabang Game', icon: Trophy },
-          { href: `/schedule`, label: 'Jadwal', icon: CalendarBlank },
-          { href: `/teams`, label: 'Tim Peserta', icon: Users },
-          { href: `/matches/live`, label: 'Live Match', icon: Lightning },
+          { href: `/events/${event.slug}/games`, label: 'Cabang Game', icon: Trophy },
+          { href: `/events/${event.slug}/schedule`, label: 'Jadwal', icon: CalendarBlank },
+          { href: `/events/${event.slug}/teams`, label: 'Tim Peserta', icon: Users },
+          { href: `/events/${event.slug}/matches/live`, label: 'Live Match', icon: Lightning },
           { href: `/leaderboards?event_id=${event.id}`, label: 'Leaderboard', icon: Medal },
           ...(isCompleted
             ? [{ href: `/events/${event.slug}/leaderboard`, label: 'Hasil Final', icon: Medal }]
@@ -328,7 +328,7 @@ export default function EventLandingPage() {
         <div className="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden">
           <div className="px-4 py-3 border-b border-stone-100 dark:border-zinc-800 flex items-center justify-between">
             <h2 className="text-sm font-bold text-stone-700 dark:text-zinc-300">Juara Umum</h2>
-            <Link href={`/schools/standings`} className="text-xs font-semibold" style={{ color: event.primary_color }}>Lihat Semua</Link>
+            <Link href={`/events/${event.slug}/schools/standings`} className="text-xs font-semibold" style={{ color: event.primary_color }}>Lihat Semua</Link>
           </div>
           <div className="divide-y divide-stone-100 dark:divide-zinc-800">
             {medals.map((s, i) => (
