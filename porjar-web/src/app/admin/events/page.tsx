@@ -32,6 +32,9 @@ import {
   Trash, Archive, Rows, UsersThree, UsersFour,
 } from '@phosphor-icons/react'
 import type { Event } from '@/types'
+import { CitywideStrip } from './components/CitywideStrip'
+import { EventHealthCard } from './components/EventHealthCard'
+import type { EventHealth } from './components/types'
 
 type EventStatus = Event['status']
 
@@ -51,11 +54,20 @@ const STATUS_VARIANT: Record<EventStatus, 'default' | 'secondary' | 'destructive
   archived: 'outline',
 }
 
+const HEALTH_REFRESH_MS = 20_000
+
 export default function AdminEventsPage() {
   const router = useRouter()
   const { isAuthenticated, isLoading: authLoading } = useAuthStore()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Event Health (command-center)
+  const [health, setHealth] = useState<EventHealth | null>(null)
+  const [healthLoading, setHealthLoading] = useState(true)
+  const [healthFailed, setHealthFailed] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -78,9 +90,34 @@ export default function AdminEventsPage() {
     }
   }, [isAuthenticated, authLoading])
 
+  const loadHealth = useCallback(async (isBackgroundRefresh: boolean) => {
+    if (!isAuthenticated || authLoading) return
+    try {
+      if (isBackgroundRefresh) setRefreshing(true)
+      const data = await api.get<EventHealth>('/admin/events/health')
+      setHealth(data)
+      setHealthFailed(false)
+      setLastUpdated(new Date())
+    } catch {
+      setHealthFailed(true)
+    } finally {
+      setHealthLoading(false)
+      setRefreshing(false)
+    }
+  }, [isAuthenticated, authLoading])
+
   useEffect(() => {
     loadEvents()
-  }, [loadEvents])
+    loadHealth(false)
+  }, [loadEvents, loadHealth])
+
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return
+    const interval = setInterval(() => {
+      loadHealth(true)
+    }, HEALTH_REFRESH_MS)
+    return () => clearInterval(interval)
+  }, [isAuthenticated, authLoading, loadHealth])
 
   if (authLoading) {
     return (
@@ -132,6 +169,7 @@ export default function AdminEventsPage() {
       clearSelection()
       setBulkConfirmOpen(false)
       await loadEvents()
+      await loadHealth(true)
     } finally {
       setBulkProcessing(false)
     }
@@ -173,6 +211,7 @@ export default function AdminEventsPage() {
       })
       toast.success('Event berhasil diarsipkan')
       await loadEvents()
+      await loadHealth(true)
     } catch {
       toast.error('Gagal mengarsipkan event')
     } finally {
@@ -184,18 +223,41 @@ export default function AdminEventsPage() {
   const allSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id))
   const someSelected = pageIds.some(id => selectedIds.includes(id)) && !allSelected
 
+  const healthById = new Map((health?.events ?? []).map(h => [h.id, h]))
+  const useCardView = !healthFailed
+
+  function lastUpdatedLabel(): string {
+    if (!lastUpdated) return ''
+    return lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  }
+
   return (
     <>
       <PageHeader
         title="Kelola Event"
         description="Buat dan kelola event turnamen esport"
         actions={
-          <Button onClick={() => router.push('/admin/events/new')} className="bg-esi-red text-white hover:bg-esi-red/90">
-            <Plus size={16} className="mr-1.5" />
-            Buat Event
-          </Button>
+          <div className="flex items-center gap-3">
+            {!healthFailed && (
+              <span className="hidden sm:flex items-center gap-1.5 text-xs text-esi-muted">
+                {refreshing
+                  ? <Spinner size={13} className="animate-spin" />
+                  : null
+                }
+                {lastUpdated ? `diperbarui ${lastUpdatedLabel()}` : ''}
+              </span>
+            )}
+            <Button onClick={() => router.push('/admin/events/new')} className="bg-esi-red text-white hover:bg-esi-red/90">
+              <Plus size={16} className="mr-1.5" />
+              Buat Event
+            </Button>
+          </div>
         }
       />
+
+      {!healthFailed && (
+        <CitywideStrip data={health?.citywide ?? null} loading={healthLoading} />
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -211,6 +273,20 @@ export default function AdminEventsPage() {
           actionLabel="Buat Event Pertama"
           onAction={() => router.push('/admin/events/new')}
         />
+      ) : useCardView ? (
+        <div className={`space-y-3 ${selectedIds.length > 0 ? 'mb-32 sm:mb-24' : ''}`}>
+          {events.map(event => (
+            <EventHealthCard
+              key={event.id}
+              event={event}
+              health={healthById.get(event.id)}
+              checked={selectedIds.includes(event.id)}
+              onToggle={() => toggleOne(event.id)}
+              archivingId={archivingId}
+              onArchive={handleArchive}
+            />
+          ))}
+        </div>
       ) : (
         <div className={`rounded-xl border border-esi-border bg-white dark:bg-zinc-900 overflow-hidden ${selectedIds.length > 0 ? 'mb-32 sm:mb-24' : ''}`}>
           <Table>

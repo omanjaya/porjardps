@@ -357,6 +357,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Event handler
 	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
+	eventHealthHandler := handler.NewEventHealthHandler(db, eventAdminRepo)
 	eventHandler.SetEventAdminRepo(eventAdminRepo)
 	eventHandler.SetPointDistributor(eventPointsService)
 
@@ -502,6 +503,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Events (multi-event)
 	eventHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, eventScopeMw)
+	eventHealthHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Event Sections
 	eventSectionHandler.RegisterRoutes(api, authMw, adminMw, eventScopeMw)
