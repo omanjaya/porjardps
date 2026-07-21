@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { api, resolveMediaUrl } from '@/lib/api'
+import { api, ApiError, resolveMediaUrl } from '@/lib/api'
 import { useAuthStore } from '@/store/auth-store'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -258,11 +258,12 @@ export function EventFormContent({ eventId }: Props) {
   async function handleSubmit() {
     if (!form.name.trim()) { toast.error('Nama event wajib diisi'); return }
     if (!form.slug.trim()) { toast.error('Slug wajib diisi'); return }
+    if (form.short_name.trim().length < 2) { toast.error('Nama Singkat wajib diisi (2-20 karakter)'); return }
 
     const payload = {
       name: form.name,
       slug: form.slug,
-      short_name: form.short_name || null,
+      short_name: form.short_name,
       description: form.description || null,
       primary_color: form.primary_color,
       secondary_color: form.secondary_color || null,
@@ -300,8 +301,13 @@ export function EventFormContent({ eventId }: Props) {
       }
       setDirty(false)
       router.push('/admin/events')
-    } catch {
-      toast.error(isEdit ? 'Gagal memperbarui event' : 'Gagal membuat event')
+    } catch (err) {
+      if (err instanceof ApiError) {
+        const fieldErr = err.details ? Object.values(err.details)[0] : null
+        toast.error(fieldErr || err.message || (isEdit ? 'Gagal memperbarui event' : 'Gagal membuat event'))
+      } else {
+        toast.error(isEdit ? 'Gagal memperbarui event' : 'Gagal membuat event')
+      }
     } finally {
       setSubmitting(false)
     }
