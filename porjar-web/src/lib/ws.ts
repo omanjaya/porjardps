@@ -11,7 +11,8 @@ const VALID_WS_TYPES: readonly string[] = [
   'score_update',
   'match_status',
   'match_complete',
-  'bracket_advance',
+  // NOTE: 'bracket_advance' removed — backend never emits this type (only
+  // 'bracket_update', see bracket_match_ops.go / bracket_generation.go).
   'bracket_update',
   'br_result_update',
   'standings_update',
@@ -19,6 +20,12 @@ const VALID_WS_TYPES: readonly string[] = [
   'spectator_count',
   'prediction_update',
   'new_submission',
+  'submission_created',
+  'submission_verified',
+  'br_submission_created',
+  'br_submission_verified',
+  'group_submission_created',
+  'group_submission_verified',
   'tournament_update',
   'team_update',
   'lobby_update',

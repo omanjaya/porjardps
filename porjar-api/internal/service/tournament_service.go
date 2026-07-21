@@ -419,6 +419,11 @@ func (s *TournamentService) RegisterTeam(ctx context.Context, tournamentID, team
 		return apperror.New("FORBIDDEN", "Hanya kapten tim yang dapat mendaftarkan tim", 403)
 	}
 
+	// Validate game matches
+	if team.GameID != tournament.GameID {
+		return apperror.BusinessRule("GAME_MISMATCH", "Game tim tidak sesuai dengan game turnamen")
+	}
+
 	// Check team has enough members
 	game, err := s.gameRepo.FindByID(ctx, team.GameID)
 	if err != nil || game == nil {

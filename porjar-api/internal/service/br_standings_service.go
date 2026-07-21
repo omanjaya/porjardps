@@ -137,6 +137,9 @@ func (s *BRService) broadcastResults(tournamentID, lobbyID uuid.UUID) {
 		slog.Error("ws broadcast br_result_update marshal error", "error", err)
 	} else {
 		s.hub.BroadcastToRoom(room, resultData)
+		// Mirror to the public global live-scores channel so public pages
+		// (matches/live, schedule, landing) receive BR result updates too.
+		s.hub.BroadcastToAll(resultData)
 	}
 
 	// Broadcast standings update
@@ -147,6 +150,9 @@ func (s *BRService) broadcastResults(tournamentID, lobbyID uuid.UUID) {
 		slog.Error("ws broadcast standings_update marshal error", "error", err)
 	} else {
 		s.hub.BroadcastToRoom(room, standingsData)
+		// Mirror to the public global live-scores channel so public pages
+		// (matches/live, schedule, landing) receive standings updates too.
+		s.hub.BroadcastToAll(standingsData)
 	}
 }
 

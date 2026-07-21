@@ -210,6 +210,19 @@ func main() {
 	eventSchedulerEventRepo := repository.NewEventRepo(db)
 	eventSchedulerTournamentRepo := repository.NewTournamentRepo(db)
 	eventScheduler := service.NewEventScheduler(eventSchedulerEventRepo, eventSchedulerTournamentRepo, hub)
+	// Distribute event points when the scheduler auto-completes tournaments by date.
+	eventScheduler.SetPointDistributor(service.NewEventPointsService(
+		repository.NewEventPointRuleRepo(db),
+		repository.NewEventTeamPointsRepo(db),
+		repository.NewEventUserPointsRepo(db),
+		repository.NewEventRegistrationRepo(db),
+		repository.NewStandingsRepo(db),
+		eventSchedulerTournamentRepo,
+		repository.NewTournamentTeamRepo(db),
+		repository.NewTeamMemberRepo(db),
+		repository.NewTeamRepo(db),
+		eventSchedulerEventRepo,
+	))
 	eventScheduler.Start(serverCtx)
 
 	// Start match reminder service (notifies players ~30 min before match)

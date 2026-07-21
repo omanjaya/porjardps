@@ -267,6 +267,21 @@ func (s *BracketService) ResetResults(ctx context.Context, tournamentID uuid.UUI
 	if err != nil {
 		return apperror.Wrap(err, "list matches after reset")
 	}
+
+	// Delete any dynamically-created grand final reset match (double elimination).
+	// It has no upstream NextMatchID linkage — it's created on-demand by
+	// CompleteMatch only when the losers bracket finalist wins the first grand
+	// final — so the generic clear above (round > 1) empties its team slots but
+	// leaves it permanently orphaned (nothing will ever repopulate it). Deleting
+	// it here is safe: CompleteMatch recreates it if the same scenario recurs.
+	for _, m := range matches {
+		if m.BracketPosition != nil && *m.BracketPosition == bracket.BracketPositionGrandFinalReset {
+			if err := s.bracketRepo.Delete(ctx, m.ID); err != nil {
+				slog.Error("failed to delete stale grand final reset match", "match_id", m.ID, "error", err)
+			}
+		}
+	}
+
 	for _, m := range matches {
 		if m.Status == "bye" && m.WinnerID != nil && m.NextMatchID != nil {
 			s.advanceWinner(ctx, m, *m.WinnerID)
@@ -368,6 +383,53 @@ func (s *BracketService) advanceToLosers(ctx context.Context, match *model.Brack
 	if nextMatch.NextMatchID != nil {
 		s.advanceWinner(ctx, nextMatch, *singleTeam)
 	}
+}
+
+// createGrandFinalReset creates the deciding "bracket reset" match (GF#2) after a
+// double elimination grand final (GF#1) is won by the losers-bracket finalist.
+// Both entrants replay: gf1WinnerID (the LB finalist, who just won GF#1) vs
+// gf1LoserID (the WB finalist, now on their first loss). The winner of this
+// match is the tournament champion — see CompleteMatch's champion auto-set
+// switch, which crowns unconditionally once this match's NextMatchID and
+// LoserNextMatchID (both nil, like any true final) are checked.
+//
+// Idempotent: if a reset match already exists for this tournament (e.g. a
+// retried request), it is left untouched instead of duplicated.
+func (s *BracketService) createGrandFinalReset(ctx context.Context, gf1 *model.BracketMatch, gf1WinnerID, gf1LoserID uuid.UUID) error {
+	existing, err := s.bracketRepo.ListByTournament(ctx, gf1.TournamentID)
+	if err != nil {
+		return apperror.Wrap(err, "list tournament matches")
+	}
+	for _, m := range existing {
+		if m.BracketPosition != nil && *m.BracketPosition == bracket.BracketPositionGrandFinalReset {
+			return nil
+		}
+	}
+
+	pos := bracket.BracketPositionGrandFinalReset
+	reset := &model.BracketMatch{
+		ID:              uuid.New(),
+		TournamentID:    gf1.TournamentID,
+		Round:           gf1.Round + 1,
+		MatchNumber:     1,
+		BracketPosition: &pos,
+		TeamAID:         &gf1WinnerID,
+		TeamBID:         &gf1LoserID,
+		Status:          "pending",
+		BestOf:          gf1.BestOf,
+	}
+
+	if err := s.bracketRepo.Create(ctx, reset); err != nil {
+		return apperror.Wrap(err, "create grand final reset match")
+	}
+
+	s.broadcastMatchUpdate(gf1.TournamentID, reset.ID, "bracket_update", map[string]interface{}{
+		"tournament_id": gf1.TournamentID.String(),
+		"action":        "grand_final_reset_created",
+		"match_id":      reset.ID.String(),
+	})
+
+	return nil
 }
 
 // advanceWinner places the winner into the next match slot.

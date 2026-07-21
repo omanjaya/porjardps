@@ -8,6 +8,24 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 )
 
+// Bracket position identifiers shared by the generator and the service layer
+// (bracket_match_ops.go / bracket_generation.go) so the two never drift apart.
+//
+// BracketPositionGrandFinalReset is deliberately NOT generated here: only
+// BracketPositionGrandFinal (the single GF match, "GF#1") is created up front so
+// that bracket size/match-count invariants (see double_elim_test.go) stay exactly
+// as before. The reset match ("GF#2") is created on-demand by
+// BracketService.CompleteMatch (in bracket_match_ops.go) only when the losers
+// bracket finalist wins GF#1 — i.e. only when a reset is actually needed. This
+// keeps the fix schema-free (no new columns, no new generation-time rows) and
+// avoids touching double_elim_test.go, which asserts fixed match counts.
+const (
+	BracketPositionWinners         = "winners"
+	BracketPositionLosers          = "losers"
+	BracketPositionGrandFinal      = "grand_final"
+	BracketPositionGrandFinalReset = "grand_final_reset"
+)
+
 // GenerateDoubleElimination creates all bracket matches for a double elimination tournament.
 // It generates a winners bracket, losers bracket, and a grand final match.
 // Returns the slice of BracketMatch structs, total number of rounds, and any error.
@@ -53,7 +71,7 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 		entryA := seedMap[pair[0]]
 		entryB := seedMap[pair[1]]
 
-		pos := "winners"
+		pos := BracketPositionWinners
 		m := &model.BracketMatch{
 			ID:              winnersIDs[wIdx],
 			TournamentID:    tournamentID,
@@ -78,7 +96,7 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 		roundMatches := make([]*model.BracketMatch, 0, roundCount)
 
 		for i := 0; i < roundCount; i++ {
-			pos := "winners"
+			pos := BracketPositionWinners
 			m := &model.BracketMatch{
 				ID:              winnersIDs[wIdx],
 				TournamentID:    tournamentID,
@@ -144,7 +162,7 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 		losersRoundNum++
 		roundMatches := make([]*model.BracketMatch, 0, count)
 		for i := 0; i < count; i++ {
-			pos := "losers"
+			pos := BracketPositionLosers
 			lID := uuid.New()
 			m := &model.BracketMatch{
 				ID:              lID,
@@ -216,7 +234,7 @@ func GenerateDoubleElimination(tournamentID uuid.UUID, entries []SeedEntry) ([]*
 	// --- Grand Final ---
 	losersRoundNum++
 	grandFinalID := uuid.New()
-	pos := "grand_final"
+	pos := BracketPositionGrandFinal
 	grandFinal := &model.BracketMatch{
 		ID:              grandFinalID,
 		TournamentID:    tournamentID,

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/bracket"
 )
 
 // UpdateMatchStatus changes the status of a match with valid transition checks.
@@ -281,6 +282,33 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		s.advanceToLosers(ctx, match, loserID)
 	}
 
+	// Grand-final "bracket reset" detection (double elimination only).
+	//
+	// The grand final match (GF#1) never has NextMatchID/LoserNextMatchID set, so
+	// without this check the generic "no path forward => eliminated" rule below
+	// would incorrectly eliminate the winners-bracket (WB) finalist on their very
+	// FIRST loss whenever the losers-bracket (LB) finalist wins GF#1.
+	//
+	// Standard double-elimination rule: the LB finalist arrives at GF#1 with
+	// exactly 1 prior loss (they must lose zero matches in the losers bracket to
+	// get there). The WB finalist arrives with 0 prior losses. So:
+	//   - If the WB finalist wins GF#1, the loser (LB finalist) already had 1 loss
+	//     -> this is their 2nd loss -> truly eliminated, champion crowned below,
+	//     exactly as before (no regression).
+	//   - If the LB finalist wins GF#1, the loser (WB finalist) had 0 prior losses
+	//     -> this is only their 1st loss -> NOT eliminated; a deciding reset match
+	//     (GF#2) is created below and champion crowning is deferred to it.
+	// This is determined from the loser's standing BEFORE it is incremented for
+	// this match, so it must be computed here, ahead of the increments.
+	isGrandFinalReset := false
+	if s.standingsRepo != nil && match.BracketPosition != nil && *match.BracketPosition == bracket.BracketPositionGrandFinal {
+		if tournament, tErr := s.tournamentRepo.FindByID(ctx, match.TournamentID); tErr == nil && tournament != nil && tournament.Format == "double_elimination" {
+			if loserStanding, sErr := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, loserID); sErr == nil && loserStanding != nil && loserStanding.Losses == 0 {
+				isGrandFinalReset = true
+			}
+		}
+	}
+
 	// Update standings atomically — IncrementBracketStats uses a single SQL
 	// INSERT ... ON CONFLICT DO UPDATE so wins/losses/matches_played are incremented
 	// without a read-modify-write race (H9 fix).
@@ -290,8 +318,9 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		}
 		// Mark loser eliminated when there is no path into a losers bracket.
 		// This is a targeted single-field UPDATE so it does not conflict with the
-		// atomic counter increment above.
-		if match.LoserNextMatchID == nil {
+		// atomic counter increment above. Skipped for a GF#1 loss that triggers a
+		// bracket reset — that loser (the WB finalist) is not eliminated yet.
+		if match.LoserNextMatchID == nil && !isGrandFinalReset {
 			standing, err := s.standingsRepo.FindByTournamentAndTeam(ctx, match.TournamentID, loserID)
 			if err == nil && standing != nil {
 				standing.IsEliminated = true
@@ -303,6 +332,15 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 
 		if err := s.standingsRepo.IncrementBracketStats(ctx, match.TournamentID, winnerID, true); err != nil {
 			slog.Error("CRITICAL: failed to increment winner standing after match completion", "match_id", matchID, "team_id", winnerID, "error", err)
+		}
+	}
+
+	// Create the deciding grand-final reset match (GF#2) now that both entrants
+	// have 1 loss each. Its winner will be crowned champion when IT completes
+	// (see the champion auto-set switch below, which excludes GF#1 in this case).
+	if isGrandFinalReset {
+		if err := s.createGrandFinalReset(ctx, match, winnerID, loserID); err != nil {
+			slog.Error("CRITICAL: failed to create grand final reset match", "match_id", matchID, "error", err)
 		}
 	}
 
@@ -370,7 +408,11 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		} else {
 			switch tournament.Format {
 			case "single_elimination", "double_elimination":
-				if match.NextMatchID == nil && match.LoserNextMatchID == nil {
+				// isGrandFinalReset guards the case where GF#1 was just won by the
+				// losers-bracket finalist: NextMatchID/LoserNextMatchID are both nil
+				// on GF#1 (same as a true final), but the champion must NOT be
+				// crowned yet — the reset match (GF#2, created above) decides it.
+				if match.NextMatchID == nil && match.LoserNextMatchID == nil && !isGrandFinalReset {
 					if err := s.tournamentSvc.SetChampion(ctx, match.TournamentID, winnerID); err != nil {
 						slog.Error("failed to auto-set tournament champion", "tournament_id", match.TournamentID, "winner_id", winnerID, "error", err)
 					}

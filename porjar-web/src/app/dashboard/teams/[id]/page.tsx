@@ -196,7 +196,7 @@ export default function TeamManagePage() {
     if (!team) return
     setRegisteringTournament(tournamentId)
     try {
-      await api.post(`/tournaments/${tournamentId}/teams`, { team_id: team.id })
+      await api.post(`/tournaments/${tournamentId}/register`, { team_id: team.id })
       await Promise.all([fetchTeam(), fetchTournaments()])
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Gagal mendaftar turnamen')

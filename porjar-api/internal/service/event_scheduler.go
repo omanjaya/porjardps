@@ -21,10 +21,11 @@ import (
 //   Tournament: registration → ongoing   when registration_end  <= now
 //   Tournament: ongoing      → completed when end_date          <= now
 type EventScheduler struct {
-	eventRepo      model.EventRepository
-	tournamentRepo model.TournamentRepository
-	hub            *ws.Hub
-	stopCh         chan struct{}
+	eventRepo        model.EventRepository
+	tournamentRepo   model.TournamentRepository
+	hub              *ws.Hub
+	stopCh           chan struct{}
+	pointDistributor PointDistributor
 }
 
 func NewEventScheduler(
@@ -37,6 +38,28 @@ func NewEventScheduler(
 		tournamentRepo: tournamentRepo,
 		hub:            hub,
 		stopCh:         make(chan struct{}),
+	}
+}
+
+// SetPointDistributor wires the event-points distributor used to award points when
+// a tournament auto-completes (via event cascade or its own end_date). Not required —
+// if unset, auto-completed tournaments simply skip point distribution (best-effort).
+func (s *EventScheduler) SetPointDistributor(pd PointDistributor) {
+	s.pointDistributor = pd
+}
+
+// distributePointsBestEffort awards event points for a newly-completed tournament.
+// Errors are logged, never fatal — matches the existing best-effort error handling
+// style used throughout the scheduler.
+func (s *EventScheduler) distributePointsBestEffort(ctx context.Context, tournamentID uuid.UUID) {
+	if s.pointDistributor == nil {
+		slog.Warn("event scheduler: point distributor not configured, skipping distribution",
+			"tournament_id", tournamentID)
+		return
+	}
+	if err := s.pointDistributor.DistributePoints(ctx, tournamentID); err != nil {
+		slog.Error("event scheduler: failed to distribute event points",
+			"tournament_id", tournamentID, "error", err)
 	}
 }
 
@@ -144,6 +167,8 @@ func (s *EventScheduler) cascadeCompleteTournaments(ctx context.Context, eventID
 		slog.Info("event scheduler: tournament cascade-completed",
 			"tournament_id", t.ID, "tournament_name", t.Name, "event_name", eventName)
 
+		s.distributePointsBestEffort(ctx, t.ID)
+
 		s.broadcastToRoom("tournament:"+t.ID.String(), map[string]interface{}{
 			"type": "tournament_update",
 			"data": map[string]interface{}{"tournament_id": t.ID.String(), "status": "completed"},
@@ -176,6 +201,10 @@ func (s *EventScheduler) autoTransitionTournaments(ctx context.Context, now time
 		}
 		slog.Info("event scheduler: tournament auto-transitioned",
 			"tournament_id", t.ID, "tournament_name", t.Name, "from", t.Status, "to", newStatus)
+
+		if newStatus == "completed" {
+			s.distributePointsBestEffort(ctx, t.ID)
+		}
 
 		s.broadcastToRoom("tournament:"+t.ID.String(), map[string]interface{}{
 			"type": "tournament_update",

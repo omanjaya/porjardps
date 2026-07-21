@@ -32,6 +32,7 @@ type AuthServiceInterface interface {
 	ResetPassword(ctx context.Context, token, newPassword string) error
 	ChangePassword(ctx context.Context, userID uuid.UUID, oldPassword, newPassword string) error
 	RecordConsent(ctx context.Context, userID uuid.UUID, ipAddress, userAgent string)
+	VerifyEmail(ctx context.Context, token string) error
 }
 
 type AuthHandler struct {
@@ -438,6 +439,25 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 
 	return response.OK(c, fiber.Map{
 		"message": "Password berhasil direset",
+	})
+}
+
+// VerifyEmail consumes an email-verification token (from the link in the
+// verification email) and marks the user's email as verified.
+func (h *AuthHandler) VerifyEmail(c *fiber.Ctx) error {
+	token := validator.TrimString(c.Params("token"))
+	if token == "" {
+		return response.Err(c, apperror.ValidationError(map[string]string{"token": "Token wajib diisi"}))
+	}
+
+	if err := h.authService.VerifyEmail(c.Context(), token); err != nil {
+		return response.HandleError(c, err)
+	}
+
+	slog.Info("email verified", "operation", "verify_email")
+
+	return response.OK(c, fiber.Map{
+		"message": "Email berhasil diverifikasi",
 	})
 }
 

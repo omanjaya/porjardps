@@ -265,6 +265,10 @@ func (s *BracketService) broadcastMatchUpdate(tournamentID uuid.UUID, matchID uu
 
 	// Broadcast to match room
 	s.hub.BroadcastToRoom(fmt.Sprintf("match:%s", matchID.String()), payload)
+
+	// Mirror to the public global live-scores channel so public pages
+	// (matches/live, schedule, landing) receive real-time updates too.
+	s.hub.BroadcastToAll(payload)
 }
 
 func isValidTransition(from, to string) bool {

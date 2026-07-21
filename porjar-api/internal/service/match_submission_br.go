@@ -286,6 +286,11 @@ func (s *MatchSubmissionService) applyApprovedBRSubmission(ctx context.Context, 
 				return fmt.Errorf("recalculate daily standings after submission approval: %w", err)
 			}
 		}
+
+		// Broadcast the updated BR results/standings so approved player
+		// submissions push live to admins (tournament room) and the public
+		// live-scores channel, matching the admin direct-entry path.
+		s.brService.broadcastResults(lobby.TournamentID, *sub.BRLobbyID)
 	}
 
 	return nil

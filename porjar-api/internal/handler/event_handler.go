@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -13,10 +14,18 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/validator"
 )
 
+// PointDistributor awards event points for a completed tournament. Satisfied by
+// service.EventPointsService (and service.PointDistributor); defined locally here to
+// avoid a handler->service import purely for an interface type.
+type PointDistributor interface {
+	DistributePoints(ctx context.Context, tournamentID uuid.UUID) error
+}
+
 type EventHandler struct {
-	eventRepo      model.EventRepository
-	tournamentRepo model.TournamentRepository
-	eventAdminRepo model.EventAdminRepository
+	eventRepo        model.EventRepository
+	tournamentRepo   model.TournamentRepository
+	eventAdminRepo   model.EventAdminRepository
+	pointDistributor PointDistributor
 }
 
 func NewEventHandler(eventRepo model.EventRepository, tournamentRepo model.TournamentRepository) *EventHandler {
@@ -25,6 +34,14 @@ func NewEventHandler(eventRepo model.EventRepository, tournamentRepo model.Tourn
 
 func (h *EventHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
 	h.eventAdminRepo = repo
+}
+
+// SetPointDistributor wires the event-points distributor used to award points when
+// this handler's event-completion cascade auto-completes child tournaments. Not
+// required to be set — if nil, distribution is skipped (best-effort, matches the
+// existing "tournament repo not available" nil-guard style below).
+func (h *EventHandler) SetPointDistributor(pd PointDistributor) {
+	h.pointDistributor = pd
 }
 
 // validEventTransitions defines allowed status transitions.
@@ -369,6 +386,22 @@ func (h *EventHandler) cascadeCompleteTournaments(c *fiber.Ctx, eventID uuid.UUI
 			continue
 		}
 		updated++
+
+		if h.pointDistributor != nil {
+			if err := h.pointDistributor.DistributePoints(c.Context(), t.ID); err != nil {
+				slog.Error("failed to distribute event points during cascade completion",
+					"event_id", eventID,
+					"tournament_id", t.ID,
+					"tournament_name", t.Name,
+					"error", err,
+				)
+			}
+		} else {
+			slog.Warn("point distributor not available for cascade completion, skipping point distribution",
+				"event_id", eventID,
+				"tournament_id", t.ID,
+			)
+		}
 	}
 
 	slog.Info("event completion cascade",

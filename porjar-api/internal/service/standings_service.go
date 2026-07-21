@@ -34,6 +34,10 @@ func (s *StandingsService) broadcastStandingsUpdate(tournamentID uuid.UUID) {
 		return
 	}
 	s.hub.BroadcastToRoom(fmt.Sprintf("tournament:%s", tournamentID.String()), payload)
+
+	// Mirror to the public global live-scores channel so public pages
+	// (matches/live, schedule, landing) receive standings updates too.
+	s.hub.BroadcastToAll(payload)
 }
 
 func NewStandingsService(
@@ -154,6 +158,9 @@ func (s *StandingsService) RecalculateBR(ctx context.Context, tournamentID uuid.
 		return apperror.Wrap(err, "update rank positions")
 	}
 
+	// Broadcast the standings change (tournament room + public live-scores)
+	s.broadcastStandingsUpdate(tournamentID)
+
 	return nil
 }
 
@@ -172,6 +179,9 @@ func (s *StandingsService) UpdateAfterBracketMatch(ctx context.Context, tourname
 	if err := s.standingsRepo.UpdateRankPositions(ctx, tournamentID, nil); err != nil {
 		return apperror.Wrap(err, "update rank positions")
 	}
+
+	// Broadcast the standings change (tournament room + public live-scores)
+	s.broadcastStandingsUpdate(tournamentID)
 
 	return nil
 }

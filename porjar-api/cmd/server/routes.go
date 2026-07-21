@@ -154,6 +154,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 		FromName:  cfg.SMTPFromName,
 	})
 	teamService.SetEmailService(emailService)
+	authService.SetEmailService(emailService)
 	tournamentService := service.NewTournamentService(tournamentRepo, tournamentTeamRepo, teamRepo, teamMemberRepo, gameRepo)
 	tournamentService.SetHub(hub)
 	tournamentService.SetSchoolRepo(schoolRepo)
@@ -333,6 +334,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Event handler
 	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
 	eventHandler.SetEventAdminRepo(eventAdminRepo)
+	eventHandler.SetPointDistributor(eventPointsService)
 
 	// Event sections handler
 	eventSectionHandler := handler.NewEventSectionHandler(eventRepo, eventSectionRepo)
@@ -400,6 +402,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	auth.Post("/logout", authHandler.Logout)
 	auth.Post("/forgot-password", forgotPasswordRL, authHandler.ForgotPassword)
 	auth.Post("/reset-password", authHandler.ResetPassword)
+	auth.Post("/verify-email/:token", authHandler.VerifyEmail)
 	auth.Get("/me", authMw, authHandler.GetProfile)
 	auth.Put("/me", authMw, authHandler.UpdateProfile)
 	auth.Put("/change-password", authMw, authHandler.ChangePassword)
