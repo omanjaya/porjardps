@@ -261,8 +261,19 @@ func (h *ImportHandler) ImportParticipants(c *fiber.Ctx) error {
 				result.Skipped++
 				continue
 			}
-			// Store encrypted password in Redis for credential card display (90 days)
+			// Store encrypted password in Redis for credential card display (90 days).
+			// The DB only ever holds the bcrypt hash, so this Redis write is the ONLY
+			// place the plaintext password survives. StoreCredPassword does not return
+			// an error, so verify the write actually landed by reading it straight back;
+			// if it didn't, do NOT silently continue — surface it as a failed row like
+			// every other per-row error in this handler, so the admin knows the
+			// credential was never stored.
 			credcrypto.StoreCredPassword(c.Context(), h.rdb, h.encKey, newUserID, plainPassword)
+			if credcrypto.GetCredPassword(c.Context(), h.rdb, h.encKey, newUserID) != plainPassword {
+				result.Errors = append(result.Errors, fmt.Sprintf("Baris %d: user '%s' dibuat tetapi gagal menyimpan password kredensial (Redis) - kredensial tidak tersedia", lineNum, nisn))
+				result.Skipped++
+				continue
+			}
 
 			if !createdUsers[nisn] {
 				createdUsers[nisn] = true

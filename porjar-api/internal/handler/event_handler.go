@@ -135,6 +135,19 @@ func (h *EventHandler) GetBySlug(c *fiber.Ctx) error {
 	if event == nil {
 		return response.NotFound(c, "Event tidak ditemukan")
 	}
+
+	// Draft/archived events are only visible to admin/superadmin; anonymous
+	// visitors (and any other role) get the same 404 as a missing event.
+	switch event.Status {
+	case "published", "ongoing", "completed":
+		// public
+	default:
+		role := middleware.GetUserRole(c)
+		if role != model.RoleAdmin && role != model.RoleSuperAdmin {
+			return response.NotFound(c, "Event tidak ditemukan")
+		}
+	}
+
 	return response.OK(c, event)
 }
 

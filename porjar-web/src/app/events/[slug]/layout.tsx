@@ -60,6 +60,7 @@ export default async function EventLayout({
     if (!res.ok) return notFound()
     const body = await res.json()
     event = body.data
+    if (!event) return notFound()
   } catch {
     return notFound()
   }

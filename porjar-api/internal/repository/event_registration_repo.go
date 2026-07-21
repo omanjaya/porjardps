@@ -75,6 +75,34 @@ func (r *eventRegistrationRepo) FindByEventAndSchool(ctx context.Context, eventI
 	return reg, nil
 }
 
+// FindByEventSchoolAndGame is the game-aware variant of FindByEventAndSchool:
+// a school may field multiple teams in the same event as long as each team
+// plays a different game. This only conflicts when the school already has a
+// team registered to the SAME game in the SAME event.
+//
+// Not part of model.EventRegistrationRepository (that interface lives in
+// internal/model/event_points.go, which this fix is not permitted to touch).
+// Callers that need this must type-assert their repo to an interface
+// declaring this method (see EventPointsService.RegisterTeam).
+func (r *eventRegistrationRepo) FindByEventSchoolAndGame(ctx context.Context, eventID, schoolID, gameID uuid.UUID) (*model.EventRegistration, error) {
+	reg := &model.EventRegistration{}
+	err := r.db.QueryRow(ctx,
+		`SELECT er.id, er.event_id, er.team_id, er.registered_at
+		 FROM event_registrations er
+		 JOIN teams t ON t.id = er.team_id
+		 WHERE er.event_id = $1 AND t.school_id = $2 AND t.game_id = $3
+		 LIMIT 1`,
+		eventID, schoolID, gameID).
+		Scan(&reg.ID, &reg.EventID, &reg.TeamID, &reg.RegisteredAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("FindByEventSchoolAndGame: %w", err)
+	}
+	return reg, nil
+}
+
 func (r *eventRegistrationRepo) ListByEvent(ctx context.Context, eventID uuid.UUID) ([]*model.EventRegistration, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, event_id, team_id, registered_at

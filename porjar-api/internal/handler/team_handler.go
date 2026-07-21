@@ -232,6 +232,15 @@ func (h *TeamHandler) List(c *fiber.Ctx) error {
 			filter.Search = &trimmed
 		}
 	}
+	// Public event-scoping: restrict to teams participating in this event's
+	// tournaments (reuses the same EXISTS-subquery filter as admin scoping
+	// below). If the caller is an authenticated admin/superadmin, the block
+	// below takes precedence and overwrites this with their allowed events.
+	if eid := c.Query("event_id"); eid != "" {
+		if id, err := uuid.Parse(eid); err == nil {
+			filter.EventIDs = []uuid.UUID{id}
+		}
+	}
 
 	// Scope admin users to teams participating in their assigned events.
 	// Only applies on authenticated admin routes (role set); the public /teams

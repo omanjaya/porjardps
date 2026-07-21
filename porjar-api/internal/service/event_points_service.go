@@ -10,6 +10,16 @@ import (
 	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 )
 
+// schoolGameRegistrationChecker is implemented by repository.eventRegistrationRepo
+// (see internal/repository/event_registration_repo.go). It is declared here,
+// rather than added to model.EventRegistrationRepository, because that
+// interface lives in internal/model/event_points.go which this fix must not
+// modify. Go's structural typing lets the concrete repo satisfy this
+// interface without any change to its own file's declared interface.
+type schoolGameRegistrationChecker interface {
+	FindByEventSchoolAndGame(ctx context.Context, eventID, schoolID, gameID uuid.UUID) (*model.EventRegistration, error)
+}
+
 type EventPointsService struct {
 	pointRuleRepo    model.EventPointRuleRepository
 	teamPointsRepo   model.EventTeamPointsRepository
@@ -224,12 +234,28 @@ func (s *EventPointsService) RegisterTeam(ctx context.Context, eventID, teamID, 
 		if team.SchoolID == nil {
 			return nil, apperror.BusinessRule("SCHOOL_REQUIRED", "Event ini mengharuskan tim terdaftar di sekolah")
 		}
-		existing, err := s.registrationRepo.FindByEventAndSchool(ctx, eventID, *team.SchoolID)
-		if err != nil {
-			return nil, apperror.Wrap(err, "check school registration")
-		}
-		if existing != nil {
-			return nil, apperror.Conflict("SCHOOL_ALREADY_REGISTERED", "Sekolah ini sudah memiliki tim yang terdaftar di event ini")
+		// Uniqueness is per (event, school, game): a school may register one
+		// team per game in an event (e.g. one ML team and one FF team), but
+		// not two teams for the same game. Prefer the game-aware check when
+		// the concrete repo supports it; otherwise fall back to the old
+		// school-wide check (which over-blocks multi-game schools) so this
+		// never silently skips the duplicate guard entirely.
+		if checker, ok := s.registrationRepo.(schoolGameRegistrationChecker); ok {
+			existing, err := checker.FindByEventSchoolAndGame(ctx, eventID, *team.SchoolID, team.GameID)
+			if err != nil {
+				return nil, apperror.Wrap(err, "check school registration")
+			}
+			if existing != nil {
+				return nil, apperror.Conflict("SCHOOL_ALREADY_REGISTERED", "Sekolah ini sudah memiliki tim yang terdaftar di game ini pada event ini")
+			}
+		} else {
+			existing, err := s.registrationRepo.FindByEventAndSchool(ctx, eventID, *team.SchoolID)
+			if err != nil {
+				return nil, apperror.Wrap(err, "check school registration")
+			}
+			if existing != nil {
+				return nil, apperror.Conflict("SCHOOL_ALREADY_REGISTERED", "Sekolah ini sudah memiliki tim yang terdaftar di event ini")
+			}
 		}
 	}
 

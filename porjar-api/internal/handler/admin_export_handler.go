@@ -54,6 +54,21 @@ func (h *AdminExportHandler) setCSVHeaders(c *fiber.Ctx, filename string) {
 // most recent team membership to keep one row per player.
 func (h *AdminExportHandler) ExportParticipants(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	// Count rows BEFORE writing any bytes to the response. If the cap is
+	// exceeded, return the 413 cleanly here — no CSV headers/body written yet.
+	// (Writing headers/rows first and erroring mid-stream would leave Fiber's
+	// error handler overwriting the body with an error string while keeping
+	// the .csv filename, producing a corrupt, data-less "csv" download.)
+	var rowCount int
+	if err := h.db.QueryRow(ctx, `SELECT COUNT(*) FROM users u WHERE u.role = 'player'`).Scan(&rowCount); err != nil {
+		slog.Error("export participants: count query failed", "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+	}
+	if rowCount > maxExportRows {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+	}
+
 	ts := time.Now().Format("20060102-150405")
 	h.setCSVHeaders(c, fmt.Sprintf("participants-%s.csv", ts))
 
@@ -94,12 +109,18 @@ func (h *AdminExportHandler) ExportParticipants(c *fiber.Ctx) error {
 		return err
 	}
 
-	rowCount := 0
+	streamedRows := 0
 	for rows.Next() {
-		rowCount++
-		if rowCount > maxExportRows {
-			slog.Warn("export participants: exceeded max rows, truncating")
-			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		streamedRows++
+		if streamedRows > maxExportRows {
+			// Defensive only: the pre-count above already rejected this request
+			// before any bytes were written. If the row count grew between the
+			// count query and the stream (TOCTOU), the CSV headers/body have
+			// already been sent, so returning a fiber.NewError here would corrupt
+			// the response instead of preventing corruption. Stop streaming and
+			// flush what has been written rather than emit a mixed error body.
+			slog.Warn("export participants: row count grew past cap mid-stream, truncating output")
+			break
 		}
 		var (
 			nisn, fullName, email, school, phone, team string
@@ -128,6 +149,17 @@ func (h *AdminExportHandler) ExportParticipants(c *fiber.Ctx) error {
 // Columns: id, name, game, school, captain, members_count, status, created_at
 func (h *AdminExportHandler) ExportTeams(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	// Count rows BEFORE writing any bytes — see ExportParticipants for why.
+	var rowCount int
+	if err := h.db.QueryRow(ctx, `SELECT COUNT(*) FROM teams t`).Scan(&rowCount); err != nil {
+		slog.Error("export teams: count query failed", "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+	}
+	if rowCount > maxExportRows {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+	}
+
 	ts := time.Now().Format("20060102-150405")
 	h.setCSVHeaders(c, fmt.Sprintf("teams-%s.csv", ts))
 
@@ -167,12 +199,14 @@ func (h *AdminExportHandler) ExportTeams(c *fiber.Ctx) error {
 		return err
 	}
 
-	rowCount := 0
+	streamedRows := 0
 	for rows.Next() {
-		rowCount++
-		if rowCount > maxExportRows {
-			slog.Warn("export teams: exceeded max rows, truncating")
-			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		streamedRows++
+		if streamedRows > maxExportRows {
+			// Defensive only (TOCTOU) — see ExportParticipants. Body already
+			// started streaming, so stop and flush instead of erroring mid-body.
+			slog.Warn("export teams: row count grew past cap mid-stream, truncating output")
+			break
 		}
 		var (
 			id, name, game, school, captain, status string
@@ -204,6 +238,17 @@ func (h *AdminExportHandler) ExportTeams(c *fiber.Ctx) error {
 // Note: schools table has no NPSN column; level/city included instead.
 func (h *AdminExportHandler) ExportSchools(c *fiber.Ctx) error {
 	ctx := c.Context()
+
+	// Count rows BEFORE writing any bytes — see ExportParticipants for why.
+	var rowCount int
+	if err := h.db.QueryRow(ctx, `SELECT COUNT(*) FROM schools s`).Scan(&rowCount); err != nil {
+		slog.Error("export schools: count query failed", "error", err)
+		return fiber.NewError(fiber.StatusInternalServerError, "Gagal mengekspor data")
+	}
+	if rowCount > maxExportRows {
+		return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+	}
+
 	ts := time.Now().Format("20060102-150405")
 	h.setCSVHeaders(c, fmt.Sprintf("schools-%s.csv", ts))
 
@@ -240,12 +285,14 @@ func (h *AdminExportHandler) ExportSchools(c *fiber.Ctx) error {
 		return err
 	}
 
-	rowCount := 0
+	streamedRows := 0
 	for rows.Next() {
-		rowCount++
-		if rowCount > maxExportRows {
-			slog.Warn("export schools: exceeded max rows, truncating")
-			return fiber.NewError(fiber.StatusRequestEntityTooLarge, "Export melebihi batas 10.000 baris")
+		streamedRows++
+		if streamedRows > maxExportRows {
+			// Defensive only (TOCTOU) — see ExportParticipants. Body already
+			// started streaming, so stop and flush instead of erroring mid-body.
+			slog.Warn("export schools: row count grew past cap mid-stream, truncating output")
+			break
 		}
 		var (
 			id, name, level, address, city, coachPhone string
