@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -237,10 +238,44 @@ func (h *AdminHandler) Dashboard(c *fiber.Ctx) error {
 }
 
 func (h *AdminHandler) RecentActivity(c *fiber.Ctx) error {
-	logs, err := h.activityLogRepo.FindRecent(c.Context(), 20)
+	// The frontend expects a paginated { items, meta } shape and sends
+	// page/per_page/action. Previously this ignored every param and returned a
+	// bare array, so the activity page always rendered empty.
+	filter := model.ActivityLogFilter{Page: 1, Limit: 20}
+	if p := c.Query("page"); p != "" {
+		if v, err := strconv.Atoi(p); err == nil && v > 0 && v <= 10000 {
+			filter.Page = v
+		}
+	}
+	if pp := c.Query("per_page"); pp != "" {
+		if v, err := strconv.Atoi(pp); err == nil && v > 0 && v <= 100 {
+			filter.Limit = v
+		}
+	}
+	if a := c.Query("action"); a != "" {
+		filter.Action = &a
+	}
+
+	logs, total, err := h.activityLogRepo.List(c.Context(), filter)
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "get recent activity"))
 	}
+	if logs == nil {
+		logs = []*model.ActivityLog{}
+	}
 
-	return response.OK(c, logs)
+	totalPages := (total + filter.Limit - 1) / filter.Limit
+	if totalPages < 1 {
+		totalPages = 1
+	}
+
+	return response.OK(c, fiber.Map{
+		"items": logs,
+		"meta": fiber.Map{
+			"page":        filter.Page,
+			"per_page":    filter.Limit,
+			"total":       total,
+			"total_pages": totalPages,
+		},
+	})
 }
