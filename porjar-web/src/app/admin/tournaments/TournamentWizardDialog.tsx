@@ -7,11 +7,25 @@ import { api } from '@/lib/api'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
 import { GAME_CONFIG } from '@/constants/games'
 import {
-  Trophy, ArrowRight, ArrowLeft, CheckCircle, GraduationCap,
+  Trophy, ArrowRight, ArrowLeft, CheckCircle, GraduationCap, CalendarBlank,
 } from '@phosphor-icons/react'
-import type { Game, GameSlug } from '@/types'
+import type { Game, GameSlug, Event } from '@/types'
+
+// Pick the most relevant event to default to: an ongoing one first, then a
+// published/upcoming one, otherwise whatever sorts first.
+function pickDefaultEvent(events: Event[]): string {
+  if (events.length === 0) return ''
+  const ongoing = events.find(e => e.status === 'ongoing')
+  if (ongoing) return ongoing.id
+  const active = events.find(e => e.status === 'published' || e.status === 'draft')
+  if (active) return active.id
+  return events[0].id
+}
 
 // ─── Game categories per tingkat ───
 const GAME_CATEGORIES = [
@@ -46,6 +60,8 @@ interface TournamentWizardDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   games: Game[]
+  events: Event[]
+  defaultEventId?: string | null
   onCreated: () => void
 }
 
@@ -53,9 +69,12 @@ export function TournamentWizardDialog({
   open,
   onOpenChange,
   games,
+  events,
+  defaultEventId,
   onCreated,
 }: TournamentWizardDialogProps) {
   const [step, setStep] = useState(1)
+  const [wizEventId, setWizEventId] = useState('')
   const [wizTingkat, setWizTingkat] = useState('')
   const [wizCategory, setWizCategory] = useState('')
   const [wizFormat, setWizFormat] = useState('single_elimination')
@@ -67,6 +86,7 @@ export function TournamentWizardDialog({
 
   function reset() {
     setStep(1)
+    setWizEventId(defaultEventId || pickDefaultEvent(events))
     setWizTingkat('')
     setWizCategory('')
     setWizFormat('single_elimination')
@@ -89,7 +109,9 @@ export function TournamentWizardDialog({
     setWizCategory(cat.label)
     setWizFormat(cat.format)
     setWizBestOf(cat.format === 'battle_royale_points' ? '1' : String(cat.bo))
-    setWizName(`${cat.label} ${wizTingkat} - ESI 2026`)
+    const ev = events.find(e => e.id === wizEventId)
+    const suffix = ev?.short_name || ev?.name || 'ESI'
+    setWizName(`${cat.label} ${wizTingkat} - ${suffix}`)
     setStep(3)
   }
 
@@ -98,10 +120,12 @@ export function TournamentWizardDialog({
     if (!cat) return
     const game = games.find(g => g.slug === cat.slug)
     if (!game) { toast.error('Game tidak ditemukan'); return }
+    if (!wizEventId) { toast.error('Pilih event terlebih dahulu'); setStep(3); return }
 
     setCreating(true)
     try {
       const result = await api.post<{ id: string }>('/admin/tournaments', {
+        event_id: wizEventId,
         name: wizName.trim(),
         game_id: game.id,
         format: wizFormat,
@@ -302,6 +326,30 @@ export function TournamentWizardDialog({
 
               <div className="space-y-4">
                 <div>
+                  <label className="mb-1.5 flex items-center gap-1.5 text-sm font-medium text-stone-700 dark:text-zinc-300">
+                    <CalendarBlank size={14} /> Event
+                  </label>
+                  {events.length === 0 ? (
+                    <p className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                      Belum ada event. Buat event dulu di menu <span className="font-semibold">Events</span> sebelum membuat turnamen.
+                    </p>
+                  ) : (
+                    <Select value={wizEventId} onValueChange={(v) => setWizEventId(v ?? '')}>
+                      <SelectTrigger className="w-full bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-stone-900 dark:text-zinc-100">
+                        <SelectValue placeholder="Pilih event..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {events.map((e) => (
+                          <SelectItem key={e.id} value={e.id} className="text-stone-900 dark:text-zinc-100">
+                            {e.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                <div>
                   <label className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-zinc-300">Nama Turnamen</label>
                   <Input
                     value={wizName}
@@ -374,7 +422,7 @@ export function TournamentWizardDialog({
                 <button onClick={() => setStep(2)} className="flex items-center gap-1 text-sm text-stone-500 dark:text-zinc-400 hover:text-esi-red transition-colors">
                   <ArrowLeft size={14} /> Kembali
                 </button>
-                <Button onClick={handleCreate} disabled={creating} className="bg-esi-red hover:bg-esi-red-dark text-white px-6">
+                <Button onClick={handleCreate} disabled={creating || !wizEventId} className="bg-esi-red hover:bg-esi-red-dark text-white px-6">
                   {creating ? 'Membuat...' : (
                     <>
                       Buat Turnamen

@@ -368,6 +368,8 @@ export default function AdminTournamentsPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         games={games}
+        events={events}
+        defaultEventId={filterEvent}
         onCreated={load}
       />
 
