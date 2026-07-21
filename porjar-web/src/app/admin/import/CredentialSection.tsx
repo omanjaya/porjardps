@@ -468,7 +468,7 @@ export function CredentialSection() {
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-esi-border">
+          <div className="overflow-x-auto rounded-lg border border-esi-border">
             <table className="w-full text-left text-sm">
               <thead className="bg-stone-800 text-white">
                 <tr>

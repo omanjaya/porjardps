@@ -11,7 +11,9 @@ interface PaletteRoute {
   href: string
   label: string
   section: string
-  roles?: Array<'admin' | 'player' | 'coach' | 'referee'>
+  roles?: Array<'admin' | 'superadmin' | 'player' | 'coach' | 'referee'>
+  /** Only reachable by superadmin (global directory/system ops). */
+  superadminOnly?: boolean
 }
 
 const ROUTES: PaletteRoute[] = [
@@ -36,9 +38,9 @@ const ROUTES: PaletteRoute[] = [
   // Admin
   { href: '/admin', label: 'Admin — Dashboard', section: 'Admin', roles: ['admin'] },
   { href: '/admin/approvals', label: 'Admin — Persetujuan', section: 'Admin', roles: ['admin'] },
-  { href: '/admin/users', label: 'Admin — Pengguna', section: 'Admin', roles: ['admin'] },
+  { href: '/admin/users', label: 'Admin — Pengguna', section: 'Admin', roles: ['admin'], superadminOnly: true },
   { href: '/admin/teams', label: 'Admin — Tim', section: 'Admin', roles: ['admin'] },
-  { href: '/admin/schools', label: 'Admin — Sekolah', section: 'Admin', roles: ['admin'] },
+  { href: '/admin/schools', label: 'Admin — Sekolah', section: 'Admin', roles: ['admin'], superadminOnly: true },
   { href: '/admin/tournaments', label: 'Admin — Turnamen', section: 'Admin', roles: ['admin'] },
   { href: '/admin/events', label: 'Admin — Event', section: 'Admin', roles: ['admin'] },
   { href: '/admin/schedules', label: 'Admin — Jadwal', section: 'Admin', roles: ['admin'] },
@@ -50,8 +52,8 @@ const ROUTES: PaletteRoute[] = [
   { href: '/admin/news', label: 'Admin — Berita', section: 'Admin', roles: ['admin'] },
   { href: '/admin/rules', label: 'Admin — Aturan', section: 'Admin', roles: ['admin'] },
   { href: '/admin/broadcast', label: 'Admin — Broadcast', section: 'Admin', roles: ['admin'] },
-  { href: '/admin/import', label: 'Admin — Import', section: 'Admin', roles: ['admin'] },
-  { href: '/admin/export', label: 'Admin — Export', section: 'Admin', roles: ['admin'] },
+  { href: '/admin/import', label: 'Admin — Import', section: 'Admin', roles: ['admin'], superadminOnly: true },
+  { href: '/admin/export', label: 'Admin — Export', section: 'Admin', roles: ['admin'], superadminOnly: true },
   { href: '/admin/webhooks', label: 'Admin — Webhook', section: 'Admin', roles: ['admin'] },
   { href: '/admin/settings', label: 'Admin — Pengaturan', section: 'Admin', roles: ['admin'] },
   { href: '/admin/site-settings', label: 'Admin — Pengaturan Situs', section: 'Admin', roles: ['admin'] },
@@ -86,8 +88,14 @@ export function CommandPalette() {
 
   const filtered = useMemo(() => {
     return ROUTES.filter((r) => {
+      // Superadmin-only routes (global directory/system ops) are hidden from scoped admins.
+      if (r.superadminOnly && role !== 'superadmin') return false
       if (r.roles && r.roles.length > 0) {
-        if (!role || !r.roles.includes(role as 'admin' | 'player' | 'coach' | 'referee')) return false
+        // superadmin can reach any 'admin' route; otherwise the role must be listed.
+        const matches =
+          (!!role && r.roles.includes(role as 'admin' | 'superadmin' | 'player' | 'coach' | 'referee')) ||
+          (role === 'superadmin' && r.roles.includes('admin'))
+        if (!matches) return false
       }
       return fuzzyScore(query, r.label) > 0 || fuzzyScore(query, r.section) > 0
     })

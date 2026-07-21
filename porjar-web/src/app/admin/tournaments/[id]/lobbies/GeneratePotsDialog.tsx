@@ -272,7 +272,7 @@ export function GeneratePotsDialog({
             <>
               {genStep === 'config' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Jumlah POT</label>
                       <Input type="number" min="1" max="20" value={genNumPots} onChange={(e) => setGenNumPots(e.target.value)} className="bg-white dark:bg-zinc-900 border-stone-300 dark:border-zinc-600 text-sm focus:border-esi-red" />
@@ -361,7 +361,7 @@ export function GeneratePotsDialog({
             <>
               {manStep === 'input' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-stone-500 dark:text-zinc-400">Jumlah POT</label>
                       <Input

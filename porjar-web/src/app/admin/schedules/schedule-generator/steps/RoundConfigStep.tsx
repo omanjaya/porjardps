@@ -23,7 +23,7 @@ export function RoundConfigStep({
       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
         Jadwal per Round <span className="text-stone-300 dark:text-zinc-600 font-normal">· jam otomatis dihitung dari round pertama tiap day</span>
       </p>
-      <div className="overflow-hidden rounded-lg border border-stone-200 dark:border-zinc-700">
+      <div className="overflow-x-auto rounded-lg border border-stone-200 dark:border-zinc-700">
         <table className="w-full text-sm">
           <thead className="bg-stone-50 dark:bg-zinc-800/50 text-xs text-stone-500 dark:text-zinc-400">
             <tr>

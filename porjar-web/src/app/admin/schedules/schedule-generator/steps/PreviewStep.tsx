@@ -47,7 +47,7 @@ export function PreviewStep({
       </div>
 
       {/* Preview table */}
-      <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-stone-200 dark:border-zinc-700">
+      <div className="max-h-[50vh] overflow-x-auto overflow-y-auto rounded-lg border border-stone-200 dark:border-zinc-700">
         <table className="w-full text-xs">
           <thead className="sticky top-0 z-10 bg-stone-50 dark:bg-zinc-800/50 text-stone-500 dark:text-zinc-400">
             <tr className="border-b border-stone-200 dark:border-zinc-700">

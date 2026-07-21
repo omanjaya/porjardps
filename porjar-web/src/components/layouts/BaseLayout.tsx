@@ -176,10 +176,9 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
           <button
             onClick={() => setSidebarOpen(true)}
             className={cn(
-              'rounded-lg p-2.5 w-10 h-10 items-center justify-center text-esi-muted hover:bg-esi-bg hover:text-esi-text lg:hidden',
-              hasBottomNav
-                ? 'hidden md:inline-flex'
-                : 'inline-flex'
+              // Always reachable below lg so player/coach (which have a 5-item bottom
+              // nav) can still open the full sidebar drawer on phones.
+              'inline-flex rounded-lg p-2.5 w-10 h-10 items-center justify-center text-esi-muted hover:bg-esi-bg hover:text-esi-text lg:hidden'
             )}
           >
             <ListIcon size={24} />

@@ -20,8 +20,8 @@ export function SettingsStep({
   breakMinStr, setBreakMinStr,
 }: Props) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <div className="col-span-2">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="col-span-full">
         <label className="mb-1.5 block text-xs font-medium text-stone-500 dark:text-zinc-400">
           Prefix Judul Jadwal
         </label>
