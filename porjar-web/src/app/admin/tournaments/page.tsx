@@ -69,7 +69,7 @@ export default function AdminTournamentsPage() {
   async function load() {
     try {
       const [tRes, g, ev] = await Promise.all([
-        api.getPaginated<Tournament[]>('/tournaments?per_page=100'),
+        api.getPaginated<Tournament[]>('/admin/tournaments?per_page=100'),
         api.get<Game[]>('/games'),
         api.get<Event[]>('/admin/events'),
       ])

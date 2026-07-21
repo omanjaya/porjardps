@@ -39,7 +39,7 @@ export function usePaginatedTeams() {
       if (statusFilter !== 'all') params.set('status', statusFilter)
 
       const [res, g, s] = await Promise.all([
-        api.getPaginated<Team[]>(`/teams?${params}`),
+        api.getPaginated<Team[]>(`/admin/teams?${params}`),
         games.length ? Promise.resolve(null) : api.get<(Game & { id: string })[]>('/games'),
         schools.length ? Promise.resolve(null) : api.getPaginated<School[]>('/schools?per_page=200'),
       ])

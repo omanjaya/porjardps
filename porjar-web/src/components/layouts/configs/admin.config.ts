@@ -48,8 +48,8 @@ export const adminConfig: LayoutConfig = {
     { label: 'Daftar Tim',     href: '/admin/approvals',   icon: ClipboardText,   section: 'Peserta' },
     { label: 'Verifikasi Skor',href: '/admin/submissions', icon: Checks },
     { label: 'Tim',            href: '/admin/teams',       icon: UsersThree },
-    { label: 'Sekolah',        href: '/admin/schools',     icon: GraduationCap },
-    { label: 'Pengguna',       href: '/admin/users',       icon: UserCircle },
+    { label: 'Sekolah',        href: '/admin/schools',     icon: GraduationCap, superadminOnly: true },
+    { label: 'Pengguna',       href: '/admin/users',       icon: UserCircle, superadminOnly: true },
 
     // ── Konten ────────────────────────────────────────────
     { label: 'Berita',         href: '/admin/news',          icon: Newspaper,  section: 'Konten' },

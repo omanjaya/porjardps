@@ -79,7 +79,14 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
   const isItemActive = (href: string) =>
     href === baseHref ? pathname === baseHref : pathname.startsWith(href)
 
-  const hasBottomNav = !!bottomNavItems && bottomNavItems.length > 0
+  const visibleNavItems = navItems.filter(
+    (item) => !item.superadminOnly || user?.role === 'superadmin'
+  )
+  const visibleBottomNavItems = (bottomNavItems ?? []).filter(
+    (item) => !item.superadminOnly || user?.role === 'superadmin'
+  )
+
+  const hasBottomNav = visibleBottomNavItems.length > 0
 
   return (
     <div className="flex min-h-[100dvh] bg-esi-bg">
@@ -120,10 +127,10 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-3">
-          {navItems.map((item, idx) => {
+          {visibleNavItems.map((item, idx) => {
             const isActive = isItemActive(item.href)
             const IconComp = item.icon
-            const showSection = item.section && (idx === 0 || item.section !== navItems[idx - 1].section)
+            const showSection = item.section && (idx === 0 || item.section !== visibleNavItems[idx - 1].section)
 
             return (
               <div key={item.href}>
@@ -233,7 +240,7 @@ export function BaseLayout({ config, children }: BaseLayoutProps) {
       {hasBottomNav && (
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-esi-border bg-white dark:bg-zinc-900 pb-[env(safe-area-inset-bottom)] lg:hidden">
           <div className="flex items-center justify-around">
-            {bottomNavItems!.map((item) => {
+            {visibleBottomNavItems.map((item) => {
               const isActive = isItemActive(item.href)
               const IconComp = item.icon
               return (

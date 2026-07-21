@@ -6,6 +6,8 @@ export interface NavItem {
   icon: Icon
   /** Section header label — rendered as a divider above this item when it changes */
   section?: string
+  /** Only visible to superadmin users */
+  superadminOnly?: boolean
 }
 
 export interface LayoutConfig {
