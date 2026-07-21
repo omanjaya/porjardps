@@ -44,8 +44,9 @@ type TeamServiceInterface interface {
 }
 
 type TeamHandler struct {
-	teamService    TeamServiceInterface
-	eventAdminRepo model.EventAdminRepository
+	teamService        TeamServiceInterface
+	eventAdminRepo     model.EventAdminRepository
+	tournamentTeamRepo model.TournamentTeamRepository
 }
 
 func NewTeamHandler(teamService *service.TeamService) *TeamHandler {
@@ -61,6 +62,14 @@ func NewTeamHandlerWithInterface(teamService TeamServiceInterface) *TeamHandler 
 // list to an admin's assigned events.
 func (h *TeamHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
 	h.eventAdminRepo = repo
+}
+
+// SetTournamentTeamRepo wires the repo used by requireTeamAccess to resolve
+// a team ID -> its tournament(s)' event ID(s), gating Approve/Reject/
+// AdminUpdate/AdminDelete/AdminAddMember. NEEDS ROUTES.GO WIRING:
+//   teamHandler.SetTournamentTeamRepo(tournamentTeamRepo)
+func (h *TeamHandler) SetTournamentTeamRepo(repo model.TournamentTeamRepository) {
+	h.tournamentTeamRepo = repo
 }
 
 func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadminMw, publicRL fiber.Handler, createRL ...fiber.Handler) {
@@ -93,16 +102,12 @@ func (h *TeamHandler) RegisterRoutes(app fiber.Router, authMw, adminMw, superadm
 	// Authenticated admin list — same handler as public /teams, but the auth
 	// context lets List() scope results to the admin's assigned events.
 	app.Get("/admin/teams", authMw, adminMw, h.List)
-	// KNOWN GAP (not fixed here — see task report): Approve/Reject/AdminUpdate/
-	// AdminDelete/AdminAddMember take a bare team ID with no in-handler event
-	// check. A team maps to event(s) only indirectly via tournament_teams, and
-	// model.TournamentTeamRepository has no "list tournaments/events for a
-	// team" method (only ListByTournament, the reverse direction) — so this
-	// handler cannot resolve team -> event without a new repo method, which is
-	// outside this task's edit scope (team_service.go / tournament.go model
-	// file). A scoped ("admin") event-admin can currently approve/reject/
-	// edit/delete/add-members-to a team belonging to another event's
-	// tournament if they know/guess its team UUID.
+	// Approve/Reject/AdminUpdate/AdminDelete/AdminAddMember take a bare team
+	// ID with no tournament/event in the URL. Each handler resolves the team
+	// to its tournament(s)' event(s) via requireTeamAccess (backed by
+	// tournamentTeamRepo.ListEventIDsByTeam) before mutating, so a scoped
+	// ("admin") event-admin can no longer act on another event's team by
+	// guessing its UUID.
 	app.Put("/admin/teams/:id/approve", authMw, adminMw, h.Approve)
 	app.Put("/admin/teams/:id/reject", authMw, adminMw, h.Reject)
 	app.Put("/admin/teams/:id", authMw, adminMw, h.AdminUpdate)
@@ -370,6 +375,9 @@ func (h *TeamHandler) Approve(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
 	}
+	if err := requireTeamAccess(c, h.eventAdminRepo, h.tournamentTeamRepo, id); err != nil {
+		return err
+	}
 
 	adminID := middleware.GetUserID(c)
 	if svcErr := h.teamService.Approve(c.Context(), id); svcErr != nil {
@@ -389,6 +397,9 @@ func (h *TeamHandler) Reject(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
+	}
+	if err := requireTeamAccess(c, h.eventAdminRepo, h.tournamentTeamRepo, id); err != nil {
+		return err
 	}
 
 	var req rejectTeamRequest
@@ -562,6 +573,9 @@ func (h *TeamHandler) AdminUpdate(c *fiber.Ctx) error {
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
 	}
+	if err := requireTeamAccess(c, h.eventAdminRepo, h.tournamentTeamRepo, id); err != nil {
+		return err
+	}
 
 	var req adminUpdateTeamRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -597,6 +611,9 @@ func (h *TeamHandler) AdminAddMember(c *fiber.Ctx) error {
 	teamID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Team ID tidak valid")
+	}
+	if err := requireTeamAccess(c, h.eventAdminRepo, h.tournamentTeamRepo, teamID); err != nil {
+		return err
 	}
 
 	var req addMemberRequest
@@ -639,6 +656,9 @@ func (h *TeamHandler) AdminDelete(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "ID tidak valid")
+	}
+	if err := requireTeamAccess(c, h.eventAdminRepo, h.tournamentTeamRepo, id); err != nil {
+		return err
 	}
 
 	if svcErr := h.teamService.AdminDelete(c.Context(), id); svcErr != nil {

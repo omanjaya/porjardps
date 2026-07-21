@@ -204,7 +204,7 @@ func generateReportPDF(report *service.TournamentReport) ([]byte, error) {
 		reportSectionTitle(pdf, marginL, contentW, "KLASEMEN")
 		pdf.Ln(2)
 
-		isBR := strings.ToLower(info.Format) == "battle_royale" || strings.ToLower(info.Format) == "br"
+		isBR := strings.HasPrefix(strings.ToLower(info.Format), "battle_royale") || strings.ToLower(info.Format) == "br"
 
 		// Define columns
 		var headers []string

@@ -11,12 +11,13 @@ import (
 )
 
 type RefereeHandler struct {
-	refereeService *service.RefereeService
-	userRepo       model.UserRepository
-	teamMemberRepo model.TeamMemberRepository
-	matchCardRepo  model.MatchCardRepository
-	tournamentRepo model.TournamentRepository
-	eventAdminRepo model.EventAdminRepository
+	refereeService        *service.RefereeService
+	userRepo              model.UserRepository
+	teamMemberRepo        model.TeamMemberRepository
+	matchCardRepo         model.MatchCardRepository
+	tournamentRepo        model.TournamentRepository
+	eventAdminRepo        model.EventAdminRepository
+	refereeAssignmentRepo model.RefereeAssignmentRepository
 }
 
 func NewRefereeHandler(refereeService *service.RefereeService, userRepo model.UserRepository, teamMemberRepo model.TeamMemberRepository) *RefereeHandler {
@@ -27,20 +28,16 @@ func NewRefereeHandler(refereeService *service.RefereeService, userRepo model.Us
 	}
 }
 
-// SetMatchCardRepo, SetTournamentRepo and SetEventAdminRepo wire the repos
-// needed to gate POST /admin/referee-assignments and POST
+// SetMatchCardRepo, SetTournamentRepo, SetEventAdminRepo and
+// SetRefereeAssignmentRepo wire the repos needed to gate POST
+// /admin/referee-assignments, DELETE /admin/referee-assignments/:id and POST
 // /admin/cards/:id/revoke, which are outside the /admin/tournaments/:id/*
 // prefix already scoped by TournamentScopeMw.
 // NEEDS ROUTES.GO WIRING:
 //   refereeHandler.SetMatchCardRepo(matchCardRepo)
 //   refereeHandler.SetTournamentRepo(tournamentRepo)
 //   refereeHandler.SetEventAdminRepo(eventAdminRepo)
-//
-// NOTE: DELETE /admin/referee-assignments/:id (UnassignReferee) is NOT
-// gated here — model.RefereeAssignmentRepository has no FindByID method,
-// only FindByReferee/FindByTournament, so there is no clean way to resolve
-// an assignment ID to its tournament from this handler without adding a
-// repo method (out of scope for this change). See report.
+//   refereeHandler.SetRefereeAssignmentRepo(refereeAssignmentRepo)
 func (h *RefereeHandler) SetMatchCardRepo(repo model.MatchCardRepository) {
 	h.matchCardRepo = repo
 }
@@ -49,6 +46,16 @@ func (h *RefereeHandler) SetTournamentRepo(repo model.TournamentRepository) {
 }
 func (h *RefereeHandler) SetEventAdminRepo(repo model.EventAdminRepository) {
 	h.eventAdminRepo = repo
+}
+
+// SetRefereeAssignmentRepo wires the repo used by UnassignReferee to resolve
+// an assignment ID -> tournament_id so it can be scope-checked via
+// requireTournamentAccess. If unset, UnassignReferee fails open (see
+// requireTournamentAccess's own nil-repo fail-open behavior) — the assignment
+// is simply not looked up and the delete proceeds unscoped, same as before
+// this change.
+func (h *RefereeHandler) SetRefereeAssignmentRepo(repo model.RefereeAssignmentRepository) {
+	h.refereeAssignmentRepo = repo
 }
 
 func (h *RefereeHandler) RegisterRoutes(api fiber.Router, authMw, refereeMw, adminMw fiber.Handler) {
@@ -321,6 +328,18 @@ func (h *RefereeHandler) UnassignReferee(c *fiber.Ctx) error {
 	assignmentID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return response.BadRequest(c, "Assignment ID tidak valid")
+	}
+
+	if h.refereeAssignmentRepo != nil {
+		assignment, findErr := h.refereeAssignmentRepo.FindByID(c.Context(), assignmentID)
+		if findErr != nil {
+			return response.HandleError(c, findErr)
+		}
+		if assignment != nil {
+			if err := requireTournamentAccess(c, h.tournamentRepo, h.eventAdminRepo, assignment.TournamentID); err != nil {
+				return err
+			}
+		}
 	}
 
 	if svcErr := h.refereeService.UnassignReferee(c.Context(), assignmentID); svcErr != nil {

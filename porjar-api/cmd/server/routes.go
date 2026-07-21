@@ -344,6 +344,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	refereeHandler.SetMatchCardRepo(matchCardRepo)
 	refereeHandler.SetTournamentRepo(tournamentRepo)
 	refereeHandler.SetEventAdminRepo(eventAdminRepo)
+	refereeHandler.SetRefereeAssignmentRepo(refereeAssignmentRepo)
 	challongeHandler.SetEventAdminRepo(eventAdminRepo)
 	// Queue and workers are still available for future use if needed:
 	_ = submissionQueue
@@ -444,6 +445,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 
 	// Phase 1 — Team, Tournament, School
 	teamHandler.SetEventAdminRepo(eventAdminRepo)
+	teamHandler.SetTournamentTeamRepo(tournamentTeamRepo)
 	teamHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, createTeamRL)
 	tournamentHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, createTournamentRL)
 	schoolHandler.SetCoachService(coachService)

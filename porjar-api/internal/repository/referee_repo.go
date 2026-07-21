@@ -105,6 +105,21 @@ func (r *refereeAssignmentRepo) Delete(ctx context.Context, id uuid.UUID) error 
 	return nil
 }
 
+func (r *refereeAssignmentRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.RefereeAssignment, error) {
+	a := &model.RefereeAssignment{}
+	err := r.db.QueryRow(ctx,
+		`SELECT id, referee_id, tournament_id, bracket_match_id, br_lobby_id, group_match_id, assigned_at
+		 FROM referee_assignments WHERE id = $1`, id).
+		Scan(&a.ID, &a.RefereeID, &a.TournamentID, &a.BracketMatchID, &a.BRLobbyID, &a.GroupMatchID, &a.AssignedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("FindByID: %w", err)
+	}
+	return a, nil
+}
+
 func (r *refereeAssignmentRepo) FindByReferee(ctx context.Context, refereeID uuid.UUID) ([]*model.RefereeAssignment, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT id, referee_id, tournament_id, bracket_match_id, br_lobby_id, group_match_id, assigned_at

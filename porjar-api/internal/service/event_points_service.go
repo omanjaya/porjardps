@@ -76,9 +76,7 @@ func (s *EventPointsService) DistributePoints(ctx context.Context, tournamentID 
 		return apperror.Wrap(err, "fetch point rules")
 	}
 	if len(rules) == 0 {
-		slog.Warn("no point rules configured for event, skipping distribution",
-			"event_id", tournament.EventID, "tournament_id", tournamentID)
-		return nil
+		return apperror.BusinessRule("NO_POINT_RULES", "Belum ada aturan poin untuk event ini — atur di Point Rules dulu")
 	}
 
 	// Build rank → points lookup

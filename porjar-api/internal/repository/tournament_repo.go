@@ -395,6 +395,34 @@ func (r *tournamentTeamRepo) ListByTournament(ctx context.Context, tournamentID 
 	return teams, nil
 }
 
+// ListEventIDsByTeam returns the distinct, non-null event_ids of every
+// tournament the given team is entered in.
+func (r *tournamentTeamRepo) ListEventIDsByTeam(ctx context.Context, teamID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT DISTINCT tr.event_id
+		 FROM tournament_teams tt
+		 JOIN tournaments tr ON tr.id = tt.tournament_id
+		 WHERE tt.team_id = $1 AND tr.event_id IS NOT NULL`, teamID)
+	if err != nil {
+		return nil, fmt.Errorf("ListEventIDsByTeam: %w", err)
+	}
+	defer rows.Close()
+
+	var eventIDs []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("ListEventIDsByTeam scan: %w", err)
+		}
+		eventIDs = append(eventIDs, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("ListEventIDsByTeam rows: %w", err)
+	}
+
+	return eventIDs, nil
+}
+
 func (r *tournamentTeamRepo) ListApprovedTeams(ctx context.Context, tournamentID uuid.UUID) ([]*model.Team, error) {
 	rows, err := r.db.Query(ctx,
 		`SELECT t.id, t.name, t.school_id, t.game_id, t.captain_user_id, t.logo_url, t.status, t.seed, t.created_at, t.updated_at

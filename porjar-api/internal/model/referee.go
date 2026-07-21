@@ -82,6 +82,7 @@ type TournamentPenaltyConfigRepository interface {
 type RefereeAssignmentRepository interface {
 	Create(ctx context.Context, a *RefereeAssignment) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	FindByID(ctx context.Context, id uuid.UUID) (*RefereeAssignment, error)
 	FindByReferee(ctx context.Context, refereeID uuid.UUID) ([]*RefereeAssignment, error)
 	FindByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*RefereeAssignment, error)
 	IsAssigned(ctx context.Context, refereeID uuid.UUID, bracketMatchID, brLobbyID, groupMatchID *uuid.UUID) (bool, error)

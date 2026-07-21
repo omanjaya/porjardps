@@ -85,10 +85,15 @@ func (s *BracketService) GenerateBracket(ctx context.Context, tournamentID uuid.
 			return 0, 0, apperror.Wrap(genErr, "generate round robin schedule")
 		}
 
-	default:
-		// Default: single_elimination
+	case "single_elimination":
 		entries = bracket.PadToPowerOfTwo(entries)
 		matches, rounds = bracket.GenerateSingleElimination(tournamentID, entries)
+
+	case "group_stage_playoff", "swiss", "multi_stage":
+		return 0, 0, apperror.BusinessRule("INVALID_FORMAT_FOR_BRACKET", "Format ini tidak menggunakan generate-bracket (gunakan grup/stage/swiss)")
+
+	default:
+		return 0, 0, apperror.BusinessRule("INVALID_FORMAT_FOR_BRACKET", "Format ini tidak menggunakan generate-bracket (gunakan grup/stage/swiss)")
 	}
 
 	// Bulk create: first pass — insert all matches without next_match references

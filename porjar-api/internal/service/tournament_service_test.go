@@ -291,6 +291,10 @@ func (m *MockTournamentTeamRepoTS) ListApprovedTeams(ctx context.Context, tourna
 	return args.Get(0).([]*model.Team), args.Error(1)
 }
 
+func (m *MockTournamentTeamRepoTS) ListEventIDsByTeam(ctx context.Context, teamID uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
 // ---- Helper ----
 
 func newTestTournamentService(

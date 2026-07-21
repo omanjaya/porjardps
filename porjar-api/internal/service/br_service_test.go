@@ -227,6 +227,10 @@ func (m *MockTournamentTeamRepository) ListApprovedTeams(ctx context.Context, to
 	return args.Get(0).([]*model.Team), args.Error(1)
 }
 
+func (m *MockTournamentTeamRepository) ListEventIDsByTeam(ctx context.Context, teamID uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
 type MockStandingsRepository struct {
 	mock.Mock
 }

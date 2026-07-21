@@ -97,4 +97,9 @@ type TournamentTeamRepository interface {
 	ListByTournament(ctx context.Context, tournamentID uuid.UUID) ([]*TournamentTeam, error)
 	ListApprovedTeams(ctx context.Context, tournamentID uuid.UUID) ([]*Team, error)
 	UpdateSeed(ctx context.Context, tournamentID, teamID uuid.UUID, seed *int) error
+	// ListEventIDsByTeam returns the distinct event_ids of every tournament
+	// the given team is entered in (via tournament_teams JOIN tournaments).
+	// Used to scope-check admin team mutations that only receive a bare team
+	// ID (no tournament/event in the URL) — see requireTeamAccess.
+	ListEventIDsByTeam(ctx context.Context, teamID uuid.UUID) ([]uuid.UUID, error)
 }

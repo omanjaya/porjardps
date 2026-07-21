@@ -86,3 +86,61 @@ func requireTournamentAccess(c *fiber.Ctx, tournamentRepo model.TournamentReposi
 	}
 	return requireEventAccess(c, eventAdminRepo, tournament.EventID)
 }
+
+// requireTeamAccess resolves teamID -> the set of event IDs of every
+// tournament the team is entered in (via TournamentTeamRepository), then
+// allows the request iff the caller (when role == "admin") is an event-admin
+// of AT LEAST ONE of those events. Superadmins and non-"admin" roles always
+// pass, matching requireEventAccess/requireTournamentAccess. If ttRepo (or
+// eventAdminRepo) is nil, it fails open — see file header.
+//
+// Edge case — a team entered in ZERO tournaments (e.g. a brand-new pending
+// team not yet registered to any tournament): ListEventIDsByTeam returns an
+// empty slice, so there is no event to check the admin against. We choose to
+// ALLOW in that case rather than hard-block, for two reasons: (1) it mirrors
+// requireTournamentAccess's own "tournament not found -> fail open" choice a
+// few lines up, keeping the two helpers consistent; and (2) it avoids a
+// footgun where a scoped event-admin can no longer act on a pending team
+// simply because its captain hasn't registered it to a tournament yet. This
+// is a deliberate, narrow widening (not a blanket fail-open): as soon as a
+// team is entered in ANY tournament, access narrows to admins of that team's
+// event(s) only.
+func requireTeamAccess(c *fiber.Ctx, eventAdminRepo model.EventAdminRepository, ttRepo model.TournamentTeamRepository, teamID uuid.UUID) error {
+	role := middleware.GetUserRole(c)
+	if role != "admin" {
+		return nil
+	}
+	if ttRepo == nil {
+		// Not wired into this handler yet — fail open (see file header).
+		return nil
+	}
+	eventIDs, err := ttRepo.ListEventIDsByTeam(c.UserContext(), teamID)
+	if err != nil {
+		return response.HandleError(c, err)
+	}
+	if len(eventIDs) == 0 {
+		// Team isn't tied to any tournament/event yet — see doc comment above.
+		return nil
+	}
+	if eventAdminRepo == nil {
+		// Not wired into this handler yet — fail open (see file header).
+		return nil
+	}
+	userID := middleware.GetUserID(c)
+	for _, eid := range eventIDs {
+		allowed, err := eventAdminRepo.IsAdminOfEvent(c.UserContext(), userID, eid)
+		if err != nil {
+			return response.HandleError(c, err)
+		}
+		if allowed {
+			return nil
+		}
+	}
+	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+		"success": false,
+		"error": fiber.Map{
+			"code":    "FORBIDDEN",
+			"message": "Kamu tidak memiliki akses ke tim ini",
+		},
+	})
+}
