@@ -509,9 +509,11 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	eventScopeMw := middleware.EventScopeMw(eventAdminRepo)
 
 	// Events (multi-event)
-	eventHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, eventScopeMw)
+	// Static /admin/events/health MUST register before eventHandler's
+	// /admin/events/:id, or Fiber matches "health" as the :id param (400).
 	eventHealthHandler.RegisterRoutes(api, authMw, adminMw)
 	eventReportHandler.RegisterRoutes(api, authMw, adminMw)
+	eventHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, eventScopeMw)
 
 	// Event Sections
 	eventSectionHandler.RegisterRoutes(api, authMw, adminMw, eventScopeMw)

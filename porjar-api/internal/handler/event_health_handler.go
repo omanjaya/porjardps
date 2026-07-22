@@ -342,7 +342,7 @@ func (h *EventHealthHandler) Overview(c *fiber.Ctx) error {
 		LEFT JOIN games g ON g.id = t.game_id
 		LEFT JOIN bracket_matches bm ON bm.tournament_id = t.id
 		WHERE t.event_id = $1
-		GROUP BY t.id
+		GROUP BY t.id, g.id
 		ORDER BY t.name ASC`, eventID)
 	if err != nil {
 		return response.HandleError(c, fmt.Errorf("event overview: list tournaments: %w", err))
