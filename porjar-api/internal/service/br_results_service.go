@@ -96,6 +96,17 @@ func (s *BRService) InputResults(ctx context.Context, lobbyID uuid.UUID, mapNumb
 		}
 	}
 
+	// Validate placements are DISTINCT within this lobby+map. Without this,
+	// two teams could both submit placement 1, each wrongly earning the
+	// placement points AND the WWCD bonus, corrupting standings.
+	seenPlacements := make(map[int]bool, len(results))
+	for _, r := range results {
+		if seenPlacements[r.Placement] {
+			return apperror.BusinessRule("DUPLICATE_PLACEMENT", "Peringkat harus unik per lobby/map")
+		}
+		seenPlacements[r.Placement] = true
+	}
+
 	// Calculate points for each result
 	var lobbyResults []*model.BRLobbyResult
 	for _, r := range results {

@@ -137,9 +137,6 @@ func (s *GroupService) recalculateStandings(ctx context.Context, groupID uuid.UU
 		}
 	}
 
-	// Head-to-head record for tiebreaker
-	h2h := make(map[uuid.UUID]map[uuid.UUID]int) // h2h[a][b] = points a earned vs b
-
 	for _, m := range matches {
 		if m.Status != "completed" || m.TeamAID == nil {
 			continue
@@ -169,31 +166,19 @@ func (s *GroupService) recalculateStandings(ctx context.Context, groupID uuid.UU
 		sb.GoalsFor += m.ScoreB
 		sb.GoalsAgainst += m.ScoreA
 
-		// Init h2h maps
-		if h2h[a] == nil {
-			h2h[a] = make(map[uuid.UUID]int)
-		}
-		if h2h[b] == nil {
-			h2h[b] = make(map[uuid.UUID]int)
-		}
-
 		if m.ScoreA > m.ScoreB {
 			sa.Wins++
 			sb.Losses++
 			sa.Points += 3
-			h2h[a][b] += 3
 		} else if m.ScoreA < m.ScoreB {
 			sb.Wins++
 			sa.Losses++
 			sb.Points += 3
-			h2h[b][a] += 3
 		} else {
 			sa.Draws++
 			sb.Draws++
 			sa.Points += 1
 			sb.Points += 1
-			h2h[a][b] += 1
-			h2h[b][a] += 1
 		}
 	}
 
@@ -203,12 +188,16 @@ func (s *GroupService) recalculateStandings(ctx context.Context, groupID uuid.UU
 		st.Points = st.Points - st.PenaltyPoints
 	}
 
-	// Sort standings: Points desc (already includes penalty deduction) -> GD desc -> GF desc -> H2H
-	// NOTE: The H2H tiebreaker below only compares two teams pairwise. For 3+ teams tied on
-	// points, GD, and GF, the sort comparator cannot correctly resolve a multi-way H2H
-	// (e.g., A beat B, B beat C, C beat A). This is acceptable for most scenarios since
-	// exact 3-way ties on points+GD+GF are extremely rare. A proper fix would require
-	// extracting tied groups and computing a mini-table among them.
+	// Sort standings: Points desc (already includes penalty deduction) -> GD desc -> GF desc.
+	// Any teams still tied after these primary criteria are resolved by resolveTiedGroup
+	// below, which builds a MINI-LEAGUE from only the matches played among the tied teams.
+	// A pairwise H2H comparator (the old approach) cannot produce a correct total order for
+	// a cyclic 3+-way tie (e.g. A beat B, B beat C, C beat A) — sort.Slice/SliceStable require
+	// a transitive "less" function, and pairwise H2H isn't transitive in that case, so the
+	// resulting order silently depended on slice/iteration order. The mini-league fixes that
+	// by scoring the tied subset as its own self-contained league, and a final stable team-ID
+	// key guarantees the overall order is always deterministic even if the mini-league itself
+	// is exactly tied (e.g. teams never played each other, or their mutual results cancel out).
 	sorted := make([]*model.GroupStanding, 0, len(stats))
 	for _, st := range stats {
 		sorted = append(sorted, st)
@@ -221,24 +210,25 @@ func (s *GroupService) recalculateStandings(ctx context.Context, groupID uuid.UU
 		if a.GoalDifference != b.GoalDifference {
 			return a.GoalDifference > b.GoalDifference
 		}
-		if a.GoalsFor != b.GoalsFor {
-			return a.GoalsFor > b.GoalsFor
-		}
-		// Total wins: breaks most 3-way ties without needing recursive H2H
-		if a.Wins != b.Wins {
-			return a.Wins > b.Wins
-		}
-		// Head-to-head: who earned more points against the other
-		h2hA := 0
-		h2hB := 0
-		if h2h[a.TeamID] != nil {
-			h2hA = h2h[a.TeamID][b.TeamID]
-		}
-		if h2h[b.TeamID] != nil {
-			h2hB = h2h[b.TeamID][a.TeamID]
-		}
-		return h2hA > h2hB
+		return a.GoalsFor > b.GoalsFor
 	})
+
+	// Find contiguous runs tied on Points/GD/GF and resolve each run
+	// independently with a mini-league (falls back to total wins, then a
+	// stable team-ID key so the order is never non-deterministic).
+	for i := 0; i < len(sorted); {
+		j := i + 1
+		for j < len(sorted) &&
+			sorted[j].Points == sorted[i].Points &&
+			sorted[j].GoalDifference == sorted[i].GoalDifference &&
+			sorted[j].GoalsFor == sorted[i].GoalsFor {
+			j++
+		}
+		if j-i > 1 {
+			resolveTiedGroup(sorted[i:j], matches)
+		}
+		i = j
+	}
 
 	// Assign rank and upsert
 	for i, st := range sorted {
@@ -249,4 +239,92 @@ func (s *GroupService) recalculateStandings(ctx context.Context, groupID uuid.UU
 	}
 
 	return nil
+}
+
+// miniLeagueStat holds a tied team's record computed using ONLY the matches
+// played among the other members of its tied group (points/GD/GF).
+type miniLeagueStat struct {
+	points int
+	gd     int
+	gf     int
+	ga     int
+}
+
+// resolveTiedGroup re-sorts a slice of standings that are already known to be
+// tied on Points/GoalDifference/GoalsFor, in place, using a mini-league among
+// only those tied teams. This correctly handles cyclic 3+-way ties (e.g. A
+// beat B, B beat C, C beat A) that a pairwise head-to-head comparator cannot,
+// since sort comparators require a transitive ordering and pairwise H2H isn't
+// transitive in a cyclic tie.
+//
+// Resolution order:
+//  1. Mini-league points (3/1/0 from matches played strictly within the tied
+//     group), then mini-league goal difference, then mini-league goals for —
+//     i.e. the standard standings criteria, but scoped to the tied subset.
+//  2. If still tied (e.g. the tied teams never played each other, or their
+//     results within the group also cancel out), total wins across all
+//     matches in the group.
+//  3. If still tied, team ID as a final stable, deterministic key so the
+//     order can never depend on map/slice iteration order or be effectively
+//     random.
+func resolveTiedGroup(tied []*model.GroupStanding, matches []*model.GroupMatch) {
+	inGroup := make(map[uuid.UUID]bool, len(tied))
+	for _, st := range tied {
+		inGroup[st.TeamID] = true
+	}
+
+	mini := make(map[uuid.UUID]*miniLeagueStat, len(tied))
+	for _, st := range tied {
+		mini[st.TeamID] = &miniLeagueStat{}
+	}
+
+	for _, m := range matches {
+		if m.Status != "completed" || m.TeamAID == nil || m.TeamBID == nil {
+			continue // BYE matches involve only one team and carry no head-to-head info
+		}
+		a, b := *m.TeamAID, *m.TeamBID
+		if !inGroup[a] || !inGroup[b] {
+			continue // only matches played between two members of the tied group count
+		}
+
+		ma, mb := mini[a], mini[b]
+		ma.gf += m.ScoreA
+		ma.ga += m.ScoreB
+		mb.gf += m.ScoreB
+		mb.ga += m.ScoreA
+
+		if m.ScoreA > m.ScoreB {
+			ma.points += 3
+		} else if m.ScoreA < m.ScoreB {
+			mb.points += 3
+		} else {
+			ma.points++
+			mb.points++
+		}
+	}
+	for _, st := range mini {
+		st.gd = st.gf - st.ga
+	}
+
+	sort.SliceStable(tied, func(i, j int) bool {
+		a, b := tied[i], tied[j]
+		ma, mb := mini[a.TeamID], mini[b.TeamID]
+
+		if ma.points != mb.points {
+			return ma.points > mb.points
+		}
+		if ma.gd != mb.gd {
+			return ma.gd > mb.gd
+		}
+		if ma.gf != mb.gf {
+			return ma.gf > mb.gf
+		}
+		if a.Wins != b.Wins {
+			return a.Wins > b.Wins
+		}
+		// Final deterministic fallback: stable team-ID ordering. This never
+		// changes between recalculations, so qualification/seeding order is
+		// always reproducible even in a fully-symmetric N-way tie.
+		return a.TeamID.String() < b.TeamID.String()
+	})
 }

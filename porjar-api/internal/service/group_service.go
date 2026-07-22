@@ -23,7 +23,12 @@ type GroupService struct {
 	submissionRepo model.MatchSubmissionRepository
 	rdb            *redis.Client
 	hub            *ws.Hub
+	tournamentSvc  *TournamentService
 }
+
+// SetTournamentService wires the tournament service so a standalone swiss
+// tournament can crown its champion (rank-1 standings) when all rounds finish.
+func (s *GroupService) SetTournamentService(t *TournamentService) { s.tournamentSvc = t }
 
 func (s *GroupService) SetHub(h *ws.Hub) { s.hub = h }
 

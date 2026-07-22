@@ -247,6 +247,9 @@ func (s *GroupService) GetSwissStatus(ctx context.Context, groupID uuid.UUID) (m
 	}
 
 	isComplete := activeCount == 0 || cfg.CurrentRound >= cfg.MaxRounds
+	if isComplete {
+		s.maybeCrownStandaloneSwissChampion(ctx, g, standings)
+	}
 
 	return map[string]interface{}{
 		"current_round":   cfg.CurrentRound,
@@ -258,6 +261,43 @@ func (s *GroupService) GetSwissStatus(ctx context.Context, groupID uuid.UUID) (m
 		"active_count":    activeCount,
 		"is_complete":     isComplete,
 	}, nil
+}
+
+// maybeCrownStandaloneSwissChampion crowns the rank-1 team as champion once a
+// STANDALONE swiss tournament (format == "swiss") has all its matches completed.
+// Swiss groups inside a multi_stage tournament advance via stage_service instead,
+// so this gates strictly on the tournament's own format. Idempotent + best-effort.
+func (s *GroupService) maybeCrownStandaloneSwissChampion(ctx context.Context, g *model.TournamentGroup, standings []*model.GroupStanding) {
+	if s.tournamentSvc == nil {
+		return
+	}
+	t, err := s.tournamentRepo.FindByID(ctx, g.TournamentID)
+	if err != nil || t == nil {
+		return
+	}
+	if t.Format != "swiss" || t.Status == "completed" {
+		return
+	}
+	// is_complete can be true while the final round's matches are still pending —
+	// require every match in the group to be completed before crowning.
+	matches, err := s.groupRepo.FindMatchesByGroup(ctx, g.ID)
+	if err != nil {
+		slog.Error("swiss champion: list matches", "group_id", g.ID, "error", err)
+		return
+	}
+	for _, m := range matches {
+		if m.Status != "completed" {
+			return
+		}
+	}
+	for _, st := range standings {
+		if st.RankPosition == 1 {
+			if err := s.tournamentSvc.SetChampion(ctx, g.TournamentID, st.TeamID); err != nil {
+				slog.Error("swiss champion: set", "tournament_id", g.TournamentID, "error", err)
+			}
+			break
+		}
+	}
 }
 
 func swissPair(active []*model.GroupStanding, playedSet map[string]bool) [][2]uuid.UUID {

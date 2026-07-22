@@ -208,6 +208,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	groupService.SetGameRepo(gameRepo)
 	groupService.SetSubmissionRepo(matchSubmissionRepo)
 	groupService.SetHub(hub)
+	groupService.SetTournamentService(tournamentService) // standalone swiss champion auto-crown
 
 	// Stage service
 	stageService := service.NewStageService(stageRepo, tournamentRepo, groupService, bracketService, tournamentTeamRepo, teamRepo)

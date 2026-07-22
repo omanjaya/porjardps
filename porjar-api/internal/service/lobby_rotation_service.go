@@ -63,18 +63,52 @@ func (s *LobbyRotationService) GenerateRotation(
 	}
 
 	// Round-robin rotation algorithm:
-	// For each round, shift team assignments by one lobby position
+	// For each round, rotate INDIVIDUAL team membership (not whole fixed
+	// blocks) through the lobby grid so that a team's lobby-mates change
+	// from round to round. We do this by cyclically shifting each team's
+	// "slot" position by `round*stride` (mod totalTeams) and then bucketing
+	// slots into lobbies of size teamsPerLobby. Because the shift is a
+	// modular addition over 0..totalTeams-1, it is always a bijection on
+	// slot indices, so every team still lands in exactly one slot (and
+	// therefore exactly one lobby) per round - no team is ever dropped or
+	// assigned twice. `stride` is deliberately NOT a multiple of
+	// teamsPerLobby: a stride that is a multiple of teamsPerLobby would
+	// shift whole blocks by whole lobbies (reproducing the original bug,
+	// where block membership never actually changes). stride=1 shifts the
+	// window by a single team each round, guaranteeing composition drifts
+	// round over round.
 	numRounds := numLobbies // each team plays in each lobby roughly once
 	var rounds [][]LobbyAssignment
+	totalTeams := len(teams)
+	stride := 1
 
 	for round := 0; round < numRounds; round++ {
 		var assignments []LobbyAssignment
+		seen := make(map[uuid.UUID]bool, totalTeams)
 		for i, team := range teams {
-			lobbyIdx := (i/teamsPerLobby + round) % numLobbies
+			slot := (i + round*stride) % totalTeams
+			lobbyIdx := slot / teamsPerLobby
+			if lobbyIdx >= numLobbies {
+				// Defensive: should be unreachable since totalSlots >= totalTeams
+				// was already validated above, but never emit an out-of-range lobby.
+				lobbyIdx = numLobbies - 1
+			}
 			assignments = append(assignments, LobbyAssignment{
 				TeamID:      team.ID,
 				LobbyNumber: lobbyIdx + 1, // 1-indexed
 			})
+			seen[team.ID] = true
+		}
+		// Invariant: every team must be assigned exactly once per round.
+		// Since we range over `teams` exactly once per round (one
+		// assignment appended per team), duplicates/omissions can only
+		// happen if `teams` itself contained a duplicate ID; guard against
+		// that defensively rather than silently producing a bad rotation.
+		if len(seen) != totalTeams {
+			return nil, apperror.Wrap(
+				fmt.Errorf("rotation invariant violated: round %d assigned %d unique teams, want %d", round, len(seen), totalTeams),
+				"generate rotation",
+			)
 		}
 		rounds = append(rounds, assignments)
 	}
@@ -220,8 +254,21 @@ func (s *LobbyRotationService) AutoAssignForDay(ctx context.Context, tournamentI
 	}
 	remainder := len(teams) % len(dayLobbies)
 
-	// Rotate based on day number (shift = dayNumber - 1)
-	shift := (dayNumber - 1) * teamsPerLobby
+	// Rotate INDIVIDUAL team membership by one team per day (shift = dayNumber - 1),
+	// NOT by whole (dayNumber-1)*teamsPerLobby blocks. The old block-shift only moved
+	// a fixed group of teams to a different lobby number each day - the group's
+	// members never changed, so the same teams always played together. Here we
+	// instead walk a single running position counter `pos` across ALL lobbies for
+	// the day (0..len(teams)-1, matching the exact partition of team counts computed
+	// above, including the remainder lobbies that get one extra team), and map each
+	// position to a team via `(pos + shift) % len(teams)`. Because shift is a modular
+	// addition over the full 0..len(teams)-1 range, this mapping is a bijection: every
+	// team index appears in exactly one position across the whole day - no team is
+	// skipped or double-booked - while which team occupies a given lobby slot still
+	// changes from day to day (shift is 1 per day, never a multiple of teamsPerLobby
+	// unless teamsPerLobby == 1, where "blocks" are meaningless anyway).
+	shift := dayNumber - 1
+	pos := 0
 
 	for lobbyIdx, lobby := range dayLobbies {
 		// Remove existing assignments
@@ -237,13 +284,24 @@ func (s *LobbyRotationService) AutoAssignForDay(ctx context.Context, tournamentI
 
 		var teamIDs []uuid.UUID
 		for j := 0; j < count; j++ {
-			teamIdx := (lobbyIdx*teamsPerLobby + j + shift) % len(teams)
+			teamIdx := (pos + shift) % len(teams)
 			teamIDs = append(teamIDs, teams[teamIdx].ID)
+			pos++
 		}
 
 		if err := s.lobbyTeamRepo.AssignTeams(ctx, lobby.ID, teamIDs); err != nil {
 			return apperror.Wrap(err, fmt.Sprintf("assign teams to lobby %s", lobby.LobbyName))
 		}
+	}
+
+	// Invariant: pos must equal len(teams) exactly - every team's slot was
+	// consumed exactly once across all lobbies for this day (no duplicates,
+	// no omissions).
+	if pos != len(teams) {
+		return apperror.Wrap(
+			fmt.Errorf("auto-assign invariant violated: consumed %d slots, want %d", pos, len(teams)),
+			"auto assign for day",
+		)
 	}
 
 	return nil
