@@ -5,8 +5,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/middleware"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
-	"github.com/porjar-denpasar/porjar-api/internal/pkg/response"
+	"github.com/porjar-denpasar/porjar-api/internal/pkg/apperror"
 )
+
+// errForbiddenEvent / errForbiddenTeam are returned (non-nil) on denial. They
+// MUST be returned as errors (never written via c.JSON here): the app's Fiber
+// ErrorHandler renders *apperror.AppError with the right 403 status+shape. This
+// makes BOTH caller patterns correct — `return requireXxx(...)` AND
+// `if err := requireXxx(...); err != nil { return err }` — whereas writing the
+// response here and returning nil silently let the second pattern continue and
+// overwrite the 403 with a 200.
+func errForbidden(msg string) error {
+	return apperror.New("FORBIDDEN", msg, fiber.StatusForbidden)
+}
 
 // This file holds small, reusable in-handler RBAC helpers used by handlers
 // whose mutating routes live OUTSIDE the `/admin/tournaments/:id/*` and
@@ -49,16 +60,10 @@ func requireEventAccess(c *fiber.Ctx, eventAdminRepo model.EventAdminRepository,
 	userID := middleware.GetUserID(c)
 	allowed, err := eventAdminRepo.IsAdminOfEvent(c.UserContext(), userID, eventID)
 	if err != nil {
-		return response.HandleError(c, err)
+		return apperror.Wrap(err, "check access")
 	}
 	if !allowed {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"success": false,
-			"error": fiber.Map{
-				"code":    "FORBIDDEN",
-				"message": "Kamu tidak memiliki akses ke event ini",
-			},
-		})
+		return errForbidden("Kamu tidak memiliki akses ke event ini")
 	}
 	return nil
 }
@@ -79,7 +84,7 @@ func requireTournamentAccess(c *fiber.Ctx, tournamentRepo model.TournamentReposi
 	}
 	tournament, err := tournamentRepo.FindByID(c.UserContext(), tournamentID)
 	if err != nil {
-		return response.HandleError(c, err)
+		return apperror.Wrap(err, "check access")
 	}
 	if tournament == nil {
 		return nil
@@ -116,7 +121,7 @@ func requireTeamAccess(c *fiber.Ctx, eventAdminRepo model.EventAdminRepository, 
 	}
 	eventIDs, err := ttRepo.ListEventIDsByTeam(c.UserContext(), teamID)
 	if err != nil {
-		return response.HandleError(c, err)
+		return apperror.Wrap(err, "check access")
 	}
 	if len(eventIDs) == 0 {
 		// Team isn't tied to any tournament/event yet — see doc comment above.
@@ -130,17 +135,11 @@ func requireTeamAccess(c *fiber.Ctx, eventAdminRepo model.EventAdminRepository, 
 	for _, eid := range eventIDs {
 		allowed, err := eventAdminRepo.IsAdminOfEvent(c.UserContext(), userID, eid)
 		if err != nil {
-			return response.HandleError(c, err)
+			return apperror.Wrap(err, "check access")
 		}
 		if allowed {
 			return nil
 		}
 	}
-	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-		"success": false,
-		"error": fiber.Map{
-			"code":    "FORBIDDEN",
-			"message": "Kamu tidak memiliki akses ke tim ini",
-		},
-	})
+	return errForbidden("Kamu tidak memiliki akses ke tim ini")
 }
