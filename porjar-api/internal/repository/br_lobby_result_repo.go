@@ -294,6 +294,48 @@ func (r *brLobbyResultRepo) FindByTeamLobbyAndMap(ctx context.Context, teamID, l
 	return res, nil
 }
 
+// UserMVPCount is the aggregate result of CountMVPsByTournament: how many
+// br_player_results rows with is_mvp = true a given user has within a
+// tournament's Battle Royale lobbies.
+type UserMVPCount struct {
+	UserID uuid.UUID
+	Count  int
+}
+
+// CountMVPsByTournament counts, per user, how many BR player-results were
+// flagged is_mvp = true across all lobbies belonging to this tournament.
+// Not part of model.BRLobbyResultRepository — added only to the concrete
+// repo (see report_service.go's local mvpCounter interface) so existing
+// hand-written mocks of that interface don't need a new method.
+func (r *brLobbyResultRepo) CountMVPsByTournament(ctx context.Context, tournamentID uuid.UUID) ([]UserMVPCount, error) {
+	rows, err := r.db.Query(ctx,
+		`SELECT pr.user_id, COUNT(*) AS mvp_count
+		 FROM br_player_results pr
+		 JOIN br_lobby_results lr ON lr.id = pr.lobby_result_id
+		 JOIN br_lobbies l ON l.id = lr.lobby_id
+		 WHERE l.tournament_id = $1 AND pr.is_mvp = true
+		 GROUP BY pr.user_id
+		 ORDER BY mvp_count DESC`, tournamentID)
+	if err != nil {
+		return nil, fmt.Errorf("CountMVPsByTournament: %w", err)
+	}
+	defer rows.Close()
+
+	var counts []UserMVPCount
+	for rows.Next() {
+		var c UserMVPCount
+		if err := rows.Scan(&c.UserID, &c.Count); err != nil {
+			return nil, fmt.Errorf("CountMVPsByTournament scan: %w", err)
+		}
+		counts = append(counts, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("CountMVPsByTournament rows: %w", err)
+	}
+
+	return counts, nil
+}
+
 // CountMapResultsByLobby returns a map of map_number -> team count for a lobby.
 // Used to determine which maps have been submitted.
 func (r *brLobbyResultRepo) CountMapResultsByLobby(ctx context.Context, lobbyID uuid.UUID) (map[int]int, error) {

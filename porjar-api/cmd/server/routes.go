@@ -268,6 +268,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Phase 7 services — webhooks & reports
 	webhookService := service.NewWebhookService(webhookRepo, webhookLogRepo)
 	reportService := service.NewReportService(tournamentRepo, tournamentTeamRepo, teamRepo, bracketRepo, matchGameRepo, standingsRepo, brLobbyRepo, brResultRepo, gameRepo, schoolRepo)
+	reportService.SetUserRepo(userRepo) // resolve MVP user_id -> name for report Top Players
 
 	// ──────────────────────────────────────────────
 	// Handlers
@@ -363,6 +364,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Event handler
 	eventHandler := handler.NewEventHandler(eventRepo, tournamentRepo)
 	eventHealthHandler := handler.NewEventHealthHandler(db, eventAdminRepo)
+	eventReportHandler := handler.NewEventReportHandler(db, eventAdminRepo)
 	eventHandler.SetEventAdminRepo(eventAdminRepo)
 	eventHandler.SetPointDistributor(eventPointsService)
 
@@ -509,6 +511,7 @@ func setupRoutes(api fiber.Router, db *pgxpool.Pool, rdb *redis.Client, hub *ws.
 	// Events (multi-event)
 	eventHandler.RegisterRoutes(api, authMw, adminMw, superadminMw, publicRL, eventScopeMw)
 	eventHealthHandler.RegisterRoutes(api, authMw, adminMw)
+	eventReportHandler.RegisterRoutes(api, authMw, adminMw)
 
 	// Event Sections
 	eventSectionHandler.RegisterRoutes(api, authMw, adminMw, eventScopeMw)

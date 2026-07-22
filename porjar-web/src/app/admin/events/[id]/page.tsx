@@ -32,6 +32,7 @@ import {
   ClipboardText,
   Plus,
   ListBullets,
+  FileText,
 } from '@phosphor-icons/react'
 import { GAME_CONFIG } from '@/constants/games'
 import type { GameSlug } from '@/types'
@@ -337,6 +338,12 @@ export default function AdminEventOverviewPage() {
           <Button variant="outline" className="border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300">
             <Plus size={14} className="mr-1.5" />
             Buat Turnamen
+          </Button>
+        </Link>
+        <Link href={`/admin/events/${params.id}/report`}>
+          <Button variant="outline" className="border-stone-300 dark:border-zinc-600 text-stone-700 dark:text-zinc-300">
+            <FileText size={14} className="mr-1.5" />
+            Laporan Event
           </Button>
         </Link>
       </div>

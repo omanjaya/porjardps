@@ -237,6 +237,24 @@ func (h *AdminHandler) Dashboard(c *fiber.Ctx) error {
 	return response.OK(c, stats)
 }
 
+// parseActivityDate tolerantly parses the "from"/"to" query params sent by the
+// admin activity page (a <input type="date"> value, e.g. "2006-01-02"), also
+// accepting a full RFC3339 timestamp. When endOfDay is true and the value is a
+// bare date (no time component), the returned time is bumped to the last
+// instant of that day so the "to" filter is inclusive of the whole day.
+func parseActivityDate(v string, endOfDay bool) (time.Time, bool) {
+	if t, err := time.Parse(time.RFC3339, v); err == nil {
+		return t, true
+	}
+	if t, err := time.Parse("2006-01-02", v); err == nil {
+		if endOfDay {
+			t = t.Add(24*time.Hour - time.Nanosecond)
+		}
+		return t, true
+	}
+	return time.Time{}, false
+}
+
 func (h *AdminHandler) RecentActivity(c *fiber.Ctx) error {
 	// The frontend expects a paginated { items, meta } shape and sends
 	// page/per_page/action. Previously this ignored every param and returned a
@@ -254,6 +272,19 @@ func (h *AdminHandler) RecentActivity(c *fiber.Ctx) error {
 	}
 	if a := c.Query("action"); a != "" {
 		filter.Action = &a
+	}
+	if u := c.Query("user"); u != "" {
+		filter.UserSearch = &u
+	}
+	if f := c.Query("from"); f != "" {
+		if t, ok := parseActivityDate(f, false); ok {
+			filter.From = &t
+		}
+	}
+	if t := c.Query("to"); t != "" {
+		if v, ok := parseActivityDate(t, true); ok {
+			filter.To = &v
+		}
 	}
 
 	logs, total, err := h.activityLogRepo.List(c.Context(), filter)

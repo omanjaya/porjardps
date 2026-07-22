@@ -24,6 +24,9 @@ type ActivityLogFilter struct {
 	Action     *string
 	EntityType *string
 	EntityID   *uuid.UUID
+	UserSearch *string
+	From       *time.Time
+	To         *time.Time
 	Page       int
 	Limit      int
 }

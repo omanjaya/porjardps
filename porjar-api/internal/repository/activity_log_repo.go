@@ -73,6 +73,21 @@ func (r *activityLogRepo) List(ctx context.Context, filter model.ActivityLogFilt
 		conditions = append(conditions, fmt.Sprintf("entity_id = $%d", argIdx))
 		args = append(args, *filter.EntityID)
 	}
+	if filter.From != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("created_at >= $%d", argIdx))
+		args = append(args, *filter.From)
+	}
+	if filter.To != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("created_at <= $%d", argIdx))
+		args = append(args, *filter.To)
+	}
+	if filter.UserSearch != nil {
+		argIdx++
+		conditions = append(conditions, fmt.Sprintf("user_id IN (SELECT id FROM users WHERE full_name ILIKE '%%'||$%d||'%%' OR email ILIKE '%%'||$%d||'%%')", argIdx, argIdx))
+		args = append(args, *filter.UserSearch)
+	}
 
 	where := ""
 	if len(conditions) > 0 {

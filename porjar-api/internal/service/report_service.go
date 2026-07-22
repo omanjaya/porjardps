@@ -8,7 +8,19 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/porjar-denpasar/porjar-api/internal/model"
+	"github.com/porjar-denpasar/porjar-api/internal/repository"
 )
+
+// mvpCounter is implemented by repository.brLobbyResultRepo (see
+// internal/repository/br_lobby_result_repo.go, method CountMVPsByTournament).
+// It is declared here, rather than added to model.BRLobbyResultRepository,
+// because that interface is implemented by hand-written mocks in
+// br_service_test.go / standings_service_test.go which this fix must not
+// touch. Go's structural typing lets the concrete repo satisfy this
+// interface without any change to its own package's declared interface.
+type mvpCounter interface {
+	CountMVPsByTournament(ctx context.Context, tournamentID uuid.UUID) ([]repository.UserMVPCount, error)
+}
 
 // ──────────────────────────────────────────────
 // Report Data Structures
@@ -133,6 +145,14 @@ type ReportService struct {
 	brResultRepo       model.BRLobbyResultRepository
 	gameRepo           model.GameRepository
 	schoolRepo         model.SchoolRepository
+	userRepo           model.UserRepository // optional; set via SetUserRepo. Resolves MVP user_id -> display name.
+}
+
+// SetUserRepo wires a user repository into ReportService so MostMVPs can
+// resolve user_id -> display name. Nil-guarded: if never called, MostMVPs
+// simply stays empty (no crash) — see GenerateTournamentReport.
+func (s *ReportService) SetUserRepo(userRepo model.UserRepository) {
+	s.userRepo = userRepo
 }
 
 func NewReportService(
@@ -251,6 +271,7 @@ func (s *ReportService) GenerateTournamentReport(ctx context.Context, tournament
 	totalDurationMins := 0
 	gameCount := 0
 	completedMatches := 0
+	mvpCounts := make(map[uuid.UUID]int) // user_id -> MVP award count, filled from bracket + BR sources below
 
 	for _, m := range matches {
 		rm := ReportMatch{
@@ -280,6 +301,9 @@ func (s *ReportService) GenerateTournamentReport(ctx context.Context, tournament
 				if g.DurationMinutes != nil {
 					totalDurationMins += *g.DurationMinutes
 					gameCount++
+				}
+				if g.MvpUserID != nil {
+					mvpCounts[*g.MvpUserID]++
 				}
 			}
 		}
@@ -387,22 +411,53 @@ func (s *ReportService) GenerateTournamentReport(ctx context.Context, tournament
 	}
 
 	// MostMVPs: MVP awards ARE recorded in the schema — match_games.mvp_user_id (per
-	// completed bracket game) and br_player_results.is_mvp (per BR player-result) — so this
-	// is not a case of missing data. What's missing is a way to turn a user_id into a
-	// display name from within ReportService: it has no user/team-roster repository
-	// dependency, and adding a name-resolving query method to the repos it already uses
-	// (MatchGameRepository / BRLobbyResultRepository) would require every other
-	// implementation of those interfaces to add the same method — including the
-	// hand-written mocks in bracket_service_test.go and br_service_test.go, which are
-	// outside the scope of this change. Rather than fabricate placeholder names, MostMVPs
-	// is left empty until a name-resolving data source (e.g. a wired-in
-	// TeamMemberRepository/UserRepository) is added to ReportService.
+	// completed bracket game, counted above in step 4's match-games loop) and
+	// br_player_results.is_mvp (per BR player-result, counted here via mvpCounter,
+	// implemented by the concrete brLobbyResultRepo — see CountMVPsByTournament in
+	// internal/repository/br_lobby_result_repo.go). The two sources key by the same
+	// mvpCounts map (user_id -> award count); a tournament is either bracket-format or
+	// BR-format so in practice only one side ever contributes, but summing both is safe
+	// and keeps this correct regardless of format.
+	if counter, ok := s.brResultRepo.(mvpCounter); ok {
+		brCounts, err := counter.CountMVPsByTournament(ctx, tournamentID)
+		if err == nil {
+			for _, c := range brCounts {
+				mvpCounts[c.UserID] += c.Count
+			}
+		}
+	}
+
+	// Resolving user_id -> display name requires s.userRepo (wired via SetUserRepo).
+	// If it hasn't been set, MostMVPs stays empty rather than crashing or showing raw
+	// UUIDs/placeholder names.
+	var mostMVPs []PlayerStat
+	if s.userRepo != nil {
+		for userID, count := range mvpCounts {
+			user, err := s.userRepo.FindByID(ctx, userID)
+			if err != nil || user == nil {
+				continue
+			}
+			mostMVPs = append(mostMVPs, PlayerStat{
+				PlayerName: user.FullName,
+				TeamName:   "",
+				Value:      count,
+			})
+		}
+		sort.Slice(mostMVPs, func(i, j int) bool { return mostMVPs[i].Value > mostMVPs[j].Value })
+		if len(mostMVPs) > topPlayersLimit {
+			mostMVPs = mostMVPs[:topPlayersLimit]
+		}
+	}
+
 	topPlayers := TopPlayersSection{
 		MostMVPs:  []PlayerStat{},
 		MostKills: []PlayerStat{},
 	}
 	if mostKills != nil {
 		topPlayers.MostKills = mostKills
+	}
+	if mostMVPs != nil {
+		topPlayers.MostMVPs = mostMVPs
 	}
 
 	// 8. Compute stats
