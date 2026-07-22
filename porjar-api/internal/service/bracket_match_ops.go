@@ -333,6 +333,13 @@ func (s *BracketService) CompleteMatch(ctx context.Context, matchID uuid.UUID, w
 		if err := s.standingsRepo.IncrementBracketStats(ctx, match.TournamentID, winnerID, true); err != nil {
 			slog.Error("CRITICAL: failed to increment winner standing after match completion", "match_id", matchID, "team_id", winnerID, "error", err)
 		}
+		// Rank bracket standings after every completion (by wins DESC via the
+		// tiebreaker in UpdateRankPositions) so rank_position is populated —
+		// otherwise bracket standings stay unranked and event point distribution
+		// (which reads rank_position) awards nothing/wrong. Best-effort.
+		if err := s.standingsRepo.UpdateRankPositions(ctx, match.TournamentID, nil); err != nil {
+			slog.Error("failed to update bracket rank positions after match completion", "match_id", matchID, "error", err)
+		}
 	}
 
 	// Create the deciding grand-final reset match (GF#2) now that both entrants
