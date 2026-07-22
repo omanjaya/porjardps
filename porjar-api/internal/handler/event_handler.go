@@ -86,6 +86,7 @@ type createEventRequest struct {
 	InstagramURL   *string `json:"instagram_url"`
 	RequiresSchool bool                       `json:"requires_school"`
 	RulesContent   []model.EventRulesSection `json:"rules_content"`
+	Rundown        []model.EventRundownItem  `json:"rundown"`
 }
 
 type updateEventRequest struct {
@@ -114,6 +115,7 @@ type updateEventRequest struct {
 	RegistrationOpen   bool       `json:"registration_open"`
 	RulesPublished     bool                      `json:"rules_published"`
 	RulesContent       []model.EventRulesSection `json:"rules_content"`
+	Rundown            []model.EventRundownItem  `json:"rundown"`
 	RequiresSchool     bool                      `json:"requires_school"`
 	SortOrder          int                       `json:"sort_order"`
 }
@@ -236,6 +238,7 @@ func (h *EventHandler) Create(c *fiber.Ctx) error {
 		InstagramURL:   req.InstagramURL,
 		RequiresSchool: req.RequiresSchool,
 		RulesContent:   req.RulesContent,
+		Rundown:        req.Rundown,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -326,6 +329,7 @@ func (h *EventHandler) Update(c *fiber.Ctx) error {
 	existing.RegistrationOpen = req.RegistrationOpen
 	existing.RulesPublished = req.RulesPublished
 	existing.RulesContent = req.RulesContent
+	existing.Rundown = req.Rundown
 	existing.RequiresSchool = req.RequiresSchool
 	existing.SortOrder = req.SortOrder
 	existing.UpdatedAt = time.Now()

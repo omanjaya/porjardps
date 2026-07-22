@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -352,12 +353,56 @@ func (s *ReportService) GenerateTournamentReport(ctx context.Context, tournament
 		})
 	}
 
-	// 7. Compute top players (MVP & kills — using match_games)
-	// For MVP: count how many times a user was selected as mvp_user_id
-	// This is a simplified approach; a full implementation would query the DB
+	// 7. Compute top players.
+	//
+	// MostKills: real data, aggregated from `standings` (already loaded above in step 6).
+	// Standings.TotalKills is computed by StandingsService.RecalculateBR directly from
+	// br_lobby_results for this tournament, so summing/sorting it here requires no extra
+	// queries. Battle Royale in this schema tracks kills per team (squad), not per
+	// individual player — there is no player-level kill breakdown reachable from the repos
+	// already wired into ReportService (br_player_results exists in the schema but its
+	// repository, BRPlayerResultRepository, is not one of ReportService's dependencies).
+	// So each entry represents a team's total kills; PlayerName/TeamName are both the team
+	// name. For non-BR tournaments, standings carry no kills (TotalKills stays 0), so those
+	// tournaments correctly yield an empty MostKills list.
+	var mostKills []PlayerStat
+	for _, st := range standings {
+		if st.TotalKills <= 0 {
+			continue
+		}
+		tn := ""
+		if t, ok := teamMap[st.TeamID]; ok {
+			tn = t.Name
+		}
+		mostKills = append(mostKills, PlayerStat{
+			PlayerName: tn,
+			TeamName:   tn,
+			Value:      st.TotalKills,
+		})
+	}
+	sort.Slice(mostKills, func(i, j int) bool { return mostKills[i].Value > mostKills[j].Value })
+	const topPlayersLimit = 5
+	if len(mostKills) > topPlayersLimit {
+		mostKills = mostKills[:topPlayersLimit]
+	}
+
+	// MostMVPs: MVP awards ARE recorded in the schema — match_games.mvp_user_id (per
+	// completed bracket game) and br_player_results.is_mvp (per BR player-result) — so this
+	// is not a case of missing data. What's missing is a way to turn a user_id into a
+	// display name from within ReportService: it has no user/team-roster repository
+	// dependency, and adding a name-resolving query method to the repos it already uses
+	// (MatchGameRepository / BRLobbyResultRepository) would require every other
+	// implementation of those interfaces to add the same method — including the
+	// hand-written mocks in bracket_service_test.go and br_service_test.go, which are
+	// outside the scope of this change. Rather than fabricate placeholder names, MostMVPs
+	// is left empty until a name-resolving data source (e.g. a wired-in
+	// TeamMemberRepository/UserRepository) is added to ReportService.
 	topPlayers := TopPlayersSection{
 		MostMVPs:  []PlayerStat{},
 		MostKills: []PlayerStat{},
+	}
+	if mostKills != nil {
+		topPlayers.MostKills = mostKills
 	}
 
 	// 8. Compute stats

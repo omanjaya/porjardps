@@ -12,6 +12,12 @@ type EventRulesSection struct {
 	Content string `json:"content"`
 }
 
+type EventRundownItem struct {
+	Time        string `json:"time"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
 type Event struct {
 	ID                 uuid.UUID  `json:"id"`
 	Slug               string     `json:"slug"`
@@ -40,6 +46,7 @@ type Event struct {
 	RegistrationOpen   bool       `json:"registration_open"`
 	RulesPublished     bool                `json:"rules_published"`
 	RulesContent       []EventRulesSection `json:"rules_content" db:"rules_content"`
+	Rundown            []EventRundownItem  `json:"rundown" db:"rundown"`
 	RequiresSchool     bool       `json:"requires_school"`
 	SortOrder          int        `json:"sort_order"`
 	CreatedAt          time.Time  `json:"created_at"`

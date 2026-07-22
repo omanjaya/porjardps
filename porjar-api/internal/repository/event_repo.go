@@ -27,18 +27,19 @@ const eventColumns = `id, slug, name, short_name, description, logo_url, banner_
 	start_date, end_date, registration_start, registration_end,
 	status, contact_phone, contact_email, instagram_url, website_url,
 	announcement, announcement_active, registration_open, rules_published,
-	requires_school, sort_order, rules_content, created_at, updated_at`
+	requires_school, sort_order, rules_content, created_at, updated_at, rundown`
 
 func scanEvent(row pgx.Row) (*model.Event, error) {
 	e := &model.Event{}
 	var rulesRaw []byte
+	var rundownRaw []byte
 	err := row.Scan(
 		&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL, &e.PosterURL,
 		&e.PrimaryColor, &e.SecondaryColor, &e.Venue, &e.City, &e.Organizer,
 		&e.StartDate, &e.EndDate, &e.RegistrationStart, &e.RegistrationEnd,
 		&e.Status, &e.ContactPhone, &e.ContactEmail, &e.InstagramURL, &e.WebsiteURL,
 		&e.Announcement, &e.AnnouncementActive, &e.RegistrationOpen, &e.RulesPublished,
-		&e.RequiresSchool, &e.SortOrder, &rulesRaw, &e.CreatedAt, &e.UpdatedAt,
+		&e.RequiresSchool, &e.SortOrder, &rulesRaw, &e.CreatedAt, &e.UpdatedAt, &rundownRaw,
 	)
 	if err != nil {
 		return e, err
@@ -51,6 +52,14 @@ func scanEvent(row pgx.Row) (*model.Event, error) {
 	if e.RulesContent == nil {
 		e.RulesContent = []model.EventRulesSection{}
 	}
+	if len(rundownRaw) > 0 {
+		if err := json.Unmarshal(rundownRaw, &e.Rundown); err != nil {
+			return e, fmt.Errorf("unmarshal rundown: %w", err)
+		}
+	}
+	if e.Rundown == nil {
+		e.Rundown = []model.EventRundownItem{}
+	}
 	return e, nil
 }
 
@@ -59,13 +68,14 @@ func scanEvents(rows pgx.Rows) ([]*model.Event, error) {
 	for rows.Next() {
 		e := &model.Event{}
 		var rulesRaw []byte
+		var rundownRaw []byte
 		if err := rows.Scan(
 			&e.ID, &e.Slug, &e.Name, &e.ShortName, &e.Description, &e.LogoURL, &e.BannerURL, &e.PosterURL,
 			&e.PrimaryColor, &e.SecondaryColor, &e.Venue, &e.City, &e.Organizer,
 			&e.StartDate, &e.EndDate, &e.RegistrationStart, &e.RegistrationEnd,
 			&e.Status, &e.ContactPhone, &e.ContactEmail, &e.InstagramURL, &e.WebsiteURL,
 			&e.Announcement, &e.AnnouncementActive, &e.RegistrationOpen, &e.RulesPublished,
-			&e.RequiresSchool, &e.SortOrder, &rulesRaw, &e.CreatedAt, &e.UpdatedAt,
+			&e.RequiresSchool, &e.SortOrder, &rulesRaw, &e.CreatedAt, &e.UpdatedAt, &rundownRaw,
 		); err != nil {
 			return nil, err
 		}
@@ -76,6 +86,14 @@ func scanEvents(rows pgx.Rows) ([]*model.Event, error) {
 		}
 		if e.RulesContent == nil {
 			e.RulesContent = []model.EventRulesSection{}
+		}
+		if len(rundownRaw) > 0 {
+			if err := json.Unmarshal(rundownRaw, &e.Rundown); err != nil {
+				return nil, fmt.Errorf("unmarshal rundown: %w", err)
+			}
+		}
+		if e.Rundown == nil {
+			e.Rundown = []model.EventRundownItem{}
 		}
 		events = append(events, e)
 	}
@@ -168,20 +186,27 @@ func (r *eventRepo) Create(ctx context.Context, e *model.Event) error {
 	if err != nil {
 		return fmt.Errorf("marshal rules_content: %w", err)
 	}
+	if e.Rundown == nil {
+		e.Rundown = []model.EventRundownItem{}
+	}
+	rundownJSON, err := json.Marshal(e.Rundown)
+	if err != nil {
+		return fmt.Errorf("marshal rundown: %w", err)
+	}
 	_, err = r.db.Exec(ctx,
 		`INSERT INTO events (id, slug, name, short_name, description, logo_url, banner_url, poster_url,
 			primary_color, secondary_color, venue, city, organizer,
 			start_date, end_date, registration_start, registration_end,
 			status, contact_phone, contact_email, instagram_url, website_url,
 			announcement, announcement_active, registration_open, rules_published,
-			requires_school, sort_order, rules_content, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)`,
+			requires_school, sort_order, rules_content, created_at, updated_at, rundown)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)`,
 		e.ID, e.Slug, e.Name, e.ShortName, e.Description, e.LogoURL, e.BannerURL, e.PosterURL,
 		e.PrimaryColor, e.SecondaryColor, e.Venue, e.City, e.Organizer,
 		e.StartDate, e.EndDate, e.RegistrationStart, e.RegistrationEnd,
 		e.Status, e.ContactPhone, e.ContactEmail, e.InstagramURL, e.WebsiteURL,
 		e.Announcement, e.AnnouncementActive, e.RegistrationOpen, e.RulesPublished,
-		e.RequiresSchool, e.SortOrder, rulesJSON, e.CreatedAt, e.UpdatedAt)
+		e.RequiresSchool, e.SortOrder, rulesJSON, e.CreatedAt, e.UpdatedAt, rundownJSON)
 	if err != nil {
 		return fmt.Errorf("Create: %w", err)
 	}
@@ -196,6 +221,13 @@ func (r *eventRepo) Update(ctx context.Context, e *model.Event) error {
 	if err != nil {
 		return fmt.Errorf("marshal rules_content: %w", err)
 	}
+	if e.Rundown == nil {
+		e.Rundown = []model.EventRundownItem{}
+	}
+	rundownJSON, err := json.Marshal(e.Rundown)
+	if err != nil {
+		return fmt.Errorf("marshal rundown: %w", err)
+	}
 	_, err = r.db.Exec(ctx,
 		`UPDATE events SET slug = $2, name = $3, short_name = $4, description = $5,
 			logo_url = $6, banner_url = $7, poster_url = $8, primary_color = $9, secondary_color = $10,
@@ -203,7 +235,7 @@ func (r *eventRepo) Update(ctx context.Context, e *model.Event) error {
 			start_date = $14, end_date = $15, registration_start = $16, registration_end = $17,
 			status = $18, contact_phone = $19, contact_email = $20, instagram_url = $21, website_url = $22,
 			announcement = $23, announcement_active = $24, registration_open = $25, rules_published = $26,
-			requires_school = $27, sort_order = $28, rules_content = $29, updated_at = $30
+			requires_school = $27, sort_order = $28, rules_content = $29, updated_at = $30, rundown = $31
 		 WHERE id = $1`,
 		e.ID, e.Slug, e.Name, e.ShortName, e.Description,
 		e.LogoURL, e.BannerURL, e.PosterURL, e.PrimaryColor, e.SecondaryColor,
@@ -211,7 +243,7 @@ func (r *eventRepo) Update(ctx context.Context, e *model.Event) error {
 		e.StartDate, e.EndDate, e.RegistrationStart, e.RegistrationEnd,
 		e.Status, e.ContactPhone, e.ContactEmail, e.InstagramURL, e.WebsiteURL,
 		e.Announcement, e.AnnouncementActive, e.RegistrationOpen, e.RulesPublished,
-		e.RequiresSchool, e.SortOrder, rulesJSON, e.UpdatedAt)
+		e.RequiresSchool, e.SortOrder, rulesJSON, e.UpdatedAt, rundownJSON)
 	if err != nil {
 		return fmt.Errorf("Update: %w", err)
 	}
