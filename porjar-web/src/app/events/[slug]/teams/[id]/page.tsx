@@ -55,7 +55,7 @@ export default function EventTeamDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-48 rounded-2xl bg-stone-100 dark:bg-zinc-800" />
         <Skeleton className="h-32 rounded-xl bg-stone-100 dark:bg-zinc-800" />
       </div>
@@ -64,13 +64,11 @@ export default function EventTeamDetailPage() {
 
   if (!team) {
     return (
-      <div className="mx-auto max-w-4xl px-4 sm:px-6 py-10">
-        <EmptyState
-          icon={Users}
-          title="Tim tidak ditemukan"
-          description="Tim yang kamu cari tidak ada atau sudah tidak aktif."
-        />
-      </div>
+      <EmptyState
+        icon={Users}
+        title="Tim tidak ditemukan"
+        description="Tim yang kamu cari tidak ada atau sudah tidak aktif."
+      />
     )
   }
 
@@ -78,7 +76,7 @@ export default function EventTeamDetailPage() {
   const members = team.members ?? []
 
   return (
-    <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10">
+    <div className="mx-auto max-w-4xl">
       {/* Back link */}
       <Link
         href={`/events/${event.slug}/teams`}

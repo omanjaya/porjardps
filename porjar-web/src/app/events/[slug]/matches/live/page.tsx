@@ -87,7 +87,7 @@ export default function EventLiveMatchesPage() {
                 <span className="font-bold text-stone-800 dark:text-zinc-100 flex-1 truncate">
                   {m.team_a_name ?? 'TBD'}
                 </span>
-                <span className="text-2xl font-black tabular-nums" style={{ color: event.primary_color }}>
+                <span className="shrink-0 text-2xl font-black tabular-nums" style={{ color: event.primary_color }}>
                   {m.score_a ?? 0} - {m.score_b ?? 0}
                 </span>
                 <span className="font-bold text-stone-800 dark:text-zinc-100 flex-1 truncate text-right">

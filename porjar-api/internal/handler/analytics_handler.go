@@ -128,8 +128,23 @@ func (h *AnalyticsHandler) GetAnalytics(c *fiber.Ctx) error {
 		daysBack = 30
 	}
 
+	// Optional event scoping: ?event_id=<uuid> restricts the main aggregates
+	// (players/teams/matches, tournament progress) to that event's tournaments.
+	// Absent/empty means the global view, unchanged from before.
+	var eventIDPtr *uuid.UUID
+	var eventIDs []uuid.UUID // non-nil (even single-element) signals "restrict" to repos that support EventIDs
+	eventIDParam := c.Query("event_id", "")
+	if eventIDParam != "" {
+		parsed, err := uuid.Parse(eventIDParam)
+		if err != nil {
+			return response.BadRequest(c, "event_id tidak valid")
+		}
+		eventIDPtr = &parsed
+		eventIDs = []uuid.UUID{parsed}
+	}
+
 	// Try Redis cache first
-	cacheKey := fmt.Sprintf("%s:%s", analyticsCacheKey, rangeParam)
+	cacheKey := fmt.Sprintf("%s:%s:%s", analyticsCacheKey, rangeParam, eventIDParam)
 	if h.redis != nil {
 		if cached, err := h.redis.Get(ctx, cacheKey).Bytes(); err == nil {
 			var resp analyticsResponse
@@ -141,28 +156,29 @@ func (h *AnalyticsHandler) GetAnalytics(c *fiber.Ctx) error {
 
 	startDate := time.Now().AddDate(0, 0, -daysBack)
 
-	// 1. Total players (users with role "player")
+	// 1. Total players (users with role "player"), scoped to the event's
+	// tournaments via team membership when event_id is set.
 	playerRole := model.RolePlayer
-	_, totalPlayers, err := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, Page: 1, Limit: 1})
+	_, totalPlayers, err := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, EventIDs: eventIDs, Page: 1, Limit: 1})
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "count players"))
 	}
 
-	// 2. Total teams — fetch all at once to reuse for buildTopSchools
-	allTeams, totalTeams, err := h.teamRepo.List(ctx, model.TeamFilter{Page: 1, Limit: 10000})
+	// 2. Total teams — fetch all at once to reuse for buildTopSchools/buildTeamsByGame
+	allTeams, totalTeams, err := h.teamRepo.List(ctx, model.TeamFilter{EventIDs: eventIDs, Page: 1, Limit: 10000})
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "count teams"))
 	}
 
 	// 3. Active tournaments
 	activeStatus := "active"
-	_, activeCount, err := h.tournamentRepo.List(ctx, model.TournamentFilter{Status: &activeStatus, Page: 1, Limit: 100})
+	_, activeCount, err := h.tournamentRepo.List(ctx, model.TournamentFilter{Status: &activeStatus, EventID: eventIDPtr, Page: 1, Limit: 100})
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "list active tournaments"))
 	}
 
 	// Also get all tournaments for progress calculation
-	allTournaments, _, err := h.tournamentRepo.List(ctx, model.TournamentFilter{Page: 1, Limit: 100})
+	allTournaments, _, err := h.tournamentRepo.List(ctx, model.TournamentFilter{EventID: eventIDPtr, Page: 1, Limit: 100})
 	if err != nil {
 		return response.HandleError(c, apperror.Wrap(err, "list all tournaments"))
 	}
@@ -171,16 +187,17 @@ func (h *AnalyticsHandler) GetAnalytics(c *fiber.Ctx) error {
 	progressData, totalMatches := h.buildTournamentProgressAndCount(ctx, allTournaments)
 
 	// 5. Registrations by date — aggregate team created_at dates
-	regByDate := h.buildRegistrationsByDate(ctx, startDate, daysBack)
+	regByDate := h.buildRegistrationsByDate(ctx, startDate, daysBack, eventIDs)
 
-	// 6. Teams by game
-	teamsByGameData := h.buildTeamsByGame(ctx)
+	// 6. Teams by game — scoped from allTeams (already event-filtered) when
+	// event_id is set; otherwise the original global per-game count query.
+	teamsByGameData := h.buildTeamsByGame(ctx, eventIDPtr, allTeams)
 
-	// 7. Top schools — uses pre-fetched teams
+	// 7. Top schools — uses pre-fetched teams (already event-filtered)
 	topSchoolsData := h.buildTopSchools(ctx, allTeams)
 
-	// 9. Match heatmap from schedules
-	heatmapData := h.buildMatchHeatmap(ctx)
+	// 9. Match heatmap from schedules, scoped to the event's tournaments when set
+	heatmapData := h.buildMatchHeatmap(ctx, eventIDs)
 
 	resp := analyticsResponse{
 		TotalPlayers:        totalPlayers,
@@ -204,13 +221,13 @@ func (h *AnalyticsHandler) GetAnalytics(c *fiber.Ctx) error {
 	return response.OK(c, resp)
 }
 
-func (h *AnalyticsHandler) buildRegistrationsByDate(ctx context.Context, startDate time.Time, daysBack int) []registrationByDate {
-	// Fetch all teams with generous limit
-	teams, _, _ := h.teamRepo.List(ctx, model.TeamFilter{Page: 1, Limit: 10000})
+func (h *AnalyticsHandler) buildRegistrationsByDate(ctx context.Context, startDate time.Time, daysBack int, eventIDs []uuid.UUID) []registrationByDate {
+	// Fetch all teams with generous limit, scoped to the event when set
+	teams, _, _ := h.teamRepo.List(ctx, model.TeamFilter{EventIDs: eventIDs, Page: 1, Limit: 10000})
 
-	// Fetch all players
+	// Fetch all players, scoped to the event when set
 	playerRole := model.RolePlayer
-	users, _, _ := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, Page: 1, Limit: 10000})
+	users, _, _ := h.userRepo.List(ctx, model.UserFilter{Role: &playerRole, EventIDs: eventIDs, Page: 1, Limit: 10000})
 
 	// Build date buckets
 	result := make([]registrationByDate, 0, daysBack)
@@ -239,10 +256,29 @@ func (h *AnalyticsHandler) buildRegistrationsByDate(ctx context.Context, startDa
 	return result
 }
 
-func (h *AnalyticsHandler) buildTeamsByGame(ctx context.Context) []teamsByGame {
+// buildTeamsByGame returns team counts per game. When eventID is set,
+// CountByGame can't be scoped to an event (it's a flat COUNT(*) WHERE game_id
+// query with no tournament join), so counts are instead derived in-memory
+// from allTeams — which the caller already fetched with EventIDs filtering,
+// making the result correctly event-scoped without a query rewrite.
+func (h *AnalyticsHandler) buildTeamsByGame(ctx context.Context, eventID *uuid.UUID, allTeams []*model.Team) []teamsByGame {
 	games, err := h.gameRepo.List(ctx)
 	if err != nil {
 		return nil
+	}
+
+	if eventID != nil {
+		counts := make(map[uuid.UUID]int, len(allTeams))
+		for _, t := range allTeams {
+			counts[t.GameID]++
+		}
+		var result []teamsByGame
+		for _, g := range games {
+			if c := counts[g.ID]; c > 0 {
+				result = append(result, teamsByGame{Game: g.Slug, Count: c})
+			}
+		}
+		return result
 	}
 
 	var result []teamsByGame
@@ -359,9 +395,9 @@ func (h *AnalyticsHandler) buildTournamentProgressAndCount(ctx context.Context, 
 	return result, totalMatches
 }
 
-func (h *AnalyticsHandler) buildMatchHeatmap(ctx context.Context) []matchHeatmapCell {
-	// Build heatmap from schedules
-	schedules, _, err := h.scheduleRepo.List(ctx, model.ScheduleFilter{Page: 1, Limit: 10000})
+func (h *AnalyticsHandler) buildMatchHeatmap(ctx context.Context, eventIDs []uuid.UUID) []matchHeatmapCell {
+	// Build heatmap from schedules, scoped to the event's tournaments when set
+	schedules, _, err := h.scheduleRepo.List(ctx, model.ScheduleFilter{EventIDs: eventIDs, Page: 1, Limit: 10000})
 	if err != nil {
 		return nil
 	}

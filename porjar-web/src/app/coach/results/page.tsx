@@ -130,20 +130,20 @@ export default function CoachResultsPage() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <CalendarBlank size={14} className="text-esi-muted" />
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+          <CalendarBlank size={14} className="shrink-0 text-esi-muted" />
           <Input
             type="date"
             value={dateFrom}
             onChange={e => setDateFrom(e.target.value)}
-            className="h-8 w-36 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20"
+            className="h-8 w-[calc(50%-2.75rem)] min-w-0 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20 sm:w-36"
           />
-          <span className="text-xs text-esi-muted">-</span>
+          <span className="shrink-0 text-xs text-esi-muted">-</span>
           <Input
             type="date"
             value={dateTo}
             onChange={e => setDateTo(e.target.value)}
-            className="h-8 w-36 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20"
+            className="h-8 w-[calc(50%-2.75rem)] min-w-0 text-xs border-stone-200 dark:border-zinc-700 focus:border-esi-red focus:ring-esi-red/20 sm:w-36"
           />
         </div>
       </div>
@@ -202,8 +202,8 @@ export default function CoachResultsPage() {
                       {result.opponent_name}
                     </p>
                   ) : (
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="font-bold text-esi-text">{result.team_name}</span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      <span className="truncate font-bold text-esi-text">{result.team_name}</span>
                       <span className="text-xs text-esi-muted">
                         Placement <span className="font-bold text-esi-red">#{result.placement}</span>
                       </span>
@@ -224,7 +224,7 @@ export default function CoachResultsPage() {
                 </div>
 
                 {/* Status + screenshots */}
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <span
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',

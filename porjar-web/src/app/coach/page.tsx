@@ -376,16 +376,16 @@ export default function CoachDashboardPage() {
               <div
                 key={sub.match_id}
                 className={cn(
-                  'flex items-center justify-between rounded-xl border p-4 shadow-sm',
+                  'flex items-center justify-between gap-3 rounded-xl border p-4 shadow-sm',
                   sub.needs_submission
                     ? 'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50'
                     : 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/30'
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex min-w-0 items-center gap-3">
                   <div
                     className={cn(
-                      'flex h-8 w-8 items-center justify-center rounded-lg',
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
                       sub.needs_submission ? 'bg-amber-100' : 'bg-green-100'
                     )}
                   >
@@ -395,8 +395,8 @@ export default function CoachDashboardPage() {
                       <CheckCircle size={16} weight="fill" className="text-green-600" />
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-esi-text">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-esi-text">
                       {sub.team_name} vs {sub.opponent_name}
                     </p>
                     <p className="text-xs text-esi-muted">{sub.game_name}</p>
@@ -404,7 +404,7 @@ export default function CoachDashboardPage() {
                 </div>
                 <span
                   className={cn(
-                    '-skew-x-2 rounded px-2 py-0.5 text-[10px] font-bold uppercase',
+                    '-skew-x-2 shrink-0 whitespace-nowrap rounded px-2 py-0.5 text-[10px] font-bold uppercase',
                     sub.needs_submission ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                   )}
                 >
